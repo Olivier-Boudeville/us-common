@@ -3,7 +3,7 @@ This repository corresponds to the **base elements on which the various Universa
 * the Universal Server itself: see [us-main](https://github.com/Olivier-Boudeville/us-main/)
 * the Universal Webserver: see [us-web](https://github.com/Olivier-Boudeville/us-web/)
 
-This repository gathers indeed the facilities that are common to at least two US elements.
+This repository gathers indeed the base facilities for the US infrastructure; as such it is a part of the [Universal Server](https://github.com/Olivier-Boudeville/Universal-Server) project.
 
 As for US-common, it depends itself on various elements of the [Ceylan](https://github.com/Olivier-Boudeville/Ceylan) project, namely:
 * [Ceylan-Myriad](https://github.com/Olivier-Boudeville/Ceylan-Myriad)

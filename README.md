@@ -1,11 +1,11 @@
 # us-common
-This is the base on which the various Universal Service elements are built, notably:
-* [us-main](https://github.com/Olivier-Boudeville/us-main/): the Universal Server itself
-* [us-web](https://github.com/Olivier-Boudeville/us-web/): the Universal Webserver
+This repository corresponds to the **base elements on which the various Universal Services** are built, notably:
+* the Universal Server itself: see [us-main](https://github.com/Olivier-Boudeville/us-main/)
+* the Universal Webserver: see [us-web](https://github.com/Olivier-Boudeville/us-web/)
 
-This repository gathers the facilities that are common to at least two US elements.
+This repository gathers indeed the facilities that are common to at least two US elements.
 
-US-common depends itself on various elements of the [Ceylan](https://github.com/Olivier-Boudeville/Ceylan) project, namely:
+As for US-common, it depends itself on various elements of the [Ceylan](https://github.com/Olivier-Boudeville/Ceylan) project, namely:
 * [Ceylan-Myriad](https://github.com/Olivier-Boudeville/Ceylan-Myriad)
 * [Ceylan-WOOPER](https://github.com/Olivier-Boudeville/Ceylan-WOOPER)
 * [Ceylan-Traces](https://github.com/Olivier-Boudeville/Ceylan-Traces)

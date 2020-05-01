@@ -1,6 +1,5 @@
 # Listing path patterns that shall be ignored by git:
 *.beam
-include/*.hrl
 *.traces
 *.log
 *.plt
@@ -9,6 +8,7 @@ declared-types-in-*.txt
 .eunit
 erl_crash.dump
 *~
+ebin/*.app
 
 # Added in relation to rebar3:
 .rebar

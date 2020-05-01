@@ -1,6 +1,7 @@
 % Copyright (C) 2019-2020 Olivier Boudeville
 %
-% This file is part of US-Common, part of the Universal Server framework.
+% This file belongs to the US-Common project, a part of the Universal Server
+% framework.
 %
 % This program is free software: you can redistribute it and/or modify it under
 % the terms of the GNU Affero General Public License as published by the Free
@@ -15,7 +16,7 @@
 % You should have received a copy of the GNU Affero General Public License along
 % with this program. If not, see <http://www.gnu.org/licenses/>.
 %
-% Author: Olivier Boudeville (olivier.boudeville@esperide.com)
+% Author: Olivier Boudeville [olivier (dot) boudeville (at) esperide (dot) com]
 % Creation date: Tuesday, December 24, 2019.
 
 

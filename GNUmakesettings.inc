@@ -1,4 +1,4 @@
-# This is the single file that all US-common GNUmakefiles, and only them, should
+# This is the single file that all us-common GNUmakefiles, and only them, should
 # include.
 
 # Prerequisite: US_COMMON_TOP must be set.

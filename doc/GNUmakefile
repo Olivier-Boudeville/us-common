@@ -1,7 +1,7 @@
 US_COMMON_TOP = ..
 
 
-DOC_BASE_NAME := US-common-manual-english
+DOC_BASE_NAME := us-common-technical-manual-english
 
 DOC_PDF_NAME := $(DOC_BASE_NAME).pdf
 
@@ -39,7 +39,7 @@ OVERALL_DOCUMENT_SOURCE = $(DOC_BASE_NAME).rst
 
 # Default do-nothing target:
 all:
-	@echo "  Run 'make full-doc' to generate the manual of the us-common layer."
+	@echo "  Run 'make full-doc' to generate the manual of the 'us-common' layer."
 
 
 doc:
@@ -55,7 +55,7 @@ html: clean-doc $(HTML_TARGET)
 # (please then remove all initial content of that branch)
 #
 clone-mirror:
-	@cd ../../ && git clone https://github.com/Olivier-Boudeville/.git $(GITHUB_PAGES_BASE) && cd $(GITHUB_PAGES_BASE) && git checkout -b gh-pages
+	@cd ../../ && git clone https://github.com/Olivier-Boudeville/us-common $(GITHUB_PAGES_BASE) && cd $(GITHUB_PAGES_BASE) && git checkout -b gh-pages
 
 
 export-doc: clean-doc full-doc export-to-official export-to-mirror
@@ -68,7 +68,7 @@ export-to-official: $(DOC_GENERATED_FILES)
 
 export-to-mirror: $(DOC_GENERATED_FILES)
 	@echo "   Exporting us-common documentation to mirror website in $(US_COMMON_WEB_MIRROR_BRANCH)"
-	@/bin/cp -f $(WEB_CONTENT) $(US_COMMON_WEB_MIRROR_BRANCH) && cd $(US_COMMON_WEB_MIRROR_BRANCH) && git add . && git merge -s ours && git commit -m "US-Common doc updated." && git push && git pull --ff-only
+	@/bin/cp -f $(WEB_CONTENT) $(US_COMMON_WEB_MIRROR_BRANCH) && cd $(US_COMMON_WEB_MIRROR_BRANCH) && git add . && git merge -s ours && git commit -m "us-common doc updated." && git push && git pull --ff-only
 
 
 clean: clean-doc

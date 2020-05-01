@@ -24,6 +24,7 @@
   {registered, []},
 
   % Regarding:
+  %  - Traces, see http://traces.esperide.org/traces.html#otp
   %  - WOOPER, see http://wooper.esperide.org/wooper.html#otp
   %  - Myriad, see http://myriad.esperide.org/myriad.html#otp
   %

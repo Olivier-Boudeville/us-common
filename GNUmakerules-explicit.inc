@@ -6,6 +6,7 @@
 
 # Prerequisite: US_COMMON_TOP must be set.
 
+.PHONY: default-us-common-rule
 
 
 # The first non-generic, therefore default, rule:

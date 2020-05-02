@@ -1,4 +1,7 @@
 # us-common
+
+![](/doc/us-common-title.png)
+
 This repository corresponds to the **base elements on which the various Universal Services** are built, notably:
 * the Universal Server itself: see [us-main](https://github.com/Olivier-Boudeville/us-main/)
 * the Universal Webserver: see [us-web](https://github.com/Olivier-Boudeville/us-web/)

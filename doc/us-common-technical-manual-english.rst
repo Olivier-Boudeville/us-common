@@ -1,0 +1,215 @@
+.. _Top:
+
+
+.. title:: Welcome to the US-Common documentation
+
+.. comment stylesheet specified through GNUmakefile
+
+
+.. role:: raw-html(raw)
+   :format: html
+
+.. role:: raw-latex(raw)
+   :format: latex
+
+.. comment Would appear too late, can only be an be used only in preamble:
+.. comment :raw-latex:`\usepackage{graphicx}`
+.. comment As a result, in this document at least a '.. figure:: XXXX' must
+.. exist, otherwise: 'Undefined control sequence \includegraphics.'.
+
+
+:raw-html:`<a name="us-common_top"></a>`
+
+:raw-html:`<div class="banner"><p><em>US-Common documentation</em> <a href="http://us-common.esperide.org">browse latest</a> <a href="https://olivier-boudeville.github.io/us-common/index.html">browse mirror</a> <a href="us-common-technical-manual-english.pdf">get PDF</a> <a href="#us-common_top">go to top</a> <a href="#us-common_bottom">go to bottom</a> <a href="mailto:about(dash)us-common(at)esperide(dot)com?subject=[US-Common]%20Remark">email us</a></p></div>`
+
+
+
+:raw-html:`<center><img src="us-common-title.png" width="70%"></img></center>`
+:raw-latex:`\includegraphics[scale=1.0]{us-common-title.png}`
+
+
+
+===========================================
+Technical Manual of the ``US-Common`` Layer
+===========================================
+
+
+:Organisation: Copyright (C) 2019-2020 Olivier Boudeville
+:Contact: about (dash) us-common (at) esperide (dot) com
+:Creation date: Saturday, May 2, 2020
+:Lastly updated: Saturday, May 2, 2020
+:Status: Work in progress
+:Version: 0.0.1
+:Dedication: Users and maintainers of the ``US-Common`` layer.
+:Abstract:
+
+	The role of the `US-Common <http://us-common.esperide.org/>`_ layer (part of the `Universal Server <https://github.com/Olivier-Boudeville/Universal-Server>`_ project) is to provide base elements on which the various *Universal Services* are built, notably:
+
+	- the Universal Server itself: see `us-main <http://us.esperide.org/>`_
+	- the Universal Webserver: see `us-web <http://us-web.esperide.org/>`_
+
+	We present here a short overview of these services, to introduce them to newcomers.
+	The next level of information is to read the corresponding `source files <https://github.com/Olivier-Boudeville/us-common>`_, which are intensely commented and generally straightforward.
+
+
+.. meta::
+   :keywords: US-Common
+
+
+:raw-latex:`\pagebreak`
+
+.. contents:: Table of Contents
+	:depth: 3
+
+
+:raw-latex:`\pagebreak`
+
+--------
+Overview
+--------
+
+
+The `US-Common <http://us-common.esperide.org/>`_ layer is the basis (lowest-level) of the `Universal Server <https://github.com/Olivier-Boudeville/Universal-Server>`_ project.
+
+Its purpose is to provide base elements on which the various *Universal Services* are built, notably:
+
+- the Universal Server itself: see `us-main <http://us.esperide.org/>`_
+- the Universal Webserver: see `us-web <http://us-web.esperide.org/>`_
+
+We present here a short overview of these services, to introduce them to newcomers.
+
+The next level of information is to read the corresponding `source files <https://github.com/Olivier-Boudeville/us-common>`_, which are intensely commented and generally straightforward.
+
+
+-----------
+Layer Stack
+-----------
+
+From the highest level to the lowest, a software stack involving US-Common usually is like:
+
+- applicative layer such as `us-main <http://us.esperide.org/>`_, `us-web <http://us-web.esperide.org/>`_, etc.
+- `US-Common <http://us-common.esperide.org/>`_ (this layer)
+- `Ceylan-Traces <http://traces.esperide.org>`_ (for advanced runtime traces)
+- `Ceylan-WOOPER <http://wooper.esperide.org>`_ (for OOP)
+- `Ceylan-Myriad <http://myriad.esperide.org>`_ (as an Erlang toolbox)
+- `Erlang <http://erlang.org>`_ (for the compiler and runtime)
+- `GNU/Linux <https://en.wikipedia.org/wiki/Linux>`_
+
+The shorthand for ``US-Common`` is ``uc``.
+
+:raw-latex:`\pagebreak`
+
+
+.. _`free software`:
+
+
+-------
+Licence
+-------
+
+``US-Common`` is licensed by its author (Olivier Boudeville) under the `GNU Affero General Public License <https://www.gnu.org/licenses/agpl-3.0.en.html>`_ as published by the Free Software Foundation, either version 3 of this license, or (at your option) any later version.
+
+This allows the use of the US-Common code in a wide a variety of software projects, while still maintaining copyleft on this code, ensuring improvements are shared.
+
+We hope indeed that enhancements will be back-contributed (ex: thanks to merge requests), so that everyone will be able to benefit from them.
+
+
+
+---------------------------------
+Current Stable Version & Download
+---------------------------------
+
+As mentioned, the single, direct prerequisite of `US-Common <https://github.com/Olivier-Boudeville/US-Common>`_ is `Ceylan-Traces <https://github.com/Olivier-Boudeville/Ceylan-Traces>`_, which implies in turn `Ceylan-WOOPER <https://github.com/Olivier-Boudeville/Ceylan-WOOPER>`_, then `Ceylan-Myriad <https://github.com/Olivier-Boudeville/Ceylan-Myriad>`_ and `Erlang <http://erlang.org>`_, version 22.1 or more recent [#]_.
+
+.. [#] Note that, in the Ceylan-Myriad repository, we have a script to streamline the installation of Erlang, see `install-erlang.sh <https://github.com/Olivier-Boudeville/Ceylan-Myriad/blob/master/conf/install-erlang.sh>`_; use ``install-erlang.sh --help`` for guidance.
+
+
+
+Using Cutting-Edge GIT
+======================
+
+This is the installation method that we use and recommend; the US-Common ``master`` branch is meant to stick to the latest stable version: we try to ensure that this main line always stays functional (sorry for the pun). Evolutions are to take place in feature branches and to be merged only when ready.
+
+Once Erlang is available, it should be just a matter of executing:
+
+.. code:: bash
+
+ $ git clone https://github.com/Olivier-Boudeville/Ceylan-Myriad myriad
+ $ cd myriad && make all && cd ..
+
+ $ git clone https://github.com/Olivier-Boudeville/Ceylan-WOOPER wooper
+ $ cd wooper && make all && cd ..
+
+ $ git clone https://github.com/Olivier-Boudeville/Ceylan-Traces traces
+ $ cd traces && make all && cd ..
+
+ $ git clone https://github.com/Olivier-Boudeville/us-common
+ $ cd us-common && make all
+
+
+Running a corresponding test just then boils down to:
+
+.. code:: bash
+
+ $ cd test && make class_USScheduler_run CMD_LINE_OPT="--batch"
+
+
+Should LogMX be installed and available in the PATH, the test may simply become:
+
+.. code:: bash
+
+ $ make class_USScheduler_run
+
+
+:raw-html:`<a name="otp"></a>`
+
+.. _`otp-build`:
+
+Using OTP-Related Build/Runtime Conventions
+===========================================
+
+As discussed in these sections of `Myriad <http://myriad.esperide.org/myriad.html#otp>`_, `WOOPER <http://wooper.esperide.org/index.html#otp>`_ and `Traces <http://traces.esperide.org/index.html#otp>`_, we added the (optional) possibility of generating a US-Common *OTP application* out of the build tree, ready to be integrated into an *(OTP) release*. For that we rely on `rebar3 <https://www.rebar3.org/>`_, `relx <https://github.com/erlware/relx>`_ and `hex <https://hex.pm/>`_.
+
+Unlike Myriad (which is an OTP *library* application), US-Common is (like WOOPER and Traces) an OTP *active* application, meaning the reliance on an application that can be started/stopped (``us_common_app``) and a root supervisor (``us_common_sup``).
+
+As for Myriad, WOOPER and Traces, most versions of US-Common are also published as `Hex packages <https://hex.pm/packages/us_common>`_.
+
+For more details, one may have a look at:
+
+- `rebar.config.template <https://github.com/Olivier-Boudeville/us-common/blob/master/conf/rebar.config.template>`_, the general rebar configuration file used when generating the US-Common OTP application and release (implying the automatic management of Myriad and WOOPER)
+- `rebar-for-hex.config.template <https://github.com/Olivier-Boudeville/us-common/blob/master/conf/rebar-for-hex.config.template>`_, to generate a corresponding Hex package for US-Common (whose structure and conventions is quite different from the previous OTP elements)
+- `rebar-for-testing.config.template <https://github.com/Olivier-Boudeville/us-common/blob/master/conf/rebar-for-testing.config.template>`_, the simplest test of the previous Hex package: an empty rebar project having for sole dependency that Hex package
+
+
+-------
+Support
+-------
+
+Bugs, questions, remarks, patches, requests for enhancements, etc. are to be reported to the `project interface <https://github.com/Olivier-Boudeville/us-common>`_ (typically `issues <https://github.com/Olivier-Boudeville/us-common/issues>`_) or directly at the email address mentioned at the beginning of this document.
+
+
+
+
+-------------
+Please React!
+-------------
+
+If you have information more detailed or more recent than those presented in this document, if you noticed errors, neglects or points insufficiently discussed, drop us a line! (for that, follow the Support_ guidelines).
+
+
+
+-----------
+Ending Word
+-----------
+
+Have fun with US-Common!
+
+.. comment Mostly added to ensure there is at least one figure directive,
+.. otherwise the LateX graphic support will not be included:
+
+.. figure:: us-common-title.png
+   :alt: US-Common logo
+   :width: 50 %
+   :align: center
+
+:raw-html:`<a name="us-common_bottom"></a>`

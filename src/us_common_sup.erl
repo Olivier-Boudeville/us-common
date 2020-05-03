@@ -52,14 +52,53 @@ start_link() ->
 						   _Module=?MODULE, _Args=[] ).
 
 
+
 % Callback to initialise this supervisor.
 init( Args ) ->
 
 	trace_utils:debug_fmt(
 	  "Initializing the US-Common root supervisor (args: ~p).", [ Args ] ),
 
-	% None for the moment:
-	%ChildrenSpec = [],
+	% Not allowed, as the *_app:start/2 is expected to return only {ok, Pid} or
+	% {ok, Pid, State}:
+	%
+	%ignore.
 
-	%{ ok, { RestartStrategy, ChildrenSpec } }.
-	ignore.
+	% We always create a US configuration server, specific to the current US
+	% application so that they can all be started, stopped, upgraded,
+	% etc. independently:
+
+	% Default strategy, intensity and period:
+
+	% Restart only children that terminate, with default settings (was: up to 1
+	% restart allowed in a 5-second period; now: none, to have masking any
+	% failure):
+	%
+	Strategy = one_for_one,
+	Intensity = 0,
+	Period = 5,
+
+	SupFlags = #{ strategy  => Strategy,
+				  intensity => Intensity,
+				  period    => Period },
+
+	% We start a configuration server:
+	CfgSrvChildSpec = #{ id => us_common_config_server,
+						 start => { class_USConfigServer, new_link, [] },
+
+						 % Never restarted:
+						 restart => temporary,
+
+						 % Wait for termination for 5 seconds before going for
+						 % brutal killing:
+						 %
+						 shutdown => 5000,
+
+						 type => worker
+
+						 % Default: modules => [ class_USConfigServer ]
+					   },
+
+	ChildrenSpec = [ CfgSrvChildSpec ],
+
+	{ ok, { SupFlags, ChildrenSpec } }.

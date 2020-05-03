@@ -45,9 +45,7 @@ start( Type, StartArgs ) ->
 		  when is_pid( UsCommonRootSupervisorPid ) ->
 			R;
 
-		ignore ->
-			ignore;
-
+		% Includes 'ignore':
 		Other ->
 			trace_utils:error_fmt( "The US-Common root supervisor did not start "
 								   "properly:~n  ~p.", [ Other ] ),

@@ -62,4 +62,4 @@ init( Args ) ->
 	%ChildrenSpec = [],
 
 	%{ ok, { RestartStrategy, ChildrenSpec } }.
-	{ ok, ignore }.
+	ignore.

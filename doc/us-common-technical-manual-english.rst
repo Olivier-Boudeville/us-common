@@ -25,7 +25,7 @@
 
 
 :raw-html:`<center><img src="us-common-title.png" width="70%"></img></center>`
-:raw-latex:`\includegraphics[scale=1.0]{us-common-title.png}`
+:raw-latex:`\includegraphics[scale=1.2]{us-common-title.png}`
 
 
 
@@ -37,7 +37,7 @@ Technical Manual of the ``US-Common`` Layer
 :Organisation: Copyright (C) 2019-2020 Olivier Boudeville
 :Contact: about (dash) us-common (at) esperide (dot) com
 :Creation date: Saturday, May 2, 2020
-:Lastly updated: Saturday, May 2, 2020
+:Lastly updated: Sunday, May 3, 2020
 :Status: Work in progress
 :Version: 0.0.1
 :Dedication: Users and maintainers of the ``US-Common`` layer.
@@ -111,9 +111,9 @@ These are mainly common services centralised here so that the various US applica
 
 - `USConfigServer <https://github.com/Olivier-Boudeville/us-common/blob/master/src/class_USConfigServer.erl>`_: a server (usually a singleton) in charge of **managing all US-level configuration information** on behalf of the other US servers; this comprises the look-up, parsing and checking of the relevant configuration files, the setting of the corresponding information then made available to the rest of the US framework (EPMD port, TCP port range, cookie, execution context, application and log directories, name and scope of registrations, user/group information, etc.)
 
-- `USScheduler <https://github.com/Olivier-Boudeville/us-common/blob/master/src/class_USScheduler.erl>`_: a server whose purpose is to **schedule any kind of asynchronous, independent tasks** (think: "crontab on steroids"); it allows planning task commands to be issued to actuators one time, multiple ones, or indefinitely, based on user-level periods with various policies, on a best-effort basis yet reliably (proper time and timer management), trying to find a balance between the respect of the requested periodicities and the correction of any delay involved (see also a `corresponding test <https://github.com/Olivier-Boudeville/us-common/blob/master/test/class_USScheduler_test.erl>`_ of it)
+- `USScheduler <https://github.com/Olivier-Boudeville/us-common/blob/master/src/class_USScheduler.erl>`_: a server whose purpose is to **schedule any kind of asynchronous, independent tasks** (think: "crontab on steroids"); it allows planning task commands to be issued to actuators one time, multiple ones, or indefinitely, based on user-level periods with various policies, on a best-effort basis yet reliably (proper time and timer management), trying to find a balance between the respect of the requested periodicities and the correction of any delay incurred (see also a `corresponding test <https://github.com/Olivier-Boudeville/us-common/blob/master/test/class_USScheduler_test.erl>`_ of it)
 
-- `USTaskRing <https://github.com/Olivier-Boudeville/us-common/blob/master/src/class_USTaskRing.erl>`_: a facility useful to **schedule a set of periodic tasks synchronously** (no overlapping between them) **and uniformly** (as evenly as possible); typically useful to pace regularly a set of actions of indefinite number that are ruled by a common periodicity and/or to share a resource unable to cope with concurrent accesses (ex: a non-reentrant third-party log analysis tool that maintains its own state yet have to operate on a set of virtual hosts)
+- `USTaskRing <https://github.com/Olivier-Boudeville/us-common/blob/master/src/class_USTaskRing.erl>`_: a facility useful to **schedule a set of periodic tasks synchronously** (no overlapping between them) **and uniformly** (as evenly as possible over time); typically useful to pace regularly a set of actions of indefinite number that are ruled by a common periodicity and/or to share a resource unable to cope with concurrent accesses (ex: a non-reentrant third-party log analysis tool that maintains its own opaque state on filesystem, yet have to operate on a set of virtual hosts)
 
 
 
@@ -191,11 +191,7 @@ Unlike Myriad (which is an OTP *library* application), US-Common is (like WOOPER
 
 As for Myriad, WOOPER and Traces, most versions of US-Common are also published as `Hex packages <https://hex.pm/packages/us_common>`_.
 
-For more details, one may have a look at:
-
-- `rebar.config.template <https://github.com/Olivier-Boudeville/us-common/blob/master/conf/rebar.config.template>`_, the general rebar configuration file used when generating the US-Common OTP application and release (implying the automatic management of Myriad and WOOPER)
-- `rebar-for-hex.config.template <https://github.com/Olivier-Boudeville/us-common/blob/master/conf/rebar-for-hex.config.template>`_, to generate a corresponding Hex package for US-Common (whose structure and conventions is quite different from the previous OTP elements)
-- `rebar-for-testing.config.template <https://github.com/Olivier-Boudeville/us-common/blob/master/conf/rebar-for-testing.config.template>`_, the simplest test of the previous Hex package: an empty rebar project having for sole dependency that Hex package
+For more details, one may have a look at `rebar.config.template <https://github.com/Olivier-Boudeville/us-common/blob/master/conf/rebar.config.template>`_, the general rebar configuration file used when generating the US-Common OTP application and release (implying the automatic management of Myriad and WOOPER).
 
 
 -------
@@ -226,7 +222,7 @@ Have fun with US-Common!
 
 .. figure:: us-common-title.png
    :alt: US-Common logo
-   :width: 75 %
+   :width: 45%
    :align: center
 
 :raw-html:`<a name="us-common_bottom"></a>`

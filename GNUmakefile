@@ -48,7 +48,7 @@ info: info-local
 
 
 info-local:
-	@echo "REBAR3 = $(REBAR3)"
+	@echo "REBAR3_EXEC = $(REBAR3_EXEC)"
 	@echo "TRACES_TOP = $(TRACES_TOP)"
 	@echo "WOOPER_TOP = $(WOOPER_TOP)"
 	@echo "MYRIAD_TOP = $(MYRIAD_TOP)"

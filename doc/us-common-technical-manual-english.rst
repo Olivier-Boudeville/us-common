@@ -86,7 +86,7 @@ The next level of information is to read the corresponding `source files <https:
 Layer Stack
 -----------
 
-From the highest level to the lowest, as shown `here <https://github.com/Olivier-Boudeville/Universal-Server>`_, a software stack involving US-Common usually is like:
+From the highest level to the lowest, as shown `here <https://github.com/Olivier-Boudeville/Universal-Server>`_, usually a software stack involving US-Common is structured that way:
 
 - applicative layer such as `us-main <http://us.esperide.org/>`_, `us-web <http://us-web.esperide.org/>`_, etc.
 - `US-Common <http://us-common.esperide.org/>`_ (this layer)
@@ -105,15 +105,15 @@ The shorthand for ``US-Common`` is ``uc``.
 Facilities Provided by this Layer
 ---------------------------------
 
-These are mainly:
+These are mainly common services centralised here so that the various US applications can make use of them:
 
-- `USServer <https://github.com/Olivier-Boudeville/us-common/blob/master/src/class_USServer.erl>`_: a general abstraction of a server, so that all US ones inherit the corresponding base features (ex: name registration, uptime information, applicative ping, state description, etc.)
+- `USServer <https://github.com/Olivier-Boudeville/us-common/blob/master/src/class_USServer.erl>`_: a general **abstraction of a server**, so that all US ones inherit the corresponding base features (ex: name registration, uptime information, applicative ping, state description, etc.)
 
-- `USConfigServer <https://github.com/Olivier-Boudeville/us-common/blob/master/src/class_USConfigServer.erl>`_: a server (usually a singleton) in charge of managing all US-level configuration information on behalf of the other US servers; this comprises the look-up, parsing and checking of the relevant configuration files, the setting of the corresponding information then made available to the rest of the US framework (EPMD port, TCP port range, cookie, execution context, application and log directories, name and scope of registrations, user/group information, etc.)
+- `USConfigServer <https://github.com/Olivier-Boudeville/us-common/blob/master/src/class_USConfigServer.erl>`_: a server (usually a singleton) in charge of **managing all US-level configuration information** on behalf of the other US servers; this comprises the look-up, parsing and checking of the relevant configuration files, the setting of the corresponding information then made available to the rest of the US framework (EPMD port, TCP port range, cookie, execution context, application and log directories, name and scope of registrations, user/group information, etc.)
 
-- `USScheduler <https://github.com/Olivier-Boudeville/us-common/blob/master/src/class_USScheduler.erl>`_: a server whose purpose is to schedule any kind of asynchronous, independent tasks (think: "crontab on steroids"): planning task commands to be issued to actuators one time, multiple ones, or indefinitely, based on user-level periods with various policies, on a best-effort basis yet reliably (proper time and timer management), trying to find a balance between the respect of the requested periodicities and the correction of any delay involved
+- `USScheduler <https://github.com/Olivier-Boudeville/us-common/blob/master/src/class_USScheduler.erl>`_: a server whose purpose is to **schedule any kind of asynchronous, independent tasks** (think: "crontab on steroids"); it allows planning task commands to be issued to actuators one time, multiple ones, or indefinitely, based on user-level periods with various policies, on a best-effort basis yet reliably (proper time and timer management), trying to find a balance between the respect of the requested periodicities and the correction of any delay involved (see also a `corresponding test <https://github.com/Olivier-Boudeville/us-common/blob/master/test/class_USScheduler_test.erl>`_ of it)
 
-- `USTaskRing <https://github.com/Olivier-Boudeville/us-common/blob/master/src/class_USTaskRing.erl>`_: a facility useful to schedule a set of periodic tasks synchronously (no overlapping between them) and uniformly (as evenly as possible); typically useful to pace regularly a set of actions of indefinite number ruled by a common periodicity and/or to share a resource unable to cope with concurrent access (ex: a non-reentrant third-party log analysis tool that maintains its own state yet have to operate on a set of virtual hosts)
+- `USTaskRing <https://github.com/Olivier-Boudeville/us-common/blob/master/src/class_USTaskRing.erl>`_: a facility useful to **schedule a set of periodic tasks synchronously** (no overlapping between them) **and uniformly** (as evenly as possible); typically useful to pace regularly a set of actions of indefinite number that are ruled by a common periodicity and/or to share a resource unable to cope with concurrent accesses (ex: a non-reentrant third-party log analysis tool that maintains its own state yet have to operate on a set of virtual hosts)
 
 
 

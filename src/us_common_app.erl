@@ -41,8 +41,12 @@ start( Type, StartArgs ) ->
 
 	case us_common_sup:start_link() of
 
-		R={ ok, _UsCommonRootSupervisorPid } ->
+		R={ ok, UsCommonRootSupervisorPid }
+		  when is_pid( UsCommonRootSupervisorPid ) ->
 			R;
+
+		ignore ->
+			ignore;
 
 		Other ->
 			trace_utils:error_fmt( "The US-Common root supervisor did not start "

@@ -25,6 +25,9 @@
 
 
 % Implementing the (active, OTP) application behaviour:
+%
+% (see https://erlang.org/doc/design_principles/applications.html)
+%
 -behaviour(application).
 
 
@@ -34,6 +37,8 @@
 
 
 % Starts the US-Common services.
+-spec start( application:start_type(), StartArgs :: term() ) -> { 'ok', pid() }
+		| { 'ok', pid(), State :: term() } | { 'error', Reason :: term() }.
 start( Type, StartArgs ) ->
 
 	trace_utils:debug_fmt( "Starting the US-Common application (type: ~w, "
@@ -56,6 +61,7 @@ start( Type, StartArgs ) ->
 
 
 % Stops the US-Common services.
+-spec stop( State :: term() ) -> void().
 stop( State ) ->
 
 	trace_utils:debug_fmt( "Stopping the US-Common application (state: ~w).",

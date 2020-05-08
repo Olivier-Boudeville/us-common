@@ -22,7 +22,9 @@
 
 % Module implementing the root supervisor of US-Common.
 %
-% In practice, it currently supervise no specific process.
+% In practice, it will supervise a single process, the one of the (singleton) US
+% configuration server, through a dedicated supervision bridge, defined in the
+% us_common_bridge_sup module.
 %
 -module(us_common_sup).
 
@@ -31,74 +33,100 @@
 -behaviour(supervisor).
 
 
-% User API:
+% User API, typically triggered from us_common_app:
 -export([ start_link/0 ]).
 
 
 % Callback of the supervisor behaviour:
+%
+% (see https://erlang.org/doc/design_principles/sup_princ.html)
+%
 -export([ init/1 ]).
 
 
+-define( root_supervisor_name, ?MODULE ).
 
--define( supervisor_name, ?MODULE ).
 
-
-% Starts and links the WOOPER root supervisor.
+% Starts and links the US-Common root supervisor, creating in turn a proper
+% supervision bridge.
+%
+% Note: typically called by us_common_app:start/2, hence generally triggered by
+% the application initialisation.
+%
+-spec start_link() -> supervisor:startlink_ret().
 start_link() ->
 
 	trace_utils:debug( "Starting the US-Common root supervisor." ),
 
-	supervisor:start_link( { local, ?supervisor_name },
-						   _Module=?MODULE, _Args=[] ).
+	% Local registration is better, to avoid clashes:
+	supervisor:start_link( _Reg={ local, ?root_supervisor_name },
+						   _Mod=?MODULE, _Args=[] ).
 
 
 
-% Callback to initialise this supervisor.
-init( Args ) ->
+% Callback to initialise this US-Common root supervisor bridge, typically in
+% answer to start_link/0 above being executed.
+%
+-spec init( list() ) -> { 'ok',
+	   { supervisor:sup_flags(), [ supervisor:child_spec() ] } } | 'ignore'.
+init( Args=[] ) ->
 
 	trace_utils:debug_fmt(
 	  "Initializing the US-Common root supervisor (args: ~p).", [ Args ] ),
 
-	% Not allowed, as the *_app:start/2 is expected to return only {ok, Pid} or
-	% {ok, Pid, State}:
+	% We always create a US configuration server and a scheduler that are
+	% specific to the current US application so that they can all be started,
+	% stopped, upgraded, etc., independently:
+
+	% Restart only children that terminate.
 	%
-	%ignore.
-
-	% We always create a US configuration server, specific to the current US
-	% application so that they can all be started, stopped, upgraded,
-	% etc. independently:
-
-	% Default strategy, intensity and period:
-
-	% Restart only children that terminate, with default settings (was: up to 1
-	% restart allowed in a 5-second period; now: none, to have masking any
-	% failure):
+	% Same as used by kernel module in safe mode:
 	%
-	Strategy = one_for_one,
-	Intensity = 0,
-	Period = 5,
+	RestartStrategy = #{ strategy  => one_for_one,
+						 intensity => _MaxRestarts=4,
+						 period    => _WithinSeconds=3600 },
 
-	SupFlags = #{ strategy  => Strategy,
-				  intensity => Intensity,
-				  period    => Period },
+	% First child, a bridge in charge of the US configuration server:
+	CfgBridgeChildSpec = get_config_bridge_spec(),
 
-	% We start a configuration server:
-	CfgSrvChildSpec = #{ id => us_common_config_server,
-						 start => { class_USConfigServer, new_link, [] },
+	% Second child, a bridge in charge of the US-Common base scheduler:
+	SchedBridgeChildSpec = get_scheduler_bridge_spec(),
 
-						 % Never restarted:
-						 restart => temporary,
+	ChildSpecs = [ CfgBridgeChildSpec, SchedBridgeChildSpec ],
 
-						 % Wait for termination for 5 seconds before going for
-						 % brutal killing:
-						 %
-						 shutdown => 5000,
+	{ ok, { RestartStrategy, ChildSpecs } }.
 
-						 type => worker
 
-						 % Default: modules => [ class_USConfigServer ]
-					   },
 
-	ChildrenSpec = [ CfgSrvChildSpec ],
+get_config_bridge_spec() ->
+	#{ id => us_common_config_bridge_id,
 
-	{ ok, { SupFlags, ChildrenSpec } }.
+	   start => { _Mod=us_common_config_bridge_sup, _Fun=start_link, _Args=[] },
+
+	   % Always restarted:
+	   restart => permanent,
+
+	   % 2-second termination allowed before brutal killing:
+	   shutdown => 2000,
+
+	   type => supervisor,
+
+	   modules => [ us_common_config_bridge_sup ] }.
+
+
+
+get_scheduler_bridge_spec() ->
+	#{ id => us_common_scheduler_bridge_id,
+
+	   start => { _Mod=us_common_scheduler_bridge_sup, _Fun=start_link,
+				  _Args=[] },
+
+	   % Always restarted:
+	   restart => permanent,
+
+	   % 2-second termination allowed before brutal killing:
+	   shutdown => 2000,
+
+	   type => supervisor,
+
+	   modules => [ us_common_scheduler_bridge_sup ] }.

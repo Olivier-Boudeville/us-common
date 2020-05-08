@@ -319,7 +319,7 @@ construct( State ) ->
 
 
 
-% Constructs a (named) US scheduler.
+% Constructs a (named, unregistered) US scheduler.
 -spec construct( wooper:state(), ustring() ) -> wooper:state().
 construct( State, SchedulerName ) ->
 
@@ -332,13 +332,13 @@ construct( State, SchedulerName ) ->
 
 
 % Constructs a (named, registered) US scheduler.
--spec construct( wooper:state(), ustring(),
+-spec construct( wooper:state(), ustring(), naming_utils:registration_name(),
 				 naming_utils:registration_name() ) -> wooper:state().
-construct( State, SchedulerName, RegistrationName ) ->
+construct( State, SchedulerName, RegistrationName, RegistrationScope ) ->
 
 	% First the direct mother classes, then this class-specific actions:
 	SrvState = class_USServer:construct( State,
-	  ?trace_categorize(SchedulerName), RegistrationName, ?registration_scope ),
+	  ?trace_categorize(SchedulerName), RegistrationName, RegistrationScope ),
 
 	init_common( SrvState ).
 

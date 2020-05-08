@@ -1,4 +1,4 @@
-% Description of the US-common OTP active application, typically used by rebar3.
+% Description of the US-Common OTP active application, typically used by rebar3.
 %
 % The real source of this file is conf/us_common.app.src, from which
 % _build/lib/us_common/ebin/us_common.app is generated and copied to
@@ -10,8 +10,8 @@
 % ./ebin/us_common.app
 % ./src/us_common.app.src -> ../ebin/us_common.app
 %
-% For more information see the Myriad 'rebar3-create-app-file' make target and
-% its associated comments.
+% For more information see the Ceylan-Myriad 'rebar3-create-app-file' make
+% target and its associated comments.
 
 % See also:
 % - http://erlang.org/doc/man/app.html
@@ -19,11 +19,12 @@
 
 
 {application, us_common,
- [{description, "US-common, the base OTP active application on which the various Universal Service elements are built (see http://us.esperide.org)"},
+ [{description, "US-Common, the base OTP active application on which the various Universal Service elements are built (see http://us-common.esperide.org)"},
   {vsn, "0.0.1"},
   {registered, []},
 
   % Regarding:
+  %  - Traces, see http://traces.esperide.org/traces.html#otp
   %  - WOOPER, see http://wooper.esperide.org/wooper.html#otp
   %  - Myriad, see http://myriad.esperide.org/myriad.html#otp
   %
@@ -34,7 +35,7 @@
   {env,[]},
 
   % Flat hierarchy in ebin here:
-  {modules, [class_USServer, class_USTaskRing, class_USScheduler, class_USConfigServer]},
+  {modules, [us_common_config_bridge_sup, us_common_sup, us_common_scheduler_bridge_sup, us_common_app, class_USServer, class_USTaskRing, class_USScheduler, class_USConfigServer]},
 
   {licenses, ["US-Common is licensed by its author (Olivier Boudeville) under the GNU Affero General Public License (AGPL), version 3.0 or later"]},
 
@@ -44,7 +45,7 @@
   %
   {mod, {us_common_app, []}},
 
-  {links, [ {"Official website", "http://us.esperide.org" },
+  {links, [ {"Official website", "http://us-common.esperide.org" },
 			{"Github", "https://github.com/Olivier-Boudeville/us-common"} ]}
 
   %{exclude_files, []}

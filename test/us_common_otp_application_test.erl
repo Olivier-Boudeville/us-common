@@ -27,33 +27,45 @@
 -module(us_common_otp_application_test).
 
 
-% For run/0 export and al:
--include("test_facilities.hrl").
+% For run/0 export and test traces:
+-include("traces_for_tests.hrl").
 
 
 % Actual test:
 test_us_common_application( OrderedAppNames ) ->
 
-	test_facilities:display( "Starting the US-Common OTP active application." ),
+	% No ?test_start/?test_stop here, as we start/stop Traces through
+	% OTP-related operations.
+	%
+	% If in batch mode (not in a release, hence no sys.config read here, so only
+	% the --batch command-line option matters here), the trace aggregator will
+	% record that a trace supervisor is wanted later (iff renamed), otherwise
+	% (not in batch mode), no trace supervisor is wanted at all.
+	%
 	otp_utils:start_applications( OrderedAppNames ),
 
+	% If not in batch mode, this renaming will trigger the launch of the trace
+	% supervisor whose activation was deferred until then:
+	%
+	traces_utils:name_trace_file_from( ?MODULE ),
 
-	test_facilities:display( "US-Common version: ~p.",
-				 [ system_utils:get_application_version( us_common ) ] ),
+	?test_info( "Starting the US-Common OTP active application." ),
+
+	?test_info_fmt( "US-Common version: ~p.",
+					[ system_utils:get_application_version( us_common ) ] ),
+
+	% Of course shall be sent before the stopping of Traces:
+	?test_info(
+	  "Successful end of test of the US-Common OTP application." ),
+
+	?test_info( "Stopping the US-Common application." ),
+	otp_utils:stop_applications( OrderedAppNames ).
 
 
-	test_facilities:display( "Stopping the US-Common application." ),
-	otp_utils:stop_applications( OrderedAppNames ),
 
-	test_facilities:display(
-	  "Successful end of test of the US-Common OTP application." ).
-
-
-
-% Note that the us_common.app, traces.app, wooper.app and myriad.app files will
-% have to be found and used for this test to succeed: US-Common, Traces, WOOPER
-% and Myriad must be already available as prerequisite, fully-built OTP
-% applications.
+% Note that the {us_common, traces, wooper, myriad}.app files will have to be
+% found and used for this test to succeed: US-Common, Traces, WOOPER and Myriad
+% must be already available as prerequisite, fully-built OTP applications.
 %
 -spec run() -> no_return().
 run() ->

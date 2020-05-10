@@ -37,7 +37,7 @@ Technical Manual of the ``US-Common`` Layer
 :Organisation: Copyright (C) 2019-2020 Olivier Boudeville
 :Contact: about (dash) us-common (at) esperide (dot) com
 :Creation date: Saturday, May 2, 2020
-:Lastly updated: Sunday, May 3, 2020
+:Lastly updated: Sunday, May 10, 2020
 :Status: Work in progress
 :Version: 0.0.1
 :Dedication: Users and maintainers of the ``US-Common`` layer.
@@ -187,11 +187,20 @@ Using OTP-Related Build/Runtime Conventions
 
 As discussed in these sections of `Myriad <http://myriad.esperide.org/myriad.html#otp>`_, `WOOPER <http://wooper.esperide.org/index.html#otp>`_ and `Traces <http://traces.esperide.org/index.html#otp>`_, we added the (optional) possibility of generating a US-Common *OTP application* out of the build tree, ready to be integrated into an *(OTP) release*. For that we rely on `rebar3 <https://www.rebar3.org/>`_, `relx <https://github.com/erlware/relx>`_ and `hex <https://hex.pm/>`_.
 
-Unlike Myriad (which is an OTP *library* application), US-Common is (like WOOPER and Traces) an OTP *active* application, meaning the reliance on an application that can be started/stopped (``us_common_app``) and a root supervisor (``us_common_sup``).
+Unlike Myriad (which is an OTP *library* application), US-Common is (like WOOPER and Traces) an OTP *active* application, meaning the reliance on an application that can be started/stopped (``us_common_app``), a root supervisor (``us_common_sup``) and, here, two proper supervisor bridges (``us_common_scheduler_bridge_sup`` and ``us_common_config_bridge_sup``).
 
 As for Myriad, WOOPER and Traces, most versions of US-Common are also published as `Hex packages <https://hex.pm/packages/us_common>`_.
 
-For more details, one may have a look at `rebar.config.template <https://github.com/Olivier-Boudeville/us-common/blob/master/conf/rebar.config.template>`_, the general rebar configuration file used when generating the US-Common OTP application and release (implying the automatic management of Myriad and WOOPER).
+For more details, one may have a look at `rebar.config.template <https://github.com/Olivier-Boudeville/us-common/blob/master/conf/rebar.config.template>`_, the general rebar configuration file used when generating the US-Common OTP application and release (implying the automatic management of Myriad, WOOPER and Traces).
+
+Once the steps listed in `Using Cutting-Edge GIT`_ have been performed, an OTP-level testing can be done as well, based on ``us_common_otp_application_test``; from the root of US-Common:
+
+.. code:: bash
+
+ $ cd test && make us_common_otp_application_run CMD_LINE_OPT="--batch"
+
+
+All relevant OTP applications shall be started in turn, US-Common shall then be ready for use, until all these applications are orderly shutdown.
 
 
 -------

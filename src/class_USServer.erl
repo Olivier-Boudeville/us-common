@@ -178,7 +178,12 @@ ping( State, PingId, MonitorPid ) ->
 					 naming_utils:registration_scope(), wooper:state() ) ->
 						  wooper:state().
 register_name( _RegistrationName=undefined, _RegistrationScope, State ) ->
-	?info( "No name to register, no registration performed." ),
+
+	% May be done later in the construction of the actual instance (ex: based on
+	% a configuration file being then read):
+	%
+	?info( "As a US server: no name to register, no registration performed." ),
+
 	State;
 
 register_name( RegistrationName, RegistrationScope, State ) ->

@@ -458,7 +458,7 @@ find_file_in( _AllBasePaths=[ Path | T ], CfgSuffix, BaseMsg, Msgs ) ->
 			CfgDir = filename:dirname( CfgFilePath ),
 
 			FullMsg = text_utils:format( "Configuration directory found "
-				"as '~s', since containing '~s'", [ CfgDir, CfgFilePath ] )
+				"as '~s', as containing '~s'", [ CfgDir, CfgFilePath ] )
 				++ case Msgs of
 
 					   [] ->
@@ -649,23 +649,23 @@ manage_tcp_port_range( ConfigTable, State ) ->
 									  wooper:state().
 manage_execution_context( ConfigTable, State ) ->
 
-	MyriadExecStr= text_utils:format( "for Myriad: ~s",
+	MyriadExecStr= text_utils:format( "for Ceylan-Myriad: ~s",
 									  [ basic_utils:get_execution_target() ] ),
 
-	WOOPERExecStr = text_utils:format( "for WOOPER: ~s",
+	WOOPERExecStr = text_utils:format( "for Ceylan-WOOPER: ~s",
 									   [ wooper:get_execution_target() ] ),
 
-	TracesExecStr = text_utils:format( "for Traces: ~s",
+	TracesExecStr = text_utils:format( "for Ceylan-Traces: ~s",
 									   [ traces:get_execution_target() ] ),
 
-	UsExecTarget = get_execution_target(),
+	USCommonExecTarget = get_execution_target(),
 
-	USExecStr = text_utils:format( "for the Universal Server: ~s",
-								   [ UsExecTarget ] ),
+	USCommonExecStr = text_utils:format( "for US-Common: ~s",
+										 [ USCommonExecTarget ] ),
 
 	CompileContextStr = text_utils:format( "while the following compilation "
 		"contexts were applied: ~s", [ text_utils:strings_to_string( [
-		MyriadExecStr, WOOPERExecStr, TracesExecStr, USExecStr ] ) ] ),
+		MyriadExecStr, WOOPERExecStr, TracesExecStr, USCommonExecStr ] ) ] ),
 
 	Context = case table:lookup_entry( ?execution_context_key, ConfigTable ) of
 
@@ -696,14 +696,14 @@ manage_execution_context( ConfigTable, State ) ->
 
 	case Context of
 
-		UsExecTarget ->
+		USCommonExecTarget ->
 			ok;
 
 		_OtherContext ->
 			?warning_fmt( "The runtime user-configured execution context (~s) "
 				"does not match the compile-time execution target of "
 				"this Universal Server (~s).",
-				[ Context, UsExecTarget ] )
+				[ Context, USCommonExecTarget ] )
 
 	end,
 

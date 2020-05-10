@@ -88,6 +88,7 @@ init( _Args=[] ) ->
 	trace_utils:trace( "Initializing the US-Common supervisor bridge for "
 					   "the US configuration server." ),
 
+	% Registration name and all details set through the US configuration file:
 	CfgServerPid = class_USConfigServer:new_link(),
 
 	{ ok, CfgServerPid, _State=CfgServerPid }.

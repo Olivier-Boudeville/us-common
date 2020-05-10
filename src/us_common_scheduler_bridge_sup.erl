@@ -58,6 +58,9 @@
 -define( bridge_name, ?MODULE ).
 
 
+% For us_common_scheduler_registration_{name,scope}:
+-include("us_common_defines.hrl").
+
 
 % Starts and links a US-Common supervision bridge to the US scheduler.
 %
@@ -73,7 +76,7 @@ start_link() ->
 					   "the US main scheduler." ),
 
 	supervisor_bridge:start_link( { local, ?bridge_name },
-			_Module=?MODULE, _Args=[] ).
+								  _Module=?MODULE, _Args=[] ).
 
 
 
@@ -87,7 +90,9 @@ init( _Args=[] ) ->
 	trace_utils:trace( "Initializing the US-Common supervisor bridge for "
 					   "the US main scheduler." ),
 
-	SchedServerPid = class_USScheduler:new_link(),
+	SchedServerPid = class_USScheduler:new_link( "US-Common Scheduler",
+		?us_common_scheduler_registration_name,
+		?us_common_scheduler_registration_scope ),
 
 	{ ok, SchedServerPid, _State=SchedServerPid }.
 

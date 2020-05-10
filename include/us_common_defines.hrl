@@ -20,13 +20,20 @@
 % Creation date: Sunday, January 19, 2020.
 
 
-% Common US defines.
+% US-Common defines.
 
 
-% US-level, for which the us-srv:us-srv ownership shall be enforced:
+-define( us_common_scheduler_registration_name, us_common_scheduler ).
+
+% Not global, so that two applications relying on US-Common may interact:
+-define( us_common_scheduler_registration_scope, local_only ).
+
+
+% For most US-related filesystem elements, the us-srv:us-srv ownership shall be
+% enforced:
 
 % Just pick the current user, in a development context:
 -define( us_user, undefined ).
 
-% In a production context, rely on uncoupled, dedicated users:
+% In a production context, rely on uncoupled, dedicated (per-application) users:
 %-define( us_user, "us-srv" ).

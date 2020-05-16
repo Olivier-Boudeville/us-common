@@ -1,4 +1,4 @@
-# Here are gathered explicit (immediate, static) rules for US-common.
+# Here are gathered explicit (immediate, static) rules for US-Common.
 #
 # See GNUmakerules-automatic.inc for their automatic (generic, pattern-based)
 # counterparts.

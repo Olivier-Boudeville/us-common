@@ -74,7 +74,7 @@ start_link() ->
 					   "the US configuration server." ),
 
 	supervisor_bridge:start_link( { local, ?bridge_name },
-			_Module=?MODULE, _Args=[] ).
+								  _Module=?MODULE, _Args=[] ).
 
 
 

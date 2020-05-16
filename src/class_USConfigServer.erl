@@ -133,7 +133,7 @@
 
 
 % For various defines:
--include_lib("us-common/include/class_USConfigServer.hrl").
+-include("class_USConfigServer.hrl").
 
 
 % The defaut registration name of the overall US configuration server:

@@ -37,7 +37,7 @@ Technical Manual of the ``US-Common`` Layer
 :Organisation: Copyright (C) 2019-2020 Olivier Boudeville
 :Contact: about (dash) us-common (at) esperide (dot) com
 :Creation date: Saturday, May 2, 2020
-:Lastly updated: Sunday, May 10, 2020
+:Lastly updated: Friday, May 15, 2020
 :Status: Work in progress
 :Version: 0.0.1
 :Dedication: Users and maintainers of the ``US-Common`` layer.
@@ -136,9 +136,11 @@ We hope indeed that enhancements will be back-contributed (ex: thanks to merge r
 Current Stable Version & Download
 ---------------------------------
 
-As mentioned, the single, direct prerequisite of `US-Common <https://github.com/Olivier-Boudeville/US-Common>`_ is `Ceylan-Traces <https://github.com/Olivier-Boudeville/Ceylan-Traces>`_, which implies in turn `Ceylan-WOOPER <https://github.com/Olivier-Boudeville/Ceylan-WOOPER>`_, then `Ceylan-Myriad <https://github.com/Olivier-Boudeville/Ceylan-Myriad>`_ and `Erlang <http://erlang.org>`_, version 22.1 or more recent [#]_.
+We prefer using GNU/Linux, sticking to the latest stable release of Erlang, and building it from sources, thanks to GNU ``make``.
 
-.. [#] Note that, in the Ceylan-Myriad repository, we have a script to streamline the installation of Erlang, see `install-erlang.sh <https://github.com/Olivier-Boudeville/Ceylan-Myriad/blob/master/conf/install-erlang.sh>`_; use ``install-erlang.sh --help`` for guidance.
+As mentioned, the single, direct prerequisite of `US-Common <https://github.com/Olivier-Boudeville/US-Common>`_ is `Ceylan-Traces <https://github.com/Olivier-Boudeville/Ceylan-Traces>`_, which implies in turn `Ceylan-WOOPER <https://github.com/Olivier-Boudeville/Ceylan-WOOPER>`_, then `Ceylan-Myriad <https://github.com/Olivier-Boudeville/Ceylan-Myriad>`_ and `Erlang <http://erlang.org>`_.
+
+Refer to the corresponding `Myriad prerequisite section <http://myriad.esperide.org#prerequisites>`_  for more precise guidelines, knowing that US-Common does not need modules with conditional support such as ``crypto`` or ``wx``.
 
 
 
@@ -231,7 +233,7 @@ Have fun with US-Common!
 
 .. figure:: us-common-title.png
    :alt: US-Common logo
-   :width: 45%
+   :width: 35%
    :align: center
 
 :raw-html:`<a name="us-common_bottom"></a>`

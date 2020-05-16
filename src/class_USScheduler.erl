@@ -295,6 +295,12 @@
 % monotonic timestamp when received; scheduling reports proceed the other way
 % round).
 %
+% Note that, should the operating system be suspended (typically if the host
+% computer itself is suspended), the monotonic time will be suspended as well,
+% unless the --enable-prefer-elapsed-monotonic-time-during-suspend command-line
+% argument was specified when building Erlang/OTP (possibly then inducing a
+% performance penalty).
+%
 % All kinds of internal system times (notably the VM one) are in UTC, so
 % depending on time zones and DST, hour-based offsets apply. At the interfaces
 % between the scheduler and the user, universal time is converted into local

@@ -9,6 +9,13 @@
 #  - "-f" detects symlinks as well
 #  - some whitespace flexibility is allowed in the configuration files
 
+# Determining us_common_root if needed:
+if [ -z "${us_common_root}" ] ; then
+
+	# Assuming then running a script in us_common/priv/bin:
+	us_common_root=$(dirname $0)/../..
+
+fi
 
 
 # Sets notably: us_config_dir, us_config_file, epmd_opt, vm_cookie,
@@ -177,30 +184,29 @@ read_us_config_file()
 	#echo "us_groupname = $us_groupname"
 
 
-
 	us_app_base_dir=$(echo "${us_base_content}" | grep us_app_base_dir | sed 's|^{[[:space:]]*us_app_base_dir,[[:space:]]*"||1' | sed 's|"[[:space:]]*}.$||1')
 
-
-	if [ -z "${us_app_base_dir}" ] ; then
-
-		# Environment variable as last-resort:
-		if [ -z "${US_APP_BASE_DIR}" ] ; then
-
-			echo "  Error, no base directory specified for the US application (no 'us_app_base_dir' entry in the main US configuration file '${us_config_file}' nor US_APP_BASE_DIR environment variable set)." 1>&2
-			exit 25
-
-		else
-			us_app_base_dir="${US_APP_BASE_DIR}"
-			echo "No base directory specified for the US application, using the value of the US_APP_BASE_DIR environment variable, trying '${us_app_base_dir}'."
-
-		fi
-
-	else
+	if [ -n "${us_app_base_dir}" ] ; then
 
 		echo "Using specified base directory for the US application, '${us_app_base_dir}'."
 
-	fi
+	else
 
+		# Environment variable maybe:
+		if [ -n "${US_APP_BASE_DIR}" ] ; then
+
+			echo "No base directory specified for the US application, using the value of the US_APP_BASE_DIR environment variable, trying '${us_app_base_dir}'."
+			us_app_base_dir="${US_APP_BASE_DIR}"
+
+		else
+
+			# Guessing as last-resort:
+			echo "  Warning: no base directory specified for the US application (no 'us_app_base_dir' entry in the main US configuration file '${us_config_file}' nor US_APP_BASE_DIR environment variable set), hence guessed as '${us_common_root}'." 1>&2
+			us_app_base_dir="${us_common_root}"
+
+		fi
+
+	fi
 
 	if [ ! -d "${us_app_base_dir}" ] ; then
 
@@ -263,8 +269,8 @@ read_us_config_file()
 
 	if [ ! -d "${us_log_dir}" ] ; then
 
-		echo "  Error, no US log directory found ('${us_log_dir}')." 1>&2
-		exit 60
+		echo "  Warning: no US log directory found ('${us_log_dir}')." 1>&2
+		# Not an error by default: exit 60
 
 	fi
 

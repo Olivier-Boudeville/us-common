@@ -25,7 +25,7 @@
 
 -define( class_description,
 		 "Singleton server holding the configuration information of the "
-		 "Universal Server." ).
+		 "Universal Server, at the level of US-Common." ).
 
 
 % Determines what are the direct mother classes of this class (if any):

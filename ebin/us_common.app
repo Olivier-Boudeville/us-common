@@ -1,12 +1,13 @@
 % Description of the US-Common OTP active application, typically used by rebar3.
-%
-% The real source of this file is conf/us_common.app.src, from which
-% _build/lib/us_common/ebin/us_common.app is generated and copied to
+
+% Note: if this file is named us_common.app, it is a *generated* file, whose
+% real source is conf/us_common.app.src, from which
+% _build/lib/us_common/ebin/us_common.app is obtained and copied to
 % ebin/us_common.app; finally src/us_common.app.src is a mere symlink to this
 % last file, so we have:
 %
 % ./conf/us_common.app.src [only real source]
-% ./_build/lib/us_common/ebin.us_common.app
+% ./_build/lib/us_common/ebin/us_common.app
 % ./ebin/us_common.app
 % ./src/us_common.app.src -> ../ebin/us_common.app
 %
@@ -35,7 +36,7 @@
   {env,[]},
 
   % Flat hierarchy in ebin here:
-  {modules, [us_common_config_bridge_sup, us_common_sup, us_common_scheduler_bridge_sup, us_common_app, class_USServer, class_USTaskRing, class_USScheduler, class_USConfigServer]},
+  {modules, [class_USConfigServer, class_USScheduler, class_USServer, class_USTaskRing, us_common_app, us_common_config_bridge_sup, us_common_scheduler_bridge_sup, us_common_sup]},
 
   {licenses, ["US-Common is licensed by its author (Olivier Boudeville) under the GNU Affero General Public License (AGPL), version 3.0 or later"]},
 

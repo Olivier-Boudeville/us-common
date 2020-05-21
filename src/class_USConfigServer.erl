@@ -122,9 +122,9 @@
 	{ registration_name, naming_utils:registration_name(),
 	  "the name under which this configuration server is registered" },
 
-	{ app_base_directory, maybe( bin_directory_path() ),
-	  "the directory (if any) where US-related applications (at least "
-	  "the universal server itself) are located" } ] ).
+	{ app_base_directory, bin_directory_path(),
+	  "the base directory where this US application is located (ex: where "
+	  "the 'priv' directory can be found)" } ] ).
 
 
 % Used by the trace_categorize/1 macro to use the right emitter:
@@ -891,18 +891,18 @@ manage_app_base_directory( ConfigTable, State ) ->
 						file_utils:get_current_directory(), "..", "..", "..",
 																 ".." ] ) ),
 
-					?warning_fmt( "No user-configured US application "
-								  "base directory set (neither in-file or "
-								  "through the '~s' environment variable), "
-								  "hence trying to guess it as '~s'.",
-								  [ ?us_app_env_variable, GuessedDir ] ),
+					?info_fmt( "No user-configured US application base "
+						"directory set (neither in configuration file nor "
+						"through the '~s' environment variable), "
+						"hence trying to guess it as '~s'.",
+						[ ?us_app_env_variable, GuessedDir ] ),
 					GuessedDir;
 
 				EnvDir ->
 					?info_fmt( "No user-configured US application base "
-							   "directory set in configuration file, using "
-							   "the value of the '~s' environment variable: "
-							   "'~s'.", [ ?us_app_env_variable, EnvDir ] ),
+						"directory set in configuration file, using the value "
+						"of the '~s' environment variable: '~s'.",
+						[ ?us_app_env_variable, EnvDir ] ),
 					EnvDir
 
 			end;
@@ -923,40 +923,20 @@ manage_app_base_directory( ConfigTable, State ) ->
 
 	BaseDir = file_utils:ensure_path_is_absolute( RawBaseDir ),
 
-	MaybeBinDir = case file_utils:is_existing_directory_or_link( BaseDir ) of
+	BinDir = case file_utils:is_existing_directory_or_link( BaseDir ) of
 
 		true ->
-			% As it may end with a version (ex: "universal_server-0.0.1") or as
-			% a "universal_server-latest" symlink thereof:
-			%
-			case filename:basename( BaseDir ) of
-
-				"universal_server" ++ _ ->
-					?info_fmt( "US application base directory set to '~s'.",
-							   [ BaseDir ] ),
-					text_utils:string_to_binary( BaseDir );
-
-				_Other ->
-					?warning_fmt( "The US application base directory '~s' "
-						"does not seem legit (it should start with "
-						"'universal_server'), thus considering knowing none.",
-						[ BaseDir ] ),
-					%throw( { incorrect_us_app_base_directory, BaseDir,
-					%		 ?us_app_base_dir_key } )
-					undefined
-
-			end;
+			text_utils:string_to_binary( BaseDir );
 
 		false ->
-			?warning_fmt( "The US application base directory '~s' does not "
-					  "exist, thus considering knowing none.", [ BaseDir ] ),
-			%throw( { non_existing_us_app_base_directory, BaseDir,
-			%		 ?us_app_base_dir_key } )
-			undefined
+			?error_fmt( "No US application base directory could be determined "
+						"(tried '~s').", [ BaseDir ] ),
+			throw( { non_existing_us_app_base_directory, BaseDir,
+					 ?us_app_base_dir_key } )
 
 	end,
 
-	setAttribute( State, app_base_directory, MaybeBinDir ).
+	setAttribute( State, app_base_directory, BinDir ).
 
 
 

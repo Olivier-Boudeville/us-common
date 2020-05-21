@@ -144,12 +144,12 @@ read_us_config_file()
 
 	if [ -z "${erl_epmd_port}" ] ; then
 
-		echo "No Erlang EPMD port specified, not interfering with context defaults."
+		#echo "No Erlang EPMD port specified, not interfering with context defaults."
 		epmd_opt=""
 
 	else
 
-		echo "Using specified EPMD port, '${erl_epmd_port}'."
+		#echo "Using specified EPMD port, '${erl_epmd_port}'."
 		epmd_opt="ERL_EPMD_PORT=${erl_epmd_port}"
 
 	fi
@@ -201,7 +201,7 @@ read_us_config_file()
 		else
 
 			# Guessing as last-resort:
-			echo "  Warning: no base directory specified for the US application (no 'us_app_base_dir' entry in the main US configuration file '${us_config_file}' nor US_APP_BASE_DIR environment variable set), hence guessed as '${us_common_root}'." 1>&2
+			echo "  Warning: no base directory specified for the US application (no 'us_app_base_dir' entry in the main US configuration file '${us_config_file}' nor US_APP_BASE_DIR environment variable set), hence guessed as '${us_common_root}'." #1>&2
 			us_app_base_dir="${us_common_root}"
 
 		fi
@@ -269,7 +269,7 @@ read_us_config_file()
 
 	if [ ! -d "${us_log_dir}" ] ; then
 
-		echo "  Warning: no US log directory found ('${us_log_dir}')." 1>&2
+		echo "  Warning: no US log directory found ('${us_log_dir}')." #1>&2
 		# Not an error by default: exit 60
 
 	fi

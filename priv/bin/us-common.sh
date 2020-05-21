@@ -136,7 +136,6 @@ read_us_config_file()
 	echo "Using US configuration file '${us_config_file}'."
 
 
-
 	# US configuration content, read once for all, with comments (%) removed:
 	us_base_content=$(/bin/cat "${us_config_file}" | sed 's|^[[:space:]]*%.*||1')
 
@@ -272,9 +271,12 @@ read_us_config_file()
 		echo "  Warning: no US log directory found ('${us_log_dir}')." #1>&2
 		# Not an error by default: exit 60
 
+	else
+
+		echo "US logs will be written in the '${us_log_dir}' directory."
+
 	fi
 
-	echo "US logs will be written in the '${us_log_dir}' directory."
 
 	# To delimit between us-main and any next similar (upper) layer
 	# configuration:

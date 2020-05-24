@@ -76,15 +76,14 @@ init( Args=[] ) ->
 
 	% We always create a US configuration server and a scheduler that are
 	% specific to the current US application so that they can all be started,
-	% stopped, upgraded, etc., independently:
+	% stopped, upgraded, etc., independently.
 
-	% Restart only children that terminate.
+	% Restart only children that terminate, and enforces intensity and periods
+	% corresponding to the execution target this layer was compiled with:
 	%
-	% Same as used by kernel module in safe mode:
-	%
-	RestartStrategy = #{ strategy  => one_for_one,
-						 intensity => _MaxRestarts=4,
-						 period    => _WithinSeconds=3600 },
+	SupSettings = otp_utils:get_supervisor_settings(
+					_RestartStrategy=one_for_one,
+					class_USConfigServer:get_execution_target() ),
 
 	% First child, a bridge in charge of the US configuration server:
 	CfgBridgeChildSpec = get_config_bridge_spec(),
@@ -94,7 +93,7 @@ init( Args=[] ) ->
 
 	ChildSpecs = [ CfgBridgeChildSpec, SchedBridgeChildSpec ],
 
-	{ ok, { RestartStrategy, ChildSpecs } }.
+	{ ok, { SupSettings, ChildSpecs } }.
 
 
 

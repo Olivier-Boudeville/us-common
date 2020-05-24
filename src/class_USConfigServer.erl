@@ -22,7 +22,6 @@
 
 -module(class_USConfigServer).
 
-
 -define( class_description,
 		 "Singleton server holding the configuration information of the "
 		 "Universal Server, at the level of US-Common." ).
@@ -131,9 +130,9 @@
 -define( trace_emitter_categorization, "US.Configuration.USConfigServer" ).
 
 
-
 % For various defines:
 -include("class_USConfigServer.hrl").
+
 
 
 % The defaut registration name of the overall US configuration server:
@@ -188,6 +187,9 @@
 
 -define( default_log_base_dir, "/var/log" ).
 
+% Exported helpers:
+-export([ get_execution_target/0 ]).
+
 
 % Allows to define WOOPER base variables and methods for that class:
 -include_lib("wooper/include/wooper.hrl").
@@ -195,6 +197,8 @@
 % Allows to use macros for trace sending:
 -include_lib("traces/include/class_TraceEmitter.hrl").
 
+% To define get_execution_target/0:
+-include_lib("myriad/include/utils/basic_utils.hrl").
 
 
 
@@ -1057,27 +1061,3 @@ to_string( State ) ->
 		[ RegString, ?getAttr(execution_context), ?getAttr(epmd_port),
 		  ?getAttr(config_base_directory), ?getAttr(log_directory),
 		  ?getAttr(web_config_filename), SrvString, WebString ] ).
-
-
-
-% Returns the execution target this module (hence, probably, that layer as a
-% whole) was compiled with, i.e. either the atom 'development' or 'production'.
-
-% Dispatched in actual clauses, otherwise Dialyzer will detect an
-% underspecification:
-%
-% -spec get_execution_target() -> execution_target().
-
--ifdef(exec_target_is_production).
-
--spec get_execution_target() -> 'production'.
-get_execution_target() ->
-	production.
-
--else. % exec_target_is_production
-
--spec get_execution_target() -> 'development'.
-get_execution_target() ->
-	development.
-
--endif. % exec_target_is_production

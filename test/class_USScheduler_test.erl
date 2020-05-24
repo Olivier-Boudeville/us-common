@@ -30,7 +30,7 @@
 
 
 % Test target:
--include("traces_for_tests.hrl").
+-include_lib("traces/include/traces_for_tests.hrl").
 
 
 

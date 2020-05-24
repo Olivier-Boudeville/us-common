@@ -78,14 +78,14 @@
 
 
 % Allows to define WOOPER base variables and methods for that class:
--include("wooper.hrl").
+-include_lib("wooper/include/wooper.hrl").
 
 
 -define( trace_emitter_categorization, "US" ).
 
 
 % Allows to use macros for trace sending:
--include("class_TraceEmitter.hrl").
+-include_lib("traces/include/class_TraceEmitter.hrl").
 
 
 

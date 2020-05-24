@@ -28,7 +28,7 @@
 
 
 % For run/0 export and test traces:
--include("traces_for_tests.hrl").
+-include_lib("traces/include/traces_for_tests.hrl").
 
 
 % Actual test:

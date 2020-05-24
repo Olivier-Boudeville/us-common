@@ -71,8 +71,10 @@ start_link() ->
 	   { supervisor:sup_flags(), [ supervisor:child_spec() ] } } | 'ignore'.
 init( Args=[] ) ->
 
-	trace_utils:debug_fmt(
-	  "Initializing the US-Common root supervisor (args: ~p).", [ Args ] ),
+	ExecTarget = class_USConfigServer:get_execution_target(),
+
+	trace_utils:debug_fmt( "Initializing the US-Common root supervisor "
+		"(args: ~p, execution target: ~s).", [ Args, ExecTarget ] ),
 
 	% We always create a US configuration server and a scheduler that are
 	% specific to the current US application so that they can all be started,
@@ -82,8 +84,7 @@ init( Args=[] ) ->
 	% corresponding to the execution target this layer was compiled with:
 	%
 	SupSettings = otp_utils:get_supervisor_settings(
-					_RestartStrategy=one_for_one,
-					class_USConfigServer:get_execution_target() ),
+					_RestartStrategy=one_for_one, ExecTarget ),
 
 	% First child, a bridge in charge of the US configuration server:
 	CfgBridgeChildSpec = get_config_bridge_spec(),

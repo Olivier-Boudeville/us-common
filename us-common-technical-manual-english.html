@@ -34,13 +34,13 @@
 <tr class="field"><th class="field-name">Creation date:</th><td class="field-body"><p class="first">Saturday, May 2, 2020</p>
 </td>
 </tr>
-<tr class="field"><th class="field-name">Lastly updated:</th><td class="field-body"><p class="first">Friday, May 15, 2020</p>
+<tr class="field"><th class="field-name">Lastly updated:</th><td class="field-body"><p class="first">Saturday, July 18, 2020</p>
 </td>
 </tr>
 <tr class="field"><th class="field-name">Status:</th><td class="field-body"><p class="first">Work in progress</p>
 </td>
 </tr>
-<tr class="field"><th class="field-name">Version:</th><td class="field-body"><p class="first">0.0.1</p>
+<tr class="field"><th class="field-name">Version:</th><td class="field-body"><p class="first">0.0.2</p>
 </td>
 </tr>
 <tr class="field"><th class="field-name">Dedication:</th><td class="field-body"><p class="first">Users and maintainers of the <tt class="docutils literal"><span class="pre">US-Common</span></tt> layer.</p>
@@ -48,8 +48,8 @@
 </tr>
 <tr class="field"><th class="field-name">Abstract:</th><td class="field-body"><p class="first">The role of the <a class="reference external" href="http://us-common.esperide.org/">US-Common</a> layer (part of the <a class="reference external" href="https://github.com/Olivier-Boudeville/Universal-Server">Universal Server</a> project) is to provide base elements on which the various <em>Universal Services</em> are built, notably:</p>
 <ul class="simple">
-<li>the Universal Server itself: see <a class="reference external" href="http://us.esperide.org/">us-main</a></li>
-<li>the Universal Webserver: see <a class="reference external" href="http://us-web.esperide.org/">us-web</a></li>
+<li>the Universal Server itself: see <a class="reference external" href="http://us.esperide.org/">US-Main</a></li>
+<li>the Universal Webserver: see <a class="reference external" href="http://us-web.esperide.org/">US-Web</a></li>
 </ul>
 <p>We present here a short overview of these services, to introduce them to newcomers.</p>
 <p class="last">The next level of information is to read the corresponding <a class="reference external" href="https://github.com/Olivier-Boudeville/us-common">source files</a>, which are intensely commented and generally straightforward.</p>
@@ -94,7 +94,7 @@
 <h2><a class="toc-backref" href="#id16">Layer Stack</a></h2>
 <p>From the highest level to the lowest, as shown <a class="reference external" href="https://github.com/Olivier-Boudeville/Universal-Server">here</a>, usually a software stack involving US-Common is structured that way:</p>
 <ul class="simple">
-<li>applicative layer such as <a class="reference external" href="http://us.esperide.org/">us-main</a>, <a class="reference external" href="http://us-web.esperide.org/">us-web</a>, etc.</li>
+<li>an applicative layer such as <a class="reference external" href="http://us-main.esperide.org/">US-Main</a> or <a class="reference external" href="http://us-web.esperide.org/">US-Web</a>, etc.</li>
 <li><a class="reference external" href="http://us-common.esperide.org/">US-Common</a> (this layer)</li>
 <li><a class="reference external" href="http://traces.esperide.org">Ceylan-Traces</a> (for advanced runtime traces)</li>
 <li><a class="reference external" href="http://wooper.esperide.org">Ceylan-WOOPER</a> (for OOP)</li>
@@ -140,8 +140,9 @@ $ <span class="nb">cd</span> wooper <span class="o">&amp;&amp;</span> make all <
 $ git clone https://github.com/Olivier-Boudeville/Ceylan-Traces traces
 $ <span class="nb">cd</span> traces <span class="o">&amp;&amp;</span> make all <span class="o">&amp;&amp;</span> <span class="nb">cd</span> ..
 
-$ git clone https://github.com/Olivier-Boudeville/us-common
-$ <span class="nb">cd</span> us-common <span class="o">&amp;&amp;</span> make all
+<span class="c1"># Note the dash becoming an underscore, for OTP compliance:
+</span>$ git clone https://github.com/Olivier-Boudeville/us-common us_common
+$ <span class="nb">cd</span> us_common <span class="o">&amp;&amp;</span> make all
 </pre>
 <p>Running a corresponding test just then boils down to:</p>
 <pre class="code bash literal-block">

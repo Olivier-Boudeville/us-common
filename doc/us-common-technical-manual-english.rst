@@ -37,16 +37,16 @@ Technical Manual of the ``US-Common`` Layer
 :Organisation: Copyright (C) 2019-2020 Olivier Boudeville
 :Contact: about (dash) us-common (at) esperide (dot) com
 :Creation date: Saturday, May 2, 2020
-:Lastly updated: Friday, May 15, 2020
+:Lastly updated: Saturday, July 18, 2020
 :Status: Work in progress
-:Version: 0.0.1
+:Version: 0.0.2
 :Dedication: Users and maintainers of the ``US-Common`` layer.
 :Abstract:
 
 	The role of the `US-Common <http://us-common.esperide.org/>`_ layer (part of the `Universal Server <https://github.com/Olivier-Boudeville/Universal-Server>`_ project) is to provide base elements on which the various *Universal Services* are built, notably:
 
-	- the Universal Server itself: see `us-main <http://us.esperide.org/>`_
-	- the Universal Webserver: see `us-web <http://us-web.esperide.org/>`_
+	- the Universal Server itself: see `US-Main <http://us.esperide.org/>`_
+	- the Universal Webserver: see `US-Web <http://us-web.esperide.org/>`_
 
 	We present here a short overview of these services, to introduce them to newcomers.
 
@@ -88,7 +88,7 @@ Layer Stack
 
 From the highest level to the lowest, as shown `here <https://github.com/Olivier-Boudeville/Universal-Server>`_, usually a software stack involving US-Common is structured that way:
 
-- applicative layer such as `us-main <http://us.esperide.org/>`_, `us-web <http://us-web.esperide.org/>`_, etc.
+- an applicative layer such as `US-Main <http://us-main.esperide.org/>`_ or `US-Web <http://us-web.esperide.org/>`_, etc.
 - `US-Common <http://us-common.esperide.org/>`_ (this layer)
 - `Ceylan-Traces <http://traces.esperide.org>`_ (for advanced runtime traces)
 - `Ceylan-WOOPER <http://wooper.esperide.org>`_ (for OOP)
@@ -162,8 +162,9 @@ Once Erlang is available, it should be just a matter of executing:
  $ git clone https://github.com/Olivier-Boudeville/Ceylan-Traces traces
  $ cd traces && make all && cd ..
 
- $ git clone https://github.com/Olivier-Boudeville/us-common
- $ cd us-common && make all
+ # Note the dash becoming an underscore, for OTP compliance:
+ $ git clone https://github.com/Olivier-Boudeville/us-common us_common
+ $ cd us_common && make all
 
 
 Running a corresponding test just then boils down to:

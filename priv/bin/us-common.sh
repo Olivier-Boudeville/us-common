@@ -10,7 +10,7 @@
 #  - some whitespace flexibility is allowed in the configuration files
 
 # Determining us_common_root if needed:
-if [ -z "${us_common_root}" ] ; then
+if [ -z "${us_common_root}" ]; then
 
 	# Assuming then running a script in us_common/priv/bin:
 	us_common_root=$(dirname $0)/../..
@@ -32,7 +32,7 @@ read_us_config_file()
 	us_config_dir="$1"
 
 
-	if [ -n "${us_config_dir}" ] ; then
+	if [ -n "${us_config_dir}" ]; then
 
 		if [ -d "${us_config_dir}" ]; then
 
@@ -47,7 +47,7 @@ read_us_config_file()
 
 		us_config_file="${us_config_dir}/${us_config_filename}"
 
-		if [ ! -f "${us_config_file}" ] ; then
+		if [ ! -f "${us_config_file}" ]; then
 
 			echo " Error, no US configuration file found (no '${us_config_file}')." 1>&2
 
@@ -66,7 +66,7 @@ read_us_config_file()
 		# configuration file that the US framework itself will use afterwards,
 		# once launched:
 
-		if [ -z "${XDG_CONFIG_HOME}" ] ; then
+		if [ -z "${XDG_CONFIG_HOME}" ]; then
 
 			base_path="$HOME/.config"
 
@@ -84,9 +84,9 @@ read_us_config_file()
 
 		echo "Looking up '${us_config_file}'..."
 
-		if [ ! -f "${us_config_file}" ] ; then
+		if [ ! -f "${us_config_file}" ]; then
 
-			if [ -z "${XDG_CONFIG_DIRS}" ] ; then
+			if [ -z "${XDG_CONFIG_DIRS}" ]; then
 
 				base_path="/etc/xdg"
 
@@ -106,7 +106,7 @@ read_us_config_file()
 
 			echo "Looking up '${us_config_file}'..."
 
-			if [ -f "${us_config_file}" ] ; then
+			if [ -f "${us_config_file}" ]; then
 
 				echo "No configuration file specified on the command-line, using default one '${us_config_file}'."
 
@@ -141,7 +141,7 @@ read_us_config_file()
 
 	erl_epmd_port=$(echo "${us_base_content}" | grep epmd_port | sed 's|^[[:space:]]*{[[:space:]]*epmd_port,[[:space:]]*||1' | sed 's|[[:space:]]*}.$||1')
 
-	if [ -z "${erl_epmd_port}" ] ; then
+	if [ -z "${erl_epmd_port}" ]; then
 
 		#echo "No Erlang EPMD port specified, not interfering with context defaults."
 		epmd_opt=""
@@ -155,17 +155,23 @@ read_us_config_file()
 
 	#echo "epmd_opt = $epmd_opt"
 
+	# Note that these shell scripts shall fetch any cookie as it is, i.e. not
+	# surrounded by signle quotes, otherwise it will not be accepted (ex: when
+	# using erl_call).
 
-	vm_cookie=$(echo "${us_base_content}" | grep vm_cookie | sed 's|^{[[:space:]]*vm_cookie,[[:space:]]*||1' | sed 's|[[:space:]]*}.$||1')
+	# Strangely unable to protect single quotes with backslash, so having to use
+	# double quotes:
+	#
+	vm_cookie=$(echo "${us_base_content}" | grep vm_cookie | sed "s|^{[[:space:]]*vm_cookie,[[:space:]]*'||1" | sed "s|'[[:space:]]*}.$||1")
 
-	#echo "vm_cookie = $vm_cookie"
+	echo "vm_cookie = $vm_cookie"
 
 
 	execution_context=$(echo "${us_base_content}" | grep execution_context | sed 's|^{[[:space:]]*execution_context,[[:space:]]*||1' | sed 's|[[:space:]]*}.$||1')
 
 	# echo "execution_context = $execution_context"
 
-	if [ -z "${execution_context}" ] ; then
+	if [ -z "${execution_context}" ]; then
 
 		# Default:
 		execution_context="production"
@@ -185,14 +191,14 @@ read_us_config_file()
 
 	us_app_base_dir=$(echo "${us_base_content}" | grep us_app_base_dir | sed 's|^{[[:space:]]*us_app_base_dir,[[:space:]]*"||1' | sed 's|"[[:space:]]*}.$||1')
 
-	if [ -n "${us_app_base_dir}" ] ; then
+	if [ -n "${us_app_base_dir}" ]; then
 
 		echo "Using specified base directory for the US application, '${us_app_base_dir}'."
 
 	else
 
 		# Environment variable maybe:
-		if [ -n "${US_APP_BASE_DIR}" ] ; then
+		if [ -n "${US_APP_BASE_DIR}" ]; then
 
 			echo "No base directory specified for the US application, using the value of the US_APP_BASE_DIR environment variable, trying '${us_app_base_dir}'."
 			us_app_base_dir="${US_APP_BASE_DIR}"
@@ -207,7 +213,7 @@ read_us_config_file()
 
 	fi
 
-	if [ ! -d "${us_app_base_dir}" ] ; then
+	if [ ! -d "${us_app_base_dir}" ]; then
 
 		echo "  Error, the base directory determined for the US application, '${us_app_base_dir}', is not an existing directory." 1>&2
 		exit 30
@@ -220,18 +226,18 @@ read_us_config_file()
 
 	us_log_dir=$(echo "${us_base_content}" | grep us_log_dir | sed 's|^{[[:space:]]*us_log_dir,[[:space:]]*"||1' | sed 's|"[[:space:]]*}.$||1')
 
-	if [ -z "${us_log_dir}" ] ; then
+	if [ -z "${us_log_dir}" ]; then
 
 		us_log_dir="${us_app_base_dir}/log"
 
-		if [ ! -d "${us_log_dir}" ] ; then
+		if [ ! -d "${us_log_dir}" ]; then
 
 			saved_log_dir="${us_log_dir}"
 
 			# Maybe in development mode then (i.e. as a rebar3 build tree):
 			us_log_dir="${us_app_base_dir}/_build/default/rel/universal_server/log"
 
-			if [ ! -d "${us_log_dir}" ] ; then
+			if [ ! -d "${us_log_dir}" ]; then
 
 				echo "  Error, no US log directory found: neither '${saved_log_dir}' (as a standard release) nor '${us_log_dir}' (as a rebar3 build tree)." 1>&2
 				exit 35
@@ -250,7 +256,7 @@ read_us_config_file()
 	else
 
 		# Checks whether absolute:
-		if [[ "${us_log_dir:0:1}" == / || "${us_log_dir:0:2}" == ~[/a-z] ]] ; then
+		if [[ "${us_log_dir:0:1}" == / || "${us_log_dir:0:2}" == ~[/a-z] ]]; then
 
 			echo "Using directly specified directory for logs, '${us_log_dir}'."
 
@@ -266,7 +272,7 @@ read_us_config_file()
 
 	fi
 
-	if [ ! -d "${us_log_dir}" ] ; then
+	if [ ! -d "${us_log_dir}" ]; then
 
 		echo "  Warning: no US log directory found ('${us_log_dir}')." #1>&2
 		# Not an error by default: exit 60
@@ -293,7 +299,7 @@ secure_authbind()
 
 	authbind="/bin/authbind"
 
-	if [ ! -x "${authbind}" ] ; then
+	if [ ! -x "${authbind}" ]; then
 
 		echo "  Error, authbind ('${authbind}') not found." 1>&2
 		exit 60

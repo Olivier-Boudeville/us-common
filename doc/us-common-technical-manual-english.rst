@@ -37,9 +37,9 @@ Technical Manual of the ``US-Common`` Layer
 :Organisation: Copyright (C) 2019-2020 Olivier Boudeville
 :Contact: about (dash) us-common (at) esperide (dot) com
 :Creation date: Saturday, May 2, 2020
-:Lastly updated: Saturday, July 18, 2020
+:Lastly updated: Thursday, August 13, 2020
 :Status: Work in progress
-:Version: 0.0.2
+:Version: 0.0.3
 :Dedication: Users and maintainers of the ``US-Common`` layer.
 :Abstract:
 
@@ -204,6 +204,9 @@ Once the steps listed in `Using Cutting-Edge GIT`_ have been performed, an OTP-l
 
 
 All relevant OTP applications shall be started in turn, US-Common shall then be ready for use, until all these applications are orderly shutdown.
+
+One may run ``make create-us-common-checkout`` in order to create, based on our conventions, a suitable ``_checkouts`` directory so that rebar3 can directly take into account local, directly available (in-development) dependencies (here, Myriad, WOOPER and Traces).
+
 
 
 -------

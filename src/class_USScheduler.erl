@@ -81,6 +81,7 @@
 
 		% Preferably after this specified duration from receiving:
 	  | dhms_duration()
+	  | unit_utils:seconds()
 
 		% Preferably at this specified (future) time:
 	  | timestamp().
@@ -190,6 +191,7 @@
 		   %
 		   actuator_pid :: actuator_pid() } ).
 
+
 -type task_entry() :: #task_entry{}.
 
 
@@ -216,6 +218,7 @@
 
 	% Allows also to count all tasks that have been submitted:
 	{ next_task_id, task_id(), "Identifier of the next registered task" } ] ).
+
 
 
 % Used by the trace_categorize/1 macro to use the right emitter:
@@ -386,7 +389,7 @@ destruct( State ) ->
 
 
 % Triggers immediately specified one-shot task: specified command will be
-% triggered at once, a single time, being assigned to actuactor process.
+% triggered at once, a single time, being assigned to actuator process.
 %
 % Returns either 'task_done' if the task was done on the fly (hence is already
 % triggered, and no task identifier applies), or {'task_registered',TaskId} if
@@ -407,7 +410,7 @@ triggerOneshotTask( State, UserTaskCommand, UserActPid ) ->
 
 
 % Registers specified one-shot task: specified command will be executed once, at
-% specified time, as assigned to requesting and specified actuactor process.
+% specified time, as assigned to requesting and specified actuator process.
 %
 % Returns either 'task_done' if the task was done on the fly (hence is already
 % triggered, and no task identifier applies), or {'task_registered',TaskId} if
@@ -433,7 +436,7 @@ registerOneshotTask( State, UserTaskCommand, UserStartTime, UserActPid ) ->
 
 % Registers specified task: specified command will be executed starting from
 % specified time, at specified periodicity, for specified number of times, being
-% assigned to requesting and specified actuactor process.
+% assigned to requesting and specified actuator process.
 %
 % Returns either 'task_done' if the task was done on the fly (hence is already
 % triggered, and no task identifier applies since it is fully completed), or
@@ -461,12 +464,12 @@ registerTask( State, UserTaskCommand, UserStartTime, UserPeriodicity, UserCount,
 	ActPid = vet_actuator_pid( UserActPid ),
 
 	?info_fmt( "Registering task whose command is '~p', whose declared start "
-			   "time is ~w (hence to happen in ~s), to be triggered ~s with ~s "
-			   "on actuator ~w (whereas requester is ~w).",
-				[ TaskCommand, UserStartTime,
-				  time_utils:duration_to_string( MsDurationBeforeStart ),
-				  schedule_count_to_string( Count ),
-				  periodicity_to_string( MaybePeriodicity ), ActPid, ReqPid ] ),
+		"time is ~w (hence to happen in ~s), to be triggered ~s with ~s "
+		"on actuator ~w (whereas requester is ~w).",
+		[ TaskCommand, UserStartTime,
+		  time_utils:duration_to_string( MsDurationBeforeStart ),
+		  schedule_count_to_string( Count ),
+		  periodicity_to_string( MaybePeriodicity ), ActPid, ReqPid ] ),
 
 	% Immediate launch requested?
 	case MsDurationBeforeStart of
@@ -604,8 +607,8 @@ unregister_task( TaskId, State ) when is_integer( TaskId ) andalso TaskId > 0 ->
 		% Could not have been allocated:
 		true ->
 			?error_fmt( "Requested to unregister task ~B, which never existed "
-						"(as the next task identifier is ~B).",
-						[ TaskId, NextTaskId ] ),
+				"(as the next task identifier is ~B).",
+				[ TaskId, NextTaskId ] ),
 			{ { task_unregistration_failed, never_existed }, State };
 
 		false ->
@@ -725,9 +728,9 @@ perform_schedule( ScheduleOffset, NowMs, _SchedulePlan=[ { Off, TaskIds } | T ],
 				  TimerTable, TaskTable, State ) when Off < ScheduleOffset ->
 
 	?error_fmt( "While scheduling #~B (~s), found late offset #~B (~s), "
-				"triggering its delayed tasks first: ~w.",
-				[ ScheduleOffset, get_timestamp_for( ScheduleOffset, State ),
-				  Off, get_timestamp_for( Off, State ), TaskIds ] ),
+		"triggering its delayed tasks first: ~w.",
+		[ ScheduleOffset, get_timestamp_for( ScheduleOffset, State ),
+		  Off, get_timestamp_for( Off, State ), TaskIds ] ),
 
 	% Using Off rather than ScheduleOffset here:
 	{ NewPlan, NewTimerTable, NewTaskTable } = trigger_tasks( TaskIds,
@@ -769,10 +772,10 @@ perform_schedule( ScheduleOffset, _NowMs, SchedulePlan, TimerTable, TaskTable,
 				  State ) ->
 
 	?warning_fmt( "Triggered schedule offset #~B (~s) not found (whereas "
-				  "schedule plan ~s), ignoring it, as supposing this is a late "
-				  "scheduling already applied.", [ ScheduleOffset,
-					get_timestamp_string_for( ScheduleOffset, State ),
-					schedule_plan_to_string( SchedulePlan, State ) ] ),
+		"schedule plan ~s), ignoring it, as supposing this is a late "
+		"scheduling already applied.",
+		[ ScheduleOffset, get_timestamp_string_for( ScheduleOffset, State ),
+		  schedule_plan_to_string( SchedulePlan, State ) ] ),
 
 	% Hopefully this lacking timer can still be cancelled:
 	ShrunkTimerTable = remove_timer( ScheduleOffset, TimerTable ),
@@ -923,8 +926,8 @@ register_task_schedule( TaskId, TaskEntry, ScheduleOffset, DurationFromNow,
 insert_task_at( TaskId, ScheduleOffset, DurationFromNow, Plan, TimerTable ) ->
 
 	%NewP = { NewPlan, _NewTimerTable } =
-	NewP = insert_task_at( TaskId, ScheduleOffset,
-							 DurationFromNow, Plan, _AccPlan=[], TimerTable ),
+	NewP = insert_task_at( TaskId, ScheduleOffset, DurationFromNow, Plan,
+						   _AccPlan=[], TimerTable ),
 
 	%trace_utils:debug_fmt( "After having inserted task ~B at offset #~B "
 	%	"(duration from now: ~s), new plan is:~n ~p",
@@ -958,6 +961,7 @@ insert_task_at( TaskId, ScheduleOffset, DurationFromNow,
 % Matching offset found, registering and stopping:
 insert_task_at( TaskId, ScheduleOffset, _DurationFromNow,
 		_SchedulePlan=[ { ScheduleOffset, Ids } | T ], AccPlan, TimeTable ) ->
+
 	% Timer already set for that offset, none to add:
 	{ lists:reverse( AccPlan ) ++ [ { ScheduleOffset, [ TaskId | Ids ] } | T ],
 	  TimeTable };
@@ -1034,7 +1038,7 @@ unschedule_task( TaskId, PlannedNextSchedule, _SchedulePlan=[ P | T ], Acc,
 
 % Adds a timer to trigger a future scheduler.
 -spec add_timer( schedule_offset(), ms_duration(), timer_table() ) ->
-					   timer_table().
+		  timer_table().
 add_timer( ScheduleOffset, DurationFromNow, TimerTable ) ->
 
 	% WOOPER oneway to be sent to this instance:
@@ -1193,6 +1197,17 @@ vet_start_time( _UserStartTime=asap, _State ) ->
 vet_start_time( _UserStartTime=flexible, _State ) ->
 	0;
 
+vet_start_time( StartTimeInSecs, _State ) when is_integer( StartTimeInSecs ) ->
+	case StartTimeInSecs > 0 of
+
+		true ->
+			1000 * StartTimeInSecs;
+
+		false ->
+			throw( { non_strictly_positive_start_duration, StartTimeInSecs } )
+
+	end;
+
 vet_start_time( _UserStartTime=StartTime, State ) ->
 
 	case time_utils:is_timestamp( StartTime ) of
@@ -1250,8 +1265,7 @@ vet_start_time( _UserStartTime=StartTime, State ) ->
 
 				false ->
 					?error_fmt( "Invalid user-specified start time (neither "
-								"timestamp nor duration): '~p'.",
-								[ StartTime ] ),
+						"timestamp nor DHMS duration): '~p'.", [ StartTime ] ),
 					throw( { invalid_start_time, StartTime } )
 
 			end
@@ -1270,8 +1284,7 @@ vet_count( C, _State ) when is_integer( C ) andalso C > 0 ->
 
 vet_count( Other, State ) ->
 
-	?error_fmt( "Invalid user-specified schedule count: ~p.",
-				[ Other ] ),
+	?error_fmt( "Invalid user-specified schedule count: ~p.", [ Other ] ),
 
 	throw( { invalid_schedule_count, Other } ).
 
@@ -1311,9 +1324,9 @@ vet_user_periodicity( UserPeriodicity, State ) ->
 
 				D ->
 					?error_fmt( "Invalid user-specified non strictly positive "
-								"task periodicity ~p, i.e. ~s).",
-								[ UserPeriodicity,
-								  time_utils:duration_to_string( D ) ] ),
+						"task periodicity ~p, i.e. ~s).",
+						[ UserPeriodicity,
+						  time_utils:duration_to_string( D ) ] ),
 					throw( { non_strictly_positive_user_periodicity,
 							 UserPeriodicity } )
 

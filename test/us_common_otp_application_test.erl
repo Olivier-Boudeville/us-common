@@ -21,8 +21,8 @@
 
 
 % Testing of US-Common as an OTP active application, directly from within its
-% code base (hence without needing to create a separate, mock-up test release
-% for that).
+% code base (hence without needing to create a separate, mock-up test OTP
+% release for that).
 %
 -module(us_common_otp_application_test).
 
@@ -58,8 +58,9 @@ test_us_common_application( OrderedAppNames ) ->
 	?test_info(
 	  "Successful end of test of the US-Common OTP application." ),
 
-	?test_info( "Stopping the US-Common application." ),
-	otp_utils:stop_applications( OrderedAppNames ).
+	% Including US-Common:
+	?test_info( "Stopping all user applications." ),
+	otp_utils:stop_user_applications( OrderedAppNames ).
 
 
 
@@ -72,22 +73,17 @@ run() ->
 
 	test_facilities:start( ?MODULE ),
 
-	% Build root directory from which prerequisite applications may be found:
+	% Build root directory from which sibling prerequisite applications may be
+	% found:
+	%
 	BuildRootDir = "..",
 
-	OrderedAppNames = [ myriad, wooper, traces, sasl, us_common ],
+	OrderedAppNames = otp_utils:prepare_for_execution( _ThisApp=us_common,
+													   BuildRootDir ),
 
-	case otp_utils:prepare_for_test( OrderedAppNames, BuildRootDir ) of
+	trace_utils:info_fmt( "Resulting applications to start, in order: ~w.",
+						  [ OrderedAppNames ] ),
 
-		ready ->
-			test_us_common_application( OrderedAppNames ) ;
-
-		{ lacking_app, _App } ->
-			% (a detailed warning message has been issued by
-			% otp_utils:prepare_for_test/2)
-			%
-			ok
-
-	end,
+	test_us_common_application( OrderedAppNames ),
 
 	test_facilities:stop().

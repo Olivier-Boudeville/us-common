@@ -422,7 +422,7 @@ get_us_config_directory() ->
 
 	CfgSuffix = file_utils:join( ?app_subdir, ?us_config_filename ),
 
-	BaseMsg = text_utils:format( "Looking-up for Universal Server "
+	BaseMsg = text_utils:format( "searched for Universal Server "
 			"configuration directory, based on suffix '~s', knowing that: ~s~n"
 			"Configuration directory ", [ CfgSuffix,
 					text_utils:strings_to_string([ FirstMsg, SecondMsg ] ) ] ),
@@ -461,7 +461,7 @@ find_file_in( _AllBasePaths=[ Path | T ], CfgSuffix, BaseMsg, Msgs ) ->
 		true ->
 			CfgDir = filename:dirname( CfgFilePath ),
 
-			FullMsg = text_utils:format( "Configuration directory found "
+			FullMsg = text_utils:format( "configuration directory found "
 				"as '~s', as containing '~s'", [ CfgDir, CfgFilePath ] )
 				++ case Msgs of
 

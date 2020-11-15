@@ -4,6 +4,7 @@
 #
 # Used by the services relying on us-common.
 
+#echo "(sourcing us-common.sh)"
 
 # Notes:
 #  - "-f" detects symlinks as well
@@ -12,8 +13,9 @@
 # Determining us_common_root if needed:
 if [ -z "${us_common_root}" ]; then
 
+	#echo "Determining us_common_root"
 	# Assuming then running a script in us_common/priv/bin:
-	us_common_root=$(dirname $0)/../..
+	us_common_root=$(realpath $(dirname $0)/../..)
 
 fi
 
@@ -132,7 +134,7 @@ read_us_config_file()
 
 	fi
 
-
+	# Note that us_config_file remains available to the caller:
 	echo "Using US configuration file '${us_config_file}'."
 
 
@@ -156,7 +158,7 @@ read_us_config_file()
 	#echo "epmd_opt = $epmd_opt"
 
 	# Note that these shell scripts shall fetch any cookie as it is, i.e. not
-	# surrounded by signle quotes, otherwise it will not be accepted (ex: when
+	# surrounded by single quotes, otherwise it will not be accepted (ex: when
 	# using erl_call).
 
 	# Strangely unable to protect single quotes with backslash, so having to use
@@ -164,7 +166,7 @@ read_us_config_file()
 	#
 	vm_cookie=$(echo "${us_base_content}" | grep vm_cookie | sed "s|^{[[:space:]]*vm_cookie,[[:space:]]*'||1" | sed "s|'[[:space:]]*}.$||1")
 
-	echo "vm_cookie = $vm_cookie"
+	#echo "vm_cookie = $vm_cookie"
 
 
 	execution_context=$(echo "${us_base_content}" | grep execution_context | sed 's|^{[[:space:]]*execution_context,[[:space:]]*||1' | sed 's|[[:space:]]*}.$||1')
@@ -265,7 +267,7 @@ read_us_config_file()
 			# If it is relative, it is relative to the US application base
 			# directory:
 			#
-			us_log_dir="${us_app_base_dir}/${us_log_dir}"
+			us_log_dir="$(realpath ${us_app_base_dir}/${us_log_dir})"
 			echo "Using specified directory for US logs (made absolute), '${us_log_dir}'."
 
 		fi
@@ -307,3 +309,5 @@ secure_authbind()
 	fi
 
 }
+
+#echo "(us-common.sh sourced)"

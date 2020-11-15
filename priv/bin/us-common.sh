@@ -241,8 +241,8 @@ read_us_config_file()
 
 			if [ ! -d "${us_log_dir}" ]; then
 
-				echo "  Error, no US log directory found: neither '${saved_log_dir}' (as a standard release) nor '${us_log_dir}' (as a rebar3 build tree)." 1>&2
-				exit 35
+				echo "  Warning: no US log directory found: neither '${saved_log_dir}' (as a standard release) nor '${us_log_dir}' (as a rebar3 build tree)." 1>&2
+				#exit 35
 
 			else
 

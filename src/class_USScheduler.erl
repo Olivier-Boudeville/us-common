@@ -444,7 +444,7 @@ registerOneshotTask( State, UserTaskCommand, UserStartTime, UserActPid ) ->
 % assigned task identifier is returned).
 %
 % Note: if the deadline is specified in absolute terms (ex: as
-% {{2020,3,22},{16,1,48}}), the conversion to internal time will be done
+% {{2020,3,22}, {16,1,48}}), the conversion to internal time will be done
 % immediately (at task submission time), resulting in any future system time
 % change (ex: DST) not being taken into account at this level (as the respect of
 % periodicities is preferred over the one of literal timestamps).
@@ -521,7 +521,7 @@ registerTask( State, UserTaskCommand, UserStartTime, UserPeriodicity, UserCount,
 											  actuator_pid=ActPid },
 
 							RegState = register_task_schedule( TaskId, TI,
-											  NextSchedule, MsPeriod, State ),
+											NextSchedule, MsPeriod, State ),
 
 							wooper:return_state_result( RegState,
 											 { task_registered, TaskId } )
@@ -607,8 +607,7 @@ unregister_task( TaskId, State ) when is_integer( TaskId ) andalso TaskId > 0 ->
 		% Could not have been allocated:
 		true ->
 			?error_fmt( "Requested to unregister task ~B, which never existed "
-				"(as the next task identifier is ~B).",
-				[ TaskId, NextTaskId ] ),
+			  "(as the next task identifier is ~B).", [ TaskId, NextTaskId ] ),
 			{ { task_unregistration_failed, never_existed }, State };
 
 		false ->
@@ -636,8 +635,7 @@ unregister_task( TaskId, State ) when is_integer( TaskId ) andalso TaskId > 0 ->
 
 							?error_fmt( "Internal error: task id #~B not found "
 							  "in schedule plan, which ~s", [ TaskId,
-							  schedule_plan_to_string( SchedulePlan,
-													   State ) ] ),
+							  schedule_plan_to_string( SchedulePlan,State ) ] ),
 
 							NewState = setAttribute( State, task_table,
 													 ShrunkTaskTable ),
@@ -680,6 +678,9 @@ timerTrigger( State, ScheduleOffset ) ->
 
 	NowMs = get_current_schedule_offset( State ),
 
+	?debug_fmt( "Timer trigger at ~w, for an expected one of ~w.",
+				[ NowMs, ScheduleOffset ] ),
+
 	% As long as a drift is below this threshold, we do not worry:
 	OffsetThreshold = 250,
 
@@ -705,10 +706,10 @@ timerTrigger( State, ScheduleOffset ) ->
 		NowMs, ?getAttr(schedule_plan), TimerTable, ?getAttr(task_table),
 		State ),
 
-	%trace_utils:debug_fmt( "After having being triggered for #~B, went "
-	%			"from ~s to ~s",
-	%			 [ ScheduleOffset, timer_table_to_string( TimerTable, State ),
-	%			   timer_table_to_string( NewTimerTable, State ) ] ),
+	?debug_fmt( "After having being triggered for #~B, went "
+		"from ~s to ~s", [ ScheduleOffset,
+		timer_table_to_string( TimerTable, State ),
+		timer_table_to_string( NewTimerTable, State ) ] ),
 
 	TrigState = setAttributes( State, [ { schedule_plan, NewPlan },
 										{ timer_table, NewTimerTable },
@@ -1494,7 +1495,7 @@ task_entry_to_string( #task_entry{ id=_TaskId,
 	  "to be scheduled next at offset #~B (~s) according to ~s, and for ~s; "
 	  "it was declared by ~w",
 	  [ Cmd, ActuatorPid, ExecStr, NextSchedOffset, NextSchedTime, PeriodStr,
-		CountStr, RequesterPid ]).
+		CountStr, RequesterPid ] ).
 
 
 

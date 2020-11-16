@@ -167,8 +167,8 @@ construct( State, RingName, Actuators, TaskOnewayName, TaskOnewayArgs,
 	TaskCall = { TaskOnewayName,
 				 list_utils:append_at_end( self(), TaskOnewayArgs ) },
 
-	SetState = setAttributes( SrvState,
-							  [ { task_periodicity, TaskPeriodicity },
+	SetState = setAttributes( SrvState, [
+								{ task_periodicity, TaskPeriodicity },
 								{ task_call, TaskCall },
 								{ scheduler_pid, SchedulerPid },
 								{ waited_actuator_pid, undefined } ] ),
@@ -248,9 +248,12 @@ triggerNextTask( State ) ->
 			{ ThisActuatorPid, NewRing } =
 				ring_utils:head( ?getAttr(actuator_ring) ),
 
-			ThisActuatorPid ! ?getAttr(task_call),
+			TaskCall = ?getAttr(task_call),
 
-			?debug_fmt( "Triggered actuator ~w.", [ ThisActuatorPid ] ),
+			ThisActuatorPid ! TaskCall,
+
+			?debug_fmt( "Triggered actuator ~w with ~p.",
+						[ ThisActuatorPid, TaskCall ] ),
 
 			TrigState = setAttributes( State, [
 					{ actuator_ring, NewRing },
@@ -262,10 +265,9 @@ triggerNextTask( State ) ->
 		LingeringActPid ->
 			% No other measure really possible (no task overlapping):
 			?error_fmt( "Next task triggered whereas current actuator (~w) "
-						"was not reported as having finished. Not triggering "
-						"a new task, si skipping this period as a whole "
-						"to wait for the lingering actuator.",
-						[ LingeringActPid ] ),
+				"was not reported as having finished. Not triggering "
+				"a new task, skipping this period as a whole "
+				"to wait for the lingering actuator.", [ LingeringActPid ] ),
 			wooper:const_return()
 
 	end.
@@ -306,12 +308,10 @@ set_actuators( NewActuators, TaskPeriodicity, State ) ->
 	% By design not a division by zero; seconds wanted for the scheduler:
 	RingPeriodicity = erlang:round( TaskPeriodicity / ActuatorCount ),
 
-	?trace_fmt( "This ring is to be triggered by its scheduler every ~s, "
-				"as task-level periodicity is ~s, and ~B actuators are being "
-				"synchronised.",
-				[ time_utils:duration_to_string( RingPeriodicity ),
-				  time_utils:duration_to_string( TaskPeriodicity ),
-				  ActuatorCount ] ),
+	?trace_fmt( "This ring is to be triggered by its scheduler every ~s, as "
+	  "task-level periodicity is ~s, and ~B actuators are being synchronised.",
+	  [ time_utils:duration_to_string( RingPeriodicity ),
+		time_utils:duration_to_string( TaskPeriodicity ), ActuatorCount ] ),
 
 	SetState = setAttribute( State, actuator_ring, NewActuatorRing ),
 

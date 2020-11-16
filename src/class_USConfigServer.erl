@@ -32,7 +32,9 @@
 
 
 % Shorthands:
+-type directory_path() :: file_utils:directory_path().
 -type bin_directory_path() :: file_utils:bin_directory_path().
+
 -type bin_file_path() :: file_utils:bin_file_path().
 -type server_pid() :: class_UniversalServer:server_pid().
 
@@ -271,16 +273,15 @@ construct( State ) ->
 %
 % Useful for example to create auxiliary universal servers.
 %
--spec construct( wooper:state(), file_utils:directory_path() ) -> wooper:state().
+-spec construct( wooper:state(), directory_path() ) -> wooper:state().
 construct( State, ConfigDir ) when is_list( ConfigDir ) ->
 
 	% First the direct mother classes, then this class-specific actions:
 	TraceState = class_USServer:construct( State,
-										   ?trace_categorize("USConfigServer") ),
+									   ?trace_categorize("USConfigServer") ),
 
 	?send_info_fmt( TraceState, "Creating the overall US configuration server, "
-					"using the '~s' configuration directory for that.",
-					[ ConfigDir ] ),
+		"using the '~s' configuration directory for that.", [ ConfigDir ] ),
 
 	BinCfgDir = text_utils:string_to_binary( ConfigDir ),
 
@@ -314,10 +315,9 @@ destruct( State ) ->
 % Notifies this server about the specified US web configuration server, and
 % requests web-information from it.
 %
--spec getWebRuntimeSettings( wooper:state() ) ->
-		  request_return( { bin_directory_path(),
-							basic_utils:execution_context(),
-							maybe( bin_file_path() ), maybe( server_pid() ) } ).
+-spec getWebRuntimeSettings( wooper:state() ) -> request_return(
+			   { bin_directory_path(), basic_utils:execution_context(),
+				 maybe( bin_file_path() ), maybe( server_pid() ) } ).
 getWebRuntimeSettings( State ) ->
 
 	USWebConfigServerPid = ?getSender(),
@@ -335,8 +335,7 @@ getWebRuntimeSettings( State ) ->
 
 		OtherPid ->
 			?error_fmt( "Notified of web configuration server ~w; ignored, as "
-						"already knowing ~w.",
-						[ USWebConfigServerPid, OtherPid ] ),
+				"already knowing ~w.", [ USWebConfigServerPid, OtherPid ] ),
 			State
 
 	end,
@@ -423,9 +422,9 @@ get_us_config_directory() ->
 	CfgSuffix = file_utils:join( ?app_subdir, ?us_config_filename ),
 
 	BaseMsg = text_utils:format( "searched for Universal Server "
-			"configuration directory, based on suffix '~s', knowing that: ~s~n"
-			"Configuration directory ", [ CfgSuffix,
-					text_utils:strings_to_string([ FirstMsg, SecondMsg ] ) ] ),
+		"configuration directory, based on suffix '~s', knowing that: ~s~n"
+		"Configuration directory ", [ CfgSuffix,
+				text_utils:strings_to_string( [ FirstMsg, SecondMsg ] ) ] ),
 
 	ResPair = find_file_in( AllBasePaths, CfgSuffix, BaseMsg, _Msgs=[] ),
 
@@ -461,7 +460,7 @@ find_file_in( _AllBasePaths=[ Path | T ], CfgSuffix, BaseMsg, Msgs ) ->
 		true ->
 			CfgDir = filename:dirname( CfgFilePath ),
 
-			FullMsg = text_utils:format( "configuration directory found "
+			FullMsg = text_utils:format( "Configuration directory found "
 				"as '~s', as containing '~s'", [ CfgDir, CfgFilePath ] )
 				++ case Msgs of
 
@@ -503,7 +502,7 @@ load_configuration( BinCfgDir, State ) ->
 
 		false ->
 			?error_fmt( "The overall US configuration file ('~s') "
-						"could not be found.", [ CfgFilename ] ),
+				"could not be found.", [ CfgFilename ] ),
 			% Must have disappeared then:
 			throw( { us_config_file_not_found, CfgFilename } )
 
@@ -549,9 +548,8 @@ load_configuration( BinCfgDir, State ) ->
 
 		UnexpectedKeys ->
 			?error_fmt( "Unknown key(s) in '~s': ~s~nLicit keys: ~s",
-						[ CfgFilename,
-						  text_utils:terms_to_string( UnexpectedKeys ),
-						  text_utils:terms_to_string( LicitKeys ) ] ),
+				[ CfgFilename, text_utils:terms_to_string( UnexpectedKeys ),
+				  text_utils:terms_to_string( LicitKeys ) ] ),
 			throw( { invalid_configuration_keys, UnexpectedKeys, CfgFilename } )
 
 	end.
@@ -574,8 +572,8 @@ manage_vm_cookie( ConfigTable, State ) ->
 			InitialCookie = net_utils:get_cookie(),
 
 			?info_fmt( "Switching the Erlang cookie of the current VM from "
-					   "the current one, '~s', to the specified one, '~s'.",
-					   [ InitialCookie, UserCookie ] ),
+				"the current one, '~s', to the specified one, '~s'.",
+				[ InitialCookie, UserCookie ] ),
 
 			net_utils:set_cookie( UserCookie );
 
@@ -598,8 +596,7 @@ manage_epmd_port( ConfigTable, State ) ->
 		key_not_found ->
 			DefaultEpmdPort = net_utils:get_default_epmd_port(),
 			?info_fmt( "No user-configured EPMD TCP port, supposing already "
-					   "using the Erlang-level default one, ~B.",
-					   [ DefaultEpmdPort ] ),
+			  "using the Erlang-level default one, ~B.", [ DefaultEpmdPort ] ),
 			DefaultEpmdPort;
 
 		{ value, UserEPMDPort } when is_integer( UserEPMDPort ) ->
@@ -650,7 +647,7 @@ manage_tcp_port_range( ConfigTable, State ) ->
 
 % Manages any user-configured execution context.
 -spec manage_execution_context( us_config_table(), wooper:state() ) ->
-									  wooper:state().
+									wooper:state().
 manage_execution_context( ConfigTable, State ) ->
 
 	MyriadExecStr= text_utils:format( "for Ceylan-Myriad: ~s",
@@ -676,8 +673,8 @@ manage_execution_context( ConfigTable, State ) ->
 		key_not_found ->
 			DefaultContext = production,
 			?info_fmt( "No user-configured execution context, "
-					   "defaulting to '~s', ~s.",
-					   [ DefaultContext, CompileContextStr ] ),
+				"defaulting to '~s', ~s.",
+				[ DefaultContext, CompileContextStr ] ),
 			DefaultContext;
 
 		{ value, development } ->
@@ -728,8 +725,7 @@ manage_os_user_group( ConfigTable, State ) ->
 		key_not_found ->
 			ActualUsername = system_utils:get_user_name(),
 			?info_fmt( "No user-configured US operating-system username set "
-					   "for this server; runtime-detected: '~s'.",
-					   [ ActualUsername ] ),
+			  "for this server; runtime-detected: '~s'.", [ ActualUsername ] ),
 			ActualUsername;
 
 		{ value, Username } when is_list( Username ) ->
@@ -749,13 +745,12 @@ manage_os_user_group( ConfigTable, State ) ->
 					% its username, which might differ.
 
 					?warning_fmt( "The user-configured US operating-system "
-								  "username '~s' for this server does not "
-								  "match the current runtime user, '~s' "
-								  "(acceptable if created on behalf on a "
-								  "US-related service - typically a "
-								  "standalone US-web server, i.e. one with "
-								  "no prior US-server companion running).",
-								  [ Username, OtherUsername ] ),
+						"username '~s' for this server does not match the "
+						"current runtime user, '~s' (acceptable if created "
+						"on behalf on a US-related service - typically a "
+						"standalone US-web server, i.e. one with no prior "
+						"US-server companion running).",
+						[ Username, OtherUsername ] ),
 					OtherUsername
 					%throw( { inconsistent_os_us_user, OtherUsername,
 					%		 Username, ?us_username_key } )
@@ -770,8 +765,7 @@ manage_os_user_group( ConfigTable, State ) ->
 		key_not_found ->
 			ActualGroupname = system_utils:get_group_name(),
 			?info_fmt( "No group-configured US operating-system group name set "
-					   "for this server; runtime-detected: '~s'.",
-					   [ ActualGroupname ] ),
+			  "for this server; runtime-detected: '~s'.", [ ActualGroupname ] ),
 			ActualGroupname;
 
 		{ value, Groupname } when is_list( Groupname ) ->
@@ -779,15 +773,15 @@ manage_os_user_group( ConfigTable, State ) ->
 
 				Groupname ->
 					?info_fmt( "Using group-configured US operating-system "
-							   "groupname '~s' for this server, which matches "
-							   "the current runtime group.", [ Groupname ] ),
+						"groupname '~s' for this server, which matches "
+						"the current runtime group.", [ Groupname ] ),
 					Groupname;
 
 				OtherGroupname ->
 					?error_fmt( "The group-configured US operating-system "
-								"groupname '~s' for this server does not match "
-								"the current runtime group, '~s'.",
-								[ Groupname, OtherGroupname ] ),
+						"groupname '~s' for this server does not match "
+						"the current runtime group, '~s'.",
+						[ Groupname, OtherGroupname ] ),
 					throw( { inconsistent_os_us_group, OtherGroupname,
 							 Groupname, ?us_groupname_key } )
 
@@ -1010,8 +1004,7 @@ manage_web_config( ConfigTable, State ) ->
 		%
 		{ value, WebFilename } when is_list( WebFilename ) ->
 			?info_fmt( "Obtained user-configured configuration filename for "
-					   "webservers and virtual hosting: '~s'.",
-					   [ WebFilename ] ),
+				"webservers and virtual hosting: '~s'.", [ WebFilename ] ),
 			text_utils:string_to_binary( WebFilename );
 
 		{ value, InvalidWebFilename } ->
@@ -1032,7 +1025,7 @@ manage_web_config( ConfigTable, State ) ->
 to_string( State ) ->
 
 	RegString = text_utils:format( "registered as '~s' (scope: ~s)",
-		   [ ?getAttr(registration_name), ?default_registration_scope ] ),
+		 [ ?getAttr(registration_name), ?default_registration_scope ] ),
 
 	SrvString = case ?getAttr(us_server_pid) of
 

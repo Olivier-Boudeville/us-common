@@ -217,7 +217,7 @@
 	{ timer_table, timer_table(), "a table registering live timers" },
 
 	% Allows also to count all tasks that have been submitted:
-	{ next_task_id, task_id(), "Identifier of the next registered task" } ] ).
+	{ next_task_id, task_id(), "identifier of the next registered task" } ] ).
 
 
 
@@ -428,7 +428,7 @@ triggerOneshotTask( State, UserTaskCommand, UserActPid ) ->
 registerOneshotTask( State, UserTaskCommand, UserStartTime, UserActPid ) ->
 
 	{ NewState, Result } = registerTask( State, UserTaskCommand, UserStartTime,
-							 _Periodicity=once, _Count=1, UserActPid ),
+							_Periodicity=once, _Count=1, UserActPid ),
 
 	wooper:return_state_result( NewState, Result ).
 
@@ -868,9 +868,9 @@ trigger_tasks( _TaskIds=[ TaskId | T ], ScheduleOffset, NowMs, SchedulePlan,
 			{ NewPlan, NewTimerTable } = insert_task_at( TaskId, NextSchedule,
 							  Periodicity, SchedulePlan, TimerTable ),
 
-			%?debug_fmt( "New plan for #~B after trigger of task ~B: ~s",
-			%			[ ScheduleOffset, TaskId,
-			%			  schedule_plan_to_string( NewPlan, State ) ] ),
+			?debug_fmt( "New plan for #~B after trigger of task ~B: ~s",
+						[ ScheduleOffset, TaskId,
+						  schedule_plan_to_string( NewPlan, State ) ] ),
 
 			trigger_tasks( T, ScheduleOffset, NowMs, NewPlan, NewTimerTable,
 						   NewTaskTable, State )
@@ -881,13 +881,13 @@ trigger_tasks( _TaskIds=[ TaskId | T ], ScheduleOffset, NowMs, SchedulePlan,
 
 % Effective launching of specified task.
 -spec launch_task( task_command(), actuator_pid(), wooper:state() ) -> void().
-launch_task( Cmd, ActuatorPid, _State ) ->
+launch_task( Cmd, ActuatorPid, State ) ->
 
 	% We want to let the requester be able to specify exactly any command term;
 	% otherwise we would have added automatically for example the PID of the
 	% sending scheduler and the corresponding task identifier.
 
-	%?trace_fmt( "Sending command '~p' to actuator ~w.", [ Cmd, ActuatorPid ] ),
+	?trace_fmt( "Sending command '~p' to actuator ~w.", [ Cmd, ActuatorPid ] ),
 	ActuatorPid ! Cmd.
 
 

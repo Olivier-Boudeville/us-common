@@ -25,7 +25,7 @@
 
 -define( class_description,
 		 "Ring to schedule evenly and synchronously a set of tasks, as a "
-		 "series." ).
+		 "series (i.e. sequentially)." ).
 
 
 % Design notes:

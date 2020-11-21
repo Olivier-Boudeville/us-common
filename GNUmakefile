@@ -2,7 +2,7 @@ US_COMMON_TOP = .
 
 
 .PHONY: help help-intro help-us-common register-version-in-header              \
-		register-us-common  info info-local
+		register-us-common info info-local info-conditionals
 
 
 MODULES_DIRS = src doc conf test
@@ -52,6 +52,11 @@ info-local:
 	@echo "TRACES_TOP = $(TRACES_TOP)"
 	@echo "WOOPER_TOP = $(WOOPER_TOP)"
 	@echo "MYRIAD_TOP = $(MYRIAD_TOP)"
+
+
+info-conditionals:
+	@echo "US_COMMON_DEBUG_FLAGS = $(US_COMMON_DEBUG_FLAGS)"
+	@echo "US_COMMON_CHECK_FLAGS = $(US_COMMON_CHECK_FLAGS)"
 
 
 include $(US_COMMON_TOP)/GNUmakesettings.inc

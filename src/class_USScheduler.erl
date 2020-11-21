@@ -81,7 +81,7 @@
 
 		% Preferably after this specified duration from receiving:
 	  | dhms_duration()
-	  | unit_utils:seconds()
+	  | unit_utils:seconds() % (not milliseconds)
 
 		% Preferably at this specified (future) time:
 	  | timestamp().
@@ -171,7 +171,7 @@
 		   count :: schedule_count(),
 
 		   % The number of times this task has already been scheduled:
-		   schedule_count = 0 :: basic_utils:count(),
+		   schedule_count = 0 :: schedule_count(),
 
 		   % The internal time offset (if any) at which this task was first
 		   % scheduled:
@@ -440,7 +440,7 @@ registerOneshotTask( State, UserTaskCommand, UserStartTime, UserActPid ) ->
 %
 % Returns either 'task_done' if the task was done on the fly (hence is already
 % triggered, and no task identifier applies since it is fully completed), or
-% {'task_registered',TaskId} if it is registered for a later trigger (then its
+% {'task_registered', TaskId} if it is registered for a later trigger (then its
 % assigned task identifier is returned).
 %
 % Note: if the deadline is specified in absolute terms (ex: as
@@ -455,7 +455,7 @@ registerOneshotTask( State, UserTaskCommand, UserStartTime, UserActPid ) ->
 registerTask( State, UserTaskCommand, UserStartTime, UserPeriodicity, UserCount,
 			  UserActPid ) ->
 
-	% Checks and canonicalise specified elements:
+	% Checks and canonicalises specified elements:
 	TaskCommand = vet_task_command( UserTaskCommand, State ),
 	MsDurationBeforeStart = vet_start_time( UserStartTime, State ),
 	Count = vet_count( UserCount, State ),
@@ -678,13 +678,16 @@ timerTrigger( State, ScheduleOffset ) ->
 
 	NowMs = get_current_schedule_offset( State ),
 
-	?debug_fmt( "Timer trigger at ~w, for an expected one of ~w.",
-				[ NowMs, ScheduleOffset ] ),
+	DiffMs = NowMs - ScheduleOffset,
+
+	?debug_fmt( "Timer trigger at schedule offset ~w, for an expected one "
+		"of ~w: delayed of ~s.",
+		[ NowMs, ScheduleOffset, time_utils:duration_to_string( DiffMs ) ] ),
 
 	% As long as a drift is below this threshold, we do not worry:
 	OffsetThreshold = 250,
 
-	case erlang:abs( NowMs - ScheduleOffset ) > OffsetThreshold of
+	case erlang:abs( DiffMs ) > OffsetThreshold of
 
 		true ->
 			?trace_fmt( "Triggered for offset #~B (~s), while being at #~B "
@@ -819,8 +822,9 @@ trigger_tasks( _TaskIds=[ TaskId | T ], ScheduleOffset, NowMs, SchedulePlan,
 
 	% next_schedule shall at least roughly match.
 
-	?debug_fmt( "Triggering task ~B: ~s.",
-				[ TaskId, task_entry_to_string( TaskEntry, State ) ] ),
+	cond_utils:if_defined( us_common_debug_scheduling,
+		?debug_fmt( "Triggering task ~B: ~s.",
+					[ TaskId, task_entry_to_string( TaskEntry, State ) ] ) ),
 
 	launch_task( TaskEntry#task_entry.command,
 				 TaskEntry#task_entry.actuator_pid, State ),
@@ -833,7 +837,7 @@ trigger_tasks( _TaskIds=[ TaskId | T ], ScheduleOffset, NowMs, SchedulePlan,
 			{ SchedulePlan, ShrunkTimerTable, ShrunkTaskTable };
 
 		NewCount ->
-			% Will thus be still scheduled afterwards.
+			% Will thus be still scheduled again afterwards.
 
 			% If first scheduling:
 			StartOffset = case TaskEntry#task_entry.started_on of
@@ -866,11 +870,12 @@ trigger_tasks( _TaskIds=[ TaskId | T ], ScheduleOffset, NowMs, SchedulePlan,
 											ShrunkTaskTable ),
 
 			{ NewPlan, NewTimerTable } = insert_task_at( TaskId, NextSchedule,
-							  Periodicity, SchedulePlan, TimerTable ),
+							Periodicity, SchedulePlan, TimerTable ),
 
-			?debug_fmt( "New plan for #~B after trigger of task ~B: ~s",
-						[ ScheduleOffset, TaskId,
-						  schedule_plan_to_string( NewPlan, State ) ] ),
+			cond_utils:if_defined( us_common_debug_scheduling,
+				?debug_fmt( "New plan for #~B after trigger of task ~B: ~s",
+							[ ScheduleOffset, TaskId,
+							  schedule_plan_to_string( NewPlan, State ) ] ) ),
 
 			trigger_tasks( T, ScheduleOffset, NowMs, NewPlan, NewTimerTable,
 						   NewTaskTable, State )
@@ -887,7 +892,10 @@ launch_task( Cmd, ActuatorPid, State ) ->
 	% otherwise we would have added automatically for example the PID of the
 	% sending scheduler and the corresponding task identifier.
 
-	?trace_fmt( "Sending command '~p' to actuator ~w.", [ Cmd, ActuatorPid ] ),
+	cond_utils:if_defined( us_common_debug_scheduling,
+		?trace_fmt( "Sending command '~p' to actuator ~w.",
+					[ Cmd, ActuatorPid ] ) ),
+
 	ActuatorPid ! Cmd.
 
 
@@ -904,8 +912,10 @@ launch_task( Cmd, ActuatorPid, State ) ->
 register_task_schedule( TaskId, TaskEntry, ScheduleOffset, DurationFromNow,
 						State ) ->
 
-	%?debug_fmt( "Registering task #~B: ~s.",
-	%			[ TaskId, task_entry_to_string( TaskEntry, State ) ] ),
+	?debug_fmt( "Registering task #~B for schedule offset ~B (duration from "
+		"now: ~s): ~s.", [ TaskId, ScheduleOffset,
+			time_utils:duration_to_string( DurationFromNow ),
+			task_entry_to_string( TaskEntry, State ) ] ),
 
 	NewTaskTable = table:add_new_entry( TaskId, TaskEntry,
 										?getAttr(task_table) ),
@@ -913,6 +923,10 @@ register_task_schedule( TaskId, TaskEntry, ScheduleOffset, DurationFromNow,
 	{ NewPlan, NewTimerTable } = insert_task_at( TaskId, ScheduleOffset,
 		DurationFromNow, ?getAttr(schedule_plan), _AccPlan=[],
 		?getAttr(timer_table) ),
+
+	cond_utils:if_defined( us_common_debug_scheduling,
+		?debug_fmt( "New plan: ~p~nNew timer table: ~p.",
+					[ NewPlan, NewTimerTable ] ) ),
 
 	setAttributes( State, [ { task_table, NewTaskTable },
 							{ schedule_plan, NewPlan },

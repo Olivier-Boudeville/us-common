@@ -210,6 +210,9 @@
 -spec construct( wooper:state() ) -> wooper:state().
 construct( State ) ->
 
+	% Wanting a better control by resisting to exit messages being received:
+	erlang:process_flag( trap_exit, true ),
+
 	% First the direct mother classes, then this class-specific actions:
 	TraceState = class_USServer:construct( State,
 								   ?trace_categorize("USConfigServer") ),

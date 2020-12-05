@@ -17,8 +17,7 @@
 %
 % Author: Olivier Boudeville (olivier.boudeville@esperide.com)
 % Creation date: Saturday, March 28, 2020.
-
-
+%
 -module(class_USScheduler_test).
 
 
@@ -34,20 +33,19 @@
 
 
 
-
 % Main loop of an actuator test process.
 operate_loop() ->
 
 	receive
 
 		{ operate, [ Pid, Name ] } ->
-			trace_utils:trace_fmt( "--> Actuator ~w just operated on behalf "
+			trace_utils:debug_fmt( "--> Actuator ~w just operated on behalf "
 								   "of ~s.", [ self(), Name ] ),
 			Pid ! { operated, Name, self() },
 			operate_loop();
 
 		stop ->
-			trace_utils:trace_fmt( "--> Actuator ~w stopped.", [ self() ] )
+			trace_utils:debug_fmt( "--> Actuator ~w stopped.", [ self() ] )
 
 	end.
 
@@ -198,7 +196,7 @@ run() ->
 	%WaitMs = 15000,
 
 	test_facilities:display( "Waiting ~s before unregistering tasks.",
-						   [ time_utils:duration_to_string( WaitMs ) ] ),
+							 [ time_utils:duration_to_string( WaitMs ) ] ),
 
 	timer:sleep( WaitMs ),
 

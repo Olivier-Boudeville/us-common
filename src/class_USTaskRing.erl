@@ -208,8 +208,8 @@ destruct( State ) ->
 
 	SchedPid ! { unregisterTask, [ TaskId ], self() },
 
-	?trace_fmt( "Being destructed, unregistering from scheduler ~w "
-				"(task: #B).", [ SchedPid, TaskId ] ),
+	?info_fmt( "Being destructed, unregistering from scheduler ~w "
+			   "(task: #B).", [ SchedPid, TaskId ] ),
 
 	receive
 
@@ -308,7 +308,7 @@ set_actuators( NewActuators, TaskPeriodicity, State ) ->
 	% By design not a division by zero; seconds wanted for the scheduler:
 	RingPeriodicity = erlang:round( TaskPeriodicity / ActuatorCount ),
 
-	?trace_fmt( "This ring is to be triggered by its scheduler every ~s, as "
+	?debug_fmt( "This ring is to be triggered by its scheduler every ~s, as "
 	  "task-level periodicity is ~s, and ~B actuators are being synchronised.",
 	  [ time_utils:duration_to_string( RingPeriodicity ),
 		time_utils:duration_to_string( TaskPeriodicity ), ActuatorCount ] ),

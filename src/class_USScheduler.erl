@@ -364,8 +364,8 @@ init_common( State ) ->
 										 { timer_table, EmptyTable },
 										 { next_task_id, 1 } ] ),
 
-	trace_utils:trace_fmt( "Scheduler ready, at ~s.",
-						   [ get_current_timestamp_string( ReadyState ) ] ),
+	trace_utils:info_fmt( "Scheduler ready, at ~s.",
+						  [ get_current_timestamp_string( ReadyState ) ] ),
 
 	ReadyState.
 
@@ -690,7 +690,7 @@ timerTrigger( State, ScheduleOffset ) ->
 	case erlang:abs( DiffMs ) > OffsetThreshold of
 
 		true ->
-			?trace_fmt( "Triggered for offset #~B (~s), while being at #~B "
+			?debug_fmt( "Triggered for offset #~B (~s), while being at #~B "
 				"(~s), hence with a signed drift of ~s (late if positive).",
 				[ ScheduleOffset,
 				  get_timestamp_string_for( ScheduleOffset, State ), NowMs,
@@ -893,7 +893,7 @@ launch_task( Cmd, ActuatorPid, State ) ->
 	% sending scheduler and the corresponding task identifier.
 
 	cond_utils:if_defined( us_common_debug_scheduling,
-		?trace_fmt( "Sending command '~p' to actuator ~w.",
+		?debug_fmt( "Sending command '~p' to actuator ~w.",
 					[ Cmd, ActuatorPid ] ) ),
 
 	ActuatorPid ! Cmd.

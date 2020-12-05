@@ -85,8 +85,8 @@ start_link() ->
 							| 'ignore' | { 'error', Error :: term() }.
 init( _Args=[] ) ->
 
-	trace_utils:trace( "Initializing the US-Common supervisor bridge for "
-					   "the US configuration server." ),
+	trace_utils:info( "Initializing the US-Common supervisor bridge for "
+					  "the US configuration server." ),
 
 	% Registration name and all details set through the US configuration file:
 	CfgServerPid = class_USConfigServer:new_link(),
@@ -99,7 +99,7 @@ init( _Args=[] ) ->
 -spec terminate( Reason :: 'shutdown' | term(), State :: term() ) -> void().
 terminate( Reason, _State=CfgServerPid ) when is_pid( CfgServerPid ) ->
 
-	trace_utils:trace_fmt( "Terminating the US-Common supervisor bridge for "
+	trace_utils:info_fmt( "Terminating the US-Common supervisor bridge for "
 		"the US configuration server (reason: ~w, configuration server: ~w).",
 		[ Reason, CfgServerPid ] ),
 

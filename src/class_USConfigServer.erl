@@ -129,7 +129,7 @@
 
 
 % Used by the trace_categorize/1 macro to use the right emitter:
--define( trace_emitter_categorization, "US.Configuration.USConfigServer" ).
+-define( trace_emitter_categorization, "US.US-Common.Configuration" ).
 
 
 % For various defines:
@@ -215,7 +215,7 @@ construct( State ) ->
 
 	% First the direct mother classes, then this class-specific actions:
 	TraceState = class_USServer:construct( State,
-								   ?trace_categorize("USConfigServer") ),
+								   ?trace_categorize("Configuration Server") ),
 
 	?send_info( TraceState, "Creating a US configuration server." ),
 
@@ -737,8 +737,8 @@ manage_os_user_group( ConfigTable, State ) ->
 
 				Username ->
 					?info_fmt( "Using user-configured US operating-system "
-							   "username '~s' for this server, which matches "
-							   "the current runtime user.", [ Username ] ),
+						"username '~s' for this server, which matches "
+						"the current runtime user.", [ Username ] ),
 					Username;
 
 				OtherUsername ->
@@ -843,8 +843,8 @@ manage_registration_names( ConfigTable, State ) ->
 
 		key_not_found ->
 			DefaultRegName = ?default_us_reg_name,
-			?info_fmt( "No user-configured registration name for the US server, "
-					   "using default name '~s'.", [ DefaultRegName ] ),
+			?info_fmt( "No user-configured registration name for the US "
+				"server, using default name '~s'.", [ DefaultRegName ] ),
 			DefaultRegName;
 
 		{ value, UserRegName } when is_atom( UserRegName ) ->
@@ -885,7 +885,7 @@ manage_app_base_directory( ConfigTable, State ) ->
 
 				false ->
 					% Guessing then, typically current directory is:
-					% [...]/universal_server/_build/default/rel/universal_server,
+					% [...]/universal_server/_build/default/rel/universal_server
 					% and we want the first universal_server, so:
 					%
 					GuessedDir = file_utils:normalise_path( file_utils:join( [
@@ -1012,8 +1012,8 @@ manage_web_config( ConfigTable, State ) ->
 
 		{ value, InvalidWebFilename } ->
 			?error_fmt( "Obtained invalid user-configured configuration "
-						"filename for webservers and virtual hosting: '~p'.",
-						[ InvalidWebFilename ] ),
+				"filename for webservers and virtual hosting: '~p'.",
+				[ InvalidWebFilename ] ),
 			throw( { invalid_us_web_config_filename, InvalidWebFilename,
 					 ?us_web_config_filename_key } )
 

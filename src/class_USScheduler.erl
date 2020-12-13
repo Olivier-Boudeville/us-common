@@ -38,7 +38,7 @@
 
 
 % The command corresponding to a task to execute respects the general form of a
-% WOOPER oneway, i.e. OnewayName or {OnewayName,Args}, where Args is
+% WOOPER oneway, i.e. OnewayName or {OnewayName, Args}, where Args is
 % conventionally a single non-list term or a list of any arguments.
 %
 % We considered, yet finally did not keep, the idea of always adding as last
@@ -222,7 +222,7 @@
 
 
 % Used by the trace_categorize/1 macro to use the right emitter:
--define( trace_emitter_categorization, "US.Scheduling.Scheduler" ).
+-define( trace_emitter_categorization, "US.Scheduling" ).
 
 
 -define( registration_name, us_scheduler ).

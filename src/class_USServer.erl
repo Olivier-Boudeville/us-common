@@ -41,6 +41,7 @@
 % Shorthands:
 
 -type ustring() :: text_utils:ustring().
+-type server_name() :: ustring().
 
 
 
@@ -93,10 +94,22 @@
 %
 % Parameter is ServerName, the name of that server.
 %
--spec construct( wooper:state(), ustring() ) -> wooper:state().
+-spec construct( wooper:state(), server_name() ) -> wooper:state().
 construct( State, ServerName ) ->
 	init_common( ServerName, _RegistrationName=undefined,
-				 _RegistrationScope=undefined, State ).
+				 _RegistrationScope=undefined, _TrapExits=true, State ).
+
+
+% Constructs a new server instance.
+%
+% Parameter is ServerName, the name of that server, and whether it should trap
+% EXITS, if wanting a better control by resisting to exit messages being
+% received (see the onWOOPERExitReceived/3 callback):
+%
+-spec construct( wooper:state(), server_name(), boolean() ) -> wooper:state().
+construct( State, ServerName, TrapExits ) ->
+	init_common( ServerName, _RegistrationName=undefined,
+				 _RegistrationScope=undefined, TrapExits, State ).
 
 
 
@@ -108,21 +121,37 @@ construct( State, ServerName ) ->
 % - RegistrationName, the name under which this server shall be registered
 % - RegistrationScope, the scope at which this server shall be registered
 %
--spec construct( wooper:state(), ustring(), naming_utils:registration_name(),
+-spec construct( wooper:state(), server_name(), naming_utils:registration_name(),
 				 naming_utils:registration_scope() ) -> wooper:state().
 construct( State, ServerName, RegistrationName, RegistrationScope ) ->
-	init_common( ServerName, RegistrationName, RegistrationScope, State ).
+	init_common( ServerName, RegistrationName, RegistrationScope,
+				 _TrapExits=true, State ).
 
 
 
 % (helper)
--spec init_common( ustring(), naming_utils:registration_name(),
-		 naming_utils:registration_scope(), wooper:state() ) -> wooper:state().
-init_common( ServerName, RegistrationName, RegistrationScope, State ) ->
+-spec init_common( server_name(), naming_utils:registration_name(),
+		naming_utils:registration_scope(), boolean(), wooper:state() ) ->
+			wooper:state().
+init_common( ServerName, RegistrationName, RegistrationScope, TrapExits,
+			 State ) ->
+
+	case TrapExits of
+
+		true ->
+			% Wanting a better control by resisting to exit messages being
+			% received (see the onWOOPERExitReceived/3 callback):
+			%
+			erlang:process_flag( trap_exit, true );
+
+		false ->
+			ok
+
+	end,
 
 	% First the direct mother classes:
 	TraceState = class_TraceEmitter:construct( State,
-										  ?trace_categorize(ServerName) ),
+										?trace_categorize(ServerName) ),
 
 	% Constant based on the number of milliseconds of the EPOCH, since year 0;
 	% used in order to compute the most complete offset (in UTC):
@@ -154,6 +183,9 @@ destruct( State ) ->
 
 
 
+% Method section.
+
+
 % Any server must be able to answer to (asynchronous) ping requests from a
 % monitoring server.
 %
@@ -168,6 +200,31 @@ ping( State, PingId, MonitorPid ) ->
 
 	wooper:const_return().
 
+
+
+% Callback triggered, if this server enabled the trapping of exits, whenever a
+% linked process stops.
+%
+-spec onWOOPERExitReceived( wooper:state(), pid(),
+							basic_utils:exit_reason() ) -> const_oneway_return().
+onWOOPERExitReceived( State, StopPid, _ExitType=normal ) ->
+	?notice_fmt( "Ignoring normal exit from process ~w.", [ StopPid ] ),
+	wooper:const_return();
+
+onWOOPERExitReceived( State, CrashPid, ExitType ) ->
+
+	% Typically: "Received exit message '{{nocatch,
+	%						{wooper_oneway_failed,<0.44.0>,class_XXX,
+	%							FunName,Arity,Args,AtomCause}}, [...]}"
+
+	?error_fmt( "Received and ignored an exit message '~p' from ~w.",
+				[ ExitType, CrashPid ] ),
+
+	wooper:const_return().
+
+
+
+% Exported helpers.
 
 
 % Registers this (supposedly not registered) server to naming server.

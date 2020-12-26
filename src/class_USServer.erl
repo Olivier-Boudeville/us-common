@@ -43,6 +43,9 @@
 -type ustring() :: text_utils:ustring().
 -type server_name() :: ustring().
 
+-type registration_name() :: naming_utils:registration_name().
+-type registration_scope() :: naming_utils:registration_scope().
+
 
 
 % Implementation notes:
@@ -69,10 +72,10 @@
 	 "the internal system time at which this server was started "
 	 "since year 0, to facilitate timestamp conversions to/from user time" },
 
-	{ registration_name, maybe( naming_utils:registration_name() ),
+	{ registration_name, maybe( registration_name() ),
 	 "records the name of this server, as registered in the naming service" },
 
-	{ registration_scope, maybe( naming_utils:registration_scope() ),
+	{ registration_scope, maybe( registration_scope() ),
 	 "records the scope of the registration of this server in the naming "
 	 "service" } ] ).
 
@@ -121,8 +124,8 @@ construct( State, ServerName, TrapExits ) ->
 % - RegistrationName, the name under which this server shall be registered
 % - RegistrationScope, the scope at which this server shall be registered
 %
--spec construct( wooper:state(), server_name(), naming_utils:registration_name(),
-				 naming_utils:registration_scope() ) -> wooper:state().
+-spec construct( wooper:state(), server_name(), registration_name(),
+				 registration_scope() ) -> wooper:state().
 construct( State, ServerName, RegistrationName, RegistrationScope ) ->
 	init_common( ServerName, RegistrationName, RegistrationScope,
 				 _TrapExits=true, State ).
@@ -130,9 +133,8 @@ construct( State, ServerName, RegistrationName, RegistrationScope ) ->
 
 
 % (helper)
--spec init_common( server_name(), naming_utils:registration_name(),
-		naming_utils:registration_scope(), boolean(), wooper:state() ) ->
-			wooper:state().
+-spec init_common( server_name(), registration_name(), registration_scope(),
+				   boolean(), wooper:state() ) -> wooper:state().
 init_common( ServerName, RegistrationName, RegistrationScope, TrapExits,
 			 State ) ->
 
@@ -192,7 +194,7 @@ destruct( State ) ->
 % (const oneway, as meant to be asynchronous)
 %
 -spec ping( wooper:state(), class_Supervisor:ping_id(), pid() ) ->
-				 const_oneway_return().
+					const_oneway_return().
 ping( State, PingId, MonitorPid ) ->
 
 	% Sends back another oneway (no result expected here):
@@ -206,9 +208,9 @@ ping( State, PingId, MonitorPid ) ->
 % linked process stops.
 %
 -spec onWOOPERExitReceived( wooper:state(), pid(),
-							basic_utils:exit_reason() ) -> const_oneway_return().
+		basic_utils:exit_reason() ) -> const_oneway_return().
 onWOOPERExitReceived( State, StopPid, _ExitType=normal ) ->
-	?notice_fmt( "Ignoring normal exit from process ~w.", [ StopPid ] ),
+	?info_fmt( "Ignoring normal exit from process ~w.", [ StopPid ] ),
 	wooper:const_return();
 
 onWOOPERExitReceived( State, CrashPid, ExitType ) ->
@@ -231,9 +233,8 @@ onWOOPERExitReceived( State, CrashPid, ExitType ) ->
 %
 % (exported helper)
 %
--spec register_name( naming_utils:registration_name(),
-					 naming_utils:registration_scope(), wooper:state() ) ->
-						  wooper:state().
+-spec register_name( registration_name(), registration_scope(),
+					 wooper:state() ) -> wooper:state().
 register_name( _RegistrationName=undefined, _RegistrationScope, State ) ->
 
 	% May be done later in the construction of the actual instance (ex: based on
@@ -266,7 +267,7 @@ unregister_name( State ) ->
 
 		undefined ->
 			?info( "No registration name available, "
-				  "no unregistering performed." ),
+				   "no unregistering performed." ),
 			State;
 
 		RegName ->
@@ -304,7 +305,7 @@ to_string( State ) ->
 
 		RegName ->
 			text_utils:format( "whose registration name is '~s' (scope: ~s)",
-							  [ RegName, ?getAttr(registration_scope) ] )
+							   [ RegName, ?getAttr(registration_scope) ] )
 
 	end,
 

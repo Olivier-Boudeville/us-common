@@ -392,7 +392,7 @@ destruct( State ) ->
 % triggered at once, a single time, being assigned to actuator process.
 %
 % Returns either 'task_done' if the task was done on the fly (hence is already
-% triggered, and no task identifier applies), or {'task_registered',TaskId} if
+% triggered, and no task identifier applies), or {'task_registered', TaskId} if
 % it is registered for a later trigger (then its assigned task identifier is
 % returned).
 %
@@ -413,7 +413,7 @@ triggerOneshotTask( State, UserTaskCommand, UserActPid ) ->
 % specified time, as assigned to requesting and specified actuator process.
 %
 % Returns either 'task_done' if the task was done on the fly (hence is already
-% triggered, and no task identifier applies), or {'task_registered',TaskId} if
+% triggered, and no task identifier applies), or {'task_registered', TaskId} if
 % it is registered for a later trigger (then its assigned task identifier is
 % returned).
 %
@@ -874,8 +874,8 @@ trigger_tasks( _TaskIds=[ TaskId | T ], ScheduleOffset, NowMs, SchedulePlan,
 
 			cond_utils:if_defined( us_common_debug_scheduling,
 				?debug_fmt( "New plan for #~B after trigger of task ~B: ~s",
-							[ ScheduleOffset, TaskId,
-							  schedule_plan_to_string( NewPlan, State ) ] ) ),
+					[ ScheduleOffset, TaskId,
+					  schedule_plan_to_string( NewPlan, State ) ] ) ),
 
 			trigger_tasks( T, ScheduleOffset, NowMs, NewPlan, NewTimerTable,
 						   NewTaskTable, State )
@@ -1133,7 +1133,7 @@ get_current_timestamp_string( State ) ->
 % (such as {{2020,3,23},{16,44,0}}).
 %
 -spec get_schedule_offset_for( timestamp(), wooper:state() ) ->
-									 schedule_offset().
+									schedule_offset().
 get_schedule_offset_for( UserTimestamp, State ) ->
 
 	% Number of milliseconds since year 0:

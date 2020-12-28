@@ -894,7 +894,8 @@ launch_task( Cmd, ActuatorPid, State ) ->
 
 	cond_utils:if_defined( us_common_debug_scheduling,
 		?debug_fmt( "Sending command '~p' to actuator ~w.",
-					[ Cmd, ActuatorPid ] ) ),
+					[ Cmd, ActuatorPid ] ),
+		basic_utils:ignore_unused( State ) ),
 
 	ActuatorPid ! Cmd.
 

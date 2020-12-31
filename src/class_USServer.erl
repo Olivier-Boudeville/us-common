@@ -240,7 +240,9 @@ register_name( _RegistrationName=undefined, _RegistrationScope, State ) ->
 	% May be done later in the construction of the actual instance (ex: based on
 	% a configuration file being then read):
 	%
-	?info( "As a US server: no name to register, no registration performed." ),
+	cond_utils:if_defined( us_common_debug_registration,
+		?debug( "As a US server: no name to register, "
+				"no registration performed." ) ),
 
 	State;
 
@@ -248,8 +250,9 @@ register_name( RegistrationName, RegistrationScope, State ) ->
 
 	naming_utils:register_as( RegistrationName, RegistrationScope ),
 
-	?info_fmt( "Registered (~s) as '~s'.",
-			  [ RegistrationScope, RegistrationName ] ),
+	cond_utils:if_defined( us_common_debug_registration,
+		?debug_fmt( "Registered (~s) as '~s'.",
+					[ RegistrationScope, RegistrationName ] ) ),
 
 	setAttributes( State, [ { registration_name, RegistrationName },
 							{ registration_scope, RegistrationScope } ] ).
@@ -266,16 +269,17 @@ unregister_name( State ) ->
 	case ?getAttr(registration_name) of
 
 		undefined ->
-			?info( "No registration name available, "
-				   "no unregistering performed." ),
+			cond_utils:if_defined( us_common_debug_registration, ?info(
+			  "No registration name available, no unregistering performed." ) ),
 			State;
 
 		RegName ->
 
 			RegScope = ?getAttr(registration_scope),
 
-			?info_fmt( "Unregistering from name '~s' (scope: ~s).",
-					  [ RegName, RegScope ] ),
+			cond_utils:if_defined( us_common_debug_registration, ?info_fmt(
+				"Unregistering from name '~s' (scope: ~s).",
+				[ RegName, RegScope ] ) ),
 
 			naming_utils:unregister( RegName, RegScope ),
 
@@ -286,11 +290,11 @@ unregister_name( State ) ->
 
 
 % Returns a textual description of this server.
--spec to_string( wooper:state() ) -> string().
+-spec to_string( wooper:state() ) -> ustring().
 to_string( State ) ->
 
 	StartTimestamp = time_utils:gregorian_ms_to_timestamp(
-					  ?getAttr(server_gregorian_start) ),
+						?getAttr(server_gregorian_start) ),
 
 	UptimeStr = time_utils:duration_to_string(
 		 time_utils:get_monotonic_time() - ?getAttr(server_start) ),
@@ -310,4 +314,4 @@ to_string( State ) ->
 	end,
 
 	text_utils:format( "server named '~s', ~s, ~s",
-					  [ ?getAttr(name), TimeStr, RegString ] ).
+					   [ ?getAttr(name), TimeStr, RegString ] ).

@@ -44,11 +44,11 @@ endif
 # conditional compilation primitives (see cond_utils for their management):
 
 # Topics covered by flags:
-#  - xx (none yet)
+#  - us_common_debug_registration: regarding naming registering
 
 # Defining debug flags (at least the most verbose are by default commented-out):
 ifeq ($(ENABLE_DEBUG),true)
-	#US_COMMON_DEBUG_FLAGS += -Dus_common_debug_scheduling
+	US_COMMON_DEBUG_FLAGS += -Dus_common_debug_registration
 endif
 
 # Defining check flags:

@@ -2,7 +2,7 @@ US_COMMON_TOP = .
 
 
 .PHONY: help help-intro help-us-common register-version-in-header              \
-		register-us-common info info-local info-conditionals
+		register-us-common info info-local info-conditionals info-deps
 
 
 MODULES_DIRS = src doc conf test
@@ -49,14 +49,17 @@ info: info-local
 
 info-local:
 	@echo "REBAR3_EXEC = $(REBAR3_EXEC)"
-	@echo "TRACES_TOP = $(TRACES_TOP)"
-	@echo "WOOPER_TOP = $(WOOPER_TOP)"
-	@echo "MYRIAD_TOP = $(MYRIAD_TOP)"
 
 
 info-conditionals:
 	@echo "US_COMMON_DEBUG_FLAGS = $(US_COMMON_DEBUG_FLAGS)"
 	@echo "US_COMMON_CHECK_FLAGS = $(US_COMMON_CHECK_FLAGS)"
+
+
+info-deps:
+	@echo "MYRIAD_TOP = $(MYRIAD_TOP) (i.e. $$(realpath $(MYRIAD_TOP)))"
+	@echo "WOOPER_TOP = $(WOOPER_TOP)) (i.e. $$(realpath $(WOOPER_TOP)))"
+	@echo "TRACES_TOP = $(TRACES_TOP)) (i.e. $$(realpath $(TRACES_TOP)))"
 
 
 include $(US_COMMON_TOP)/GNUmakesettings.inc

@@ -34,10 +34,10 @@ Technical Manual of the ``US-Common`` Layer
 ===========================================
 
 
-:Organisation: Copyright (C) 2019-2020 Olivier Boudeville
+:Organisation: Copyright (C) 2019-2021 Olivier Boudeville
 :Contact: about (dash) us-common (at) esperide (dot) com
 :Creation date: Saturday, May 2, 2020
-:Lastly updated: Thursday, August 13, 2020
+:Lastly updated: Saturday, January 23, 2021
 :Status: Work in progress
 :Version: 0.0.3
 :Dedication: Users and maintainers of the ``US-Common`` layer.

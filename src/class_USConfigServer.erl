@@ -32,6 +32,9 @@
 
 
 % Shorthands:
+
+-type ustring() :: text_utils:ustring().
+
 -type directory_path() :: file_utils:directory_path().
 -type bin_directory_path() :: file_utils:bin_directory_path().
 
@@ -215,7 +218,7 @@ construct( State ) ->
 
 	% First the direct mother classes, then this class-specific actions:
 	TraceState = class_USServer:construct( State,
-								   ?trace_categorize("Configuration Server") ),
+									?trace_categorize("Configuration Server") ),
 
 	?send_info( TraceState, "Creating a US configuration server." ),
 
@@ -319,8 +322,8 @@ destruct( State ) ->
 % requests web-information from it.
 %
 -spec getWebRuntimeSettings( wooper:state() ) -> request_return(
-			   { bin_directory_path(), basic_utils:execution_context(),
-				 maybe( bin_file_path() ), maybe( server_pid() ) } ).
+				{ bin_directory_path(), basic_utils:execution_context(),
+					maybe( bin_file_path() ), maybe( server_pid() ) } ).
 getWebRuntimeSettings( State ) ->
 
 	USWebConfigServerPid = ?getSender(),
@@ -356,7 +359,7 @@ getWebRuntimeSettings( State ) ->
 % its clients.
 %
 -spec get_default_settings() -> static_return(
-		  { file_utils:file_name(), basic_utils:atom_key(),
+		{ file_utils:file_name(), basic_utils:atom_key(),
 			naming_utils:registration_name(), naming_utils:look_up_scope() } ).
 get_default_settings() ->
 
@@ -373,7 +376,7 @@ get_default_settings() ->
 % and others (ex: web configuration ones) can use the same, factored, logic.
 %
 -spec get_us_config_directory() -> static_return(
-		   { maybe( bin_directory_path() ), text_utils:ustring() } ).
+			{ maybe( bin_directory_path() ), ustring() } ).
 get_us_config_directory() ->
 
 	HomeDir = system_utils:get_user_home_directory(),
@@ -620,7 +623,7 @@ manage_epmd_port( ConfigTable, State ) ->
 
 % Manages any user-configured TCP port range.
 -spec manage_tcp_port_range( us_config_table(), wooper:state() ) ->
-								   wooper:state().
+									wooper:state().
 manage_tcp_port_range( ConfigTable, State ) ->
 
 	PortRange = case table:lookup_entry( ?tcp_port_range_key, ConfigTable ) of
@@ -719,7 +722,7 @@ manage_execution_context( ConfigTable, State ) ->
 % level) US user and group.
 %
 -spec manage_os_user_group( us_config_table(), wooper:state() ) ->
-								  wooper:state().
+									wooper:state().
 manage_os_user_group( ConfigTable, State ) ->
 
 	% Mostly used by start/stop scripts:
@@ -803,7 +806,7 @@ manage_os_user_group( ConfigTable, State ) ->
 % US server.
 %
 -spec manage_registration_names( us_config_table(), wooper:state() ) ->
-									   wooper:state().
+										wooper:state().
 manage_registration_names( ConfigTable, State ) ->
 
 	ThisRegName = case table:lookup_entry(
@@ -868,7 +871,7 @@ manage_registration_names( ConfigTable, State ) ->
 
 % Manages any user-configured application base directory.
 -spec manage_app_base_directory( us_config_table(), wooper:state() ) ->
-									   wooper:state().
+										wooper:state().
 manage_app_base_directory( ConfigTable, State ) ->
 
 	% As opposed to, say, start/stop script, the Erlang code does not care so
@@ -945,7 +948,7 @@ manage_app_base_directory( ConfigTable, State ) ->
 % necessary.
 %
 -spec manage_log_directory( us_config_table(), wooper:state() ) ->
-							   wooper:state().
+								wooper:state().
 manage_log_directory( ConfigTable, State ) ->
 
 	BaseDir = case table:lookup_entry( ?us_log_dir_key, ConfigTable ) of
@@ -1024,7 +1027,7 @@ manage_web_config( ConfigTable, State ) ->
 
 
 % Returns a textual description of this server.
--spec to_string( wooper:state() ) -> text_utils:ustring().
+-spec to_string( wooper:state() ) -> ustring().
 to_string( State ) ->
 
 	RegString = text_utils:format( "registered as '~s' (scope: ~s)",

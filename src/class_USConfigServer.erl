@@ -875,9 +875,10 @@ manage_registration_names( ConfigTable, State ) ->
 manage_app_base_directory( ConfigTable, State ) ->
 
 	% As opposed to, say, start/stop script, the Erlang code does not care so
-	% much about these directories, so warnings, not errors, will be issued if
-	% not found (the US framework being also launchable thanks to, for example,
-	% 'make debug').
+	% much about these directories (however the app base directory may be used
+	% to determine the absolute log directory for example), so warnings, not
+	% errors, will be issued if not found (the US framework being also
+	% launchable thanks to, for example, 'make debug').
 
 	RawBaseDir = case table:lookup_entry( ?us_app_base_dir_key, ConfigTable ) of
 
@@ -887,13 +888,24 @@ manage_app_base_directory( ConfigTable, State ) ->
 				   ?us_app_env_variable ) of
 
 				false ->
-					% Guessing then, typically current directory is:
+					% Guessing then, typically current directory was with rebar:
 					% [...]/universal_server/_build/default/rel/universal_server
 					% and we want the first universal_server, so:
 					%
+					%GuessedDir = file_utils:normalise_path( file_utils:join( [
+					%	file_utils:get_current_directory(), "..", "..", "..",
+					%											 ".." ] ) ),
+
+					% Now, with our native build we shall be in
+					% us_{common,main,web}/src for example, so:
+					%
+					% (their own app base directory shall not selected here,
+					% even though they all respect the same structure), we want
+					% the US-Common one)
+					%
 					GuessedDir = file_utils:normalise_path( file_utils:join( [
-						file_utils:get_current_directory(), "..", "..", "..",
-																 ".." ] ) ),
+						file_utils:get_current_directory(), "..", "..",
+						"us_common" ] ) ),
 
 					?info_fmt( "No user-configured US application base "
 						"directory set (neither in configuration file nor "

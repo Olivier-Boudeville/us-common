@@ -20,7 +20,7 @@
 
 :raw-html:`<a name="us-common_top"></a>`
 
-:raw-html:`<div class="banner"><p><em>US-Common documentation</em> <a href="http://us-common.esperide.org">browse latest</a> <a href="https://olivier-boudeville.github.io/us-common/index.html">browse mirror</a> <a href="us-common-technical-manual-english.pdf">get PDF</a> <a href="#us-common_top">go to top</a> <a href="#us-common_bottom">go to bottom</a> <a href="mailto:about(dash)us-common(at)esperide(dot)com?subject=[US-Common]%20Remark">email us</a></p></div>`
+:raw-html:`<div class="banner"><p><em>US-Common documentation</em> <a href="http://us-common.esperide.org">browse latest</a> <a href="https://olivier-boudeville.github.io/us-common/index.html">browse mirror</a> <a href="us-common-technical-manual-english.pdf">get PDF</a> <a href="#us-common_top">go to top</a> <a href="#us-common_bottom">go to bottom</a> <a href="https://github.com/Olivier-Boudeville/us-common">go to project</a> <a href="mailto:about(dash)us-common(at)esperide(dot)com?subject=[US-Common]%20Remark">email us</a></p></div>`
 
 
 
@@ -37,9 +37,9 @@ Technical Manual of the ``US-Common`` Layer
 :Organisation: Copyright (C) 2019-2021 Olivier Boudeville
 :Contact: about (dash) us-common (at) esperide (dot) com
 :Creation date: Saturday, May 2, 2020
-:Lastly updated: Saturday, January 23, 2021
+:Lastly updated: Monday, February 8, 2021
 :Status: Work in progress
-:Version: 0.0.3
+:Version: 0.0.4
 :Dedication: Users and maintainers of the ``US-Common`` layer.
 :Abstract:
 
@@ -50,7 +50,7 @@ Technical Manual of the ``US-Common`` Layer
 
 	We present here a short overview of these services, to introduce them to newcomers.
 
-	The next level of information is to read the corresponding `source files <https://github.com/Olivier-Boudeville/us-common>`_, which are intensely commented and generally straightforward.
+	The next level of information is to read the corresponding `source files <https://github.com/Olivier-Boudeville/us-common/>`_, which are intensely commented and generally straightforward.
 
 
 .. meta::
@@ -79,7 +79,9 @@ Its purpose is to provide base elements on which the various *Universal Services
 
 We present here a short overview of these services, to introduce them to newcomers.
 
-The next level of information is to read the corresponding `source files <https://github.com/Olivier-Boudeville/us-common>`_, which are intensely commented and generally straightforward.
+The next level of information is to read the corresponding `source files <https://github.com/Olivier-Boudeville/us-common/src>`_, which are intensely commented and generally straightforward.
+
+The project repository is located `here <https://github.com/Olivier-Boudeville/us-common>`_.
 
 
 -----------

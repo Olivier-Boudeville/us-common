@@ -78,9 +78,9 @@ ifndef PROJECT_NAME
 endif
 
 
-# REBAR3_PROJECT_NAME should be defined on a per-project basis.
-ifndef REBAR3_PROJECT_NAME
-	REBAR3_PROJECT_NAME := us_common
+# PROJECT_NAME_FOR_REBAR should be defined on a per-project basis.
+ifndef PROJECT_NAME_FOR_REBAR
+	PROJECT_NAME_FOR_REBAR := us_common
 endif
 
 

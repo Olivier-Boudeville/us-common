@@ -37,15 +37,15 @@ Technical Manual of the ``US-Common`` Layer
 :Organisation: Copyright (C) 2019-2021 Olivier Boudeville
 :Contact: about (dash) us-common (at) esperide (dot) com
 :Creation date: Saturday, May 2, 2020
-:Lastly updated: Monday, February 8, 2021
+:Lastly updated: Sunday, February 21, 2021
 :Status: Work in progress
-:Version: 0.0.4
+:Version: 0.0.5
 :Dedication: Users and maintainers of the ``US-Common`` layer.
 :Abstract:
 
 	The role of the `US-Common <http://us-common.esperide.org/>`_ layer (part of the `Universal Server <https://github.com/Olivier-Boudeville/Universal-Server>`_ project) is to provide base elements on which the various *Universal Services* are built, notably:
 
-	- the Universal Server itself: see `US-Main <http://us.esperide.org/>`_
+	- the Universal Server itself: see `US-Main <http://us-main.esperide.org/>`_
 	- the Universal Webserver: see `US-Web <http://us-web.esperide.org/>`_
 
 	We present here a short overview of these services, to introduce them to newcomers.
@@ -55,6 +55,13 @@ Technical Manual of the ``US-Common`` Layer
 
 .. meta::
    :keywords: US-Common
+
+
+The latest version of this documentation is to be found at the `official US-Common website <http://us-common.esperide.org>`_ (``http://us-common.esperide.org``).
+
+:raw-html:`This US-Common documentation is also available in the PDF format (see <a href="us-common-technical-manual-english.pdf">us-common-Layer-technical-manual-english.pdf</a>), and mirrored <a href="https://olivier-boudeville.github.io/us-common/">here</a>.`
+
+:raw-latex:`The documentation is also mirrored \href{https://olivier-boudeville.github.io/us-common/}{here}.`
 
 
 :raw-latex:`\pagebreak`
@@ -74,8 +81,8 @@ The `US-Common <http://us-common.esperide.org/>`_ layer is the basis (lowest-lev
 
 Its purpose is to provide base elements on which the various *Universal Services* are built, notably:
 
-- the Universal Server itself: see `us-main <http://us.esperide.org/>`_
-- the Universal Webserver: see `us-web <http://us-web.esperide.org/>`_
+- the Universal Server itself: see `US-Main <http://us.esperide.org/>`_
+- the Universal Webserver: see `US-Web <http://us-web.esperide.org/>`_
 
 We present here a short overview of these services, to introduce them to newcomers.
 

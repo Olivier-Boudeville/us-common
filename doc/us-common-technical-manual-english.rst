@@ -86,7 +86,7 @@ Its purpose is to provide base elements on which the various *Universal Services
 
 We present here a short overview of these services, to introduce them to newcomers.
 
-The next level of information is to read the corresponding `source files <https://github.com/Olivier-Boudeville/us-common/src>`_, which are intensely commented and generally straightforward.
+The next level of information is to read the corresponding `source files <https://github.com/Olivier-Boudeville/us-common/tree/master/src>`_, which are intensely commented and generally straightforward.
 
 The project repository is located `here <https://github.com/Olivier-Boudeville/us-common>`_.
 
@@ -201,20 +201,22 @@ As discussed in these sections of `Myriad <http://myriad.esperide.org/myriad.htm
 
 Unlike Myriad (which is an OTP *library* application), US-Common is (like WOOPER and Traces) an OTP *active* application, meaning the reliance on an application that can be started/stopped (``us_common_app``), a root supervisor (``us_common_sup``) and, here, two proper supervisor bridges (``us_common_scheduler_bridge_sup`` and ``us_common_config_bridge_sup``).
 
-As for Myriad, WOOPER and Traces, most versions of US-Common are also published as `Hex packages <https://hex.pm/packages/us_common>`_.
+..
+ As for Myriad, WOOPER and Traces, most versions of US-Common are also published as `Hex packages <https://hex.pm/packages/us_common>`_.
 
-For more details, one may have a look at `rebar.config.template <https://github.com/Olivier-Boudeville/us-common/blob/master/conf/rebar.config.template>`_, the general rebar configuration file used when generating the US-Common OTP application and release (implying the automatic management of Myriad, WOOPER and Traces).
+ For more details, one may have a look at `rebar.config.template <https://github.com/Olivier-Boudeville/us-common/blob/master/conf/rebar.config.template>`_, the general rebar configuration file used when generating the US-Common OTP application and release (implying the automatic management of Myriad, WOOPER and Traces).
 
-Once the steps listed in `Using Cutting-Edge GIT`_ have been performed, an OTP-level testing can be done as well, based on ``us_common_otp_application_test``; from the root of US-Common:
-
-.. code:: bash
-
- $ cd test && make us_common_otp_application_run CMD_LINE_OPT="--batch"
+ Once the steps listed in `Using Cutting-Edge GIT`_ have been performed, an OTP-level testing can be done as well, based on ``us_common_otp_application_test``; from the root of US-Common:
 
 
-All relevant OTP applications shall be started in turn, US-Common shall then be ready for use, until all these applications are orderly shutdown.
+  code:: bash
 
-One may run ``make create-us-common-checkout`` in order to create, based on our conventions, a suitable ``_checkouts`` directory so that rebar3 can directly take into account local, directly available (in-development) dependencies (here, Myriad, WOOPER and Traces).
+  $ cd test && make us_common_otp_application_run CMD_LINE_OPT="--batch"
+
+
+ All relevant OTP applications shall be started in turn, US-Common shall then be ready for use, until all these applications are orderly shutdown.
+
+ One may run ``make create-us-common-checkout`` in order to create, based on our conventions, a suitable ``_checkouts`` directory so that rebar3 can directly take into account local, directly available (in-development) dependencies (here, Myriad, WOOPER and Traces).
 
 
 

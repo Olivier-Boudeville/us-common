@@ -151,10 +151,10 @@ endif
 # We define the path to the Traces layer (possibly available as a symbolic
 # link).
 #
-# For the sake of these build-related makefiles, dependencies will be searched
-# (in that order, the one enforced in otp_utils) in a local _checkouts child
-# directory (if checkout directories are used and if the top-level package of
-# interest is the current one), otherwise in sibling directories (i.e. whose
+# For the sake of these build-related makefiles, Ceylan dependencies will be
+# searched (in that order, the one enforced in otp_utils) in a local _checkouts
+# child directory (if checkout directories are used and if the top-level package
+# of interest is the current one), otherwise in sibling directories (i.e. whose
 # build root is at the same level as this one).
 #
 # This last case happens notably if not using checkout directories, or if using
@@ -168,11 +168,15 @@ endif
 ifneq ($(wildcard $(US_COMMON_TOP)/_checkouts/traces/.),)
 	TRACES_TOP = $(US_COMMON_TOP)/_checkouts/traces
 else
-	# Otherwise a sibling one is searched for:
+	# Second, a sibling one is searched for:
 	ifneq ($(wildcard $(US_COMMON_TOP)/../traces/.),)
 		TRACES_TOP = $(US_COMMON_TOP)/../traces
    else
-		FORCE_EVAL := $(error Unable to find the build root of Ceylan-Traces)
+		# Otherwise most probably in a 'rebar3 compile' context:
+		ifneq ($(wildcard $(US_COMMON_TOP)/_build/default/lib/traces/.),)
+			TRACES_TOP = $(US_COMMON_TOP)/_build/default/lib/traces
+		else
+			FORCE_EVAL := $(error Unable to find the build root of Ceylan-Traces from $(realpath .).)
+		endif
 	endif
-
 endif

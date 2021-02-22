@@ -132,13 +132,13 @@ run() ->
 
 
 	SchedPid ! { registerOneshotTask, [ get_command( second ),
-					   _SecondOneshotStartTime=asap, FirstActuatorPid ], self() },
+		_SecondOneshotStartTime=asap, FirstActuatorPid ], self() },
 
 	task_done = test_receive(),
 
 
 	SchedPid ! { registerOneshotTask, [ get_command( third ),
-				   _ThirdOneshotStartTime=flexible, FirstActuatorPid ], self() },
+		_ThirdOneshotStartTime=flexible, FirstActuatorPid ], self() },
 
 	task_done = test_receive(),
 
@@ -205,8 +205,8 @@ run() ->
 
 	NonExistingId = 1000,
 
-	test_facilities:display( "Next error about the unregistering of task ~B "
-							 "is expected:", [ NonExistingId ] ),
+	test_facilities:display( "Next error message about the unregistering "
+							 "of task ~B is expected:", [ NonExistingId ] ),
 
 	SchedPid ! { unregisterTask, NonExistingId, self() },
 

@@ -52,8 +52,8 @@ start( Type, StartArgs ) ->
 
 		% Includes 'ignore':
 		Other ->
-			trace_utils:error_fmt( "The US-Common root supervisor did not start "
-								   "properly:~n  ~p.", [ Other ] ),
+			trace_utils:error_fmt( "The US-Common root supervisor did not "
+								   "start properly:~n  ~p.", [ Other ] ),
 			{ error, Other }
 
 	end.

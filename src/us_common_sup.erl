@@ -94,6 +94,9 @@ init( Args=[] ) ->
 
 	ChildSpecs = [ CfgBridgeChildSpec, SchedBridgeChildSpec ],
 
+	%trace_utils:debug_fmt( "Supervisor settings: ~p~nChild spec: ~p",
+	%					   [ SupSettings, ChildSpecs ] ),
+
 	{ ok, { SupSettings, ChildSpecs } }.
 
 
@@ -103,8 +106,16 @@ get_config_bridge_spec() ->
 
 	   start => { _Mod=us_common_config_bridge_sup, _Fun=start_link, _Args=[] },
 
-	   % Always restarted:
-	   restart => permanent,
+	   restart => cond_utils:if_defined( exec_target_is_production,
+
+			% In production, as reliable as possible:
+			_AlwaysRestarted=permanent,
+
+			% In development, failing as clearly as possible; here at least so
+			% that tests fail in case of problem (ex: if no configuration file
+			% is found):
+			%
+			_NeverRestarted=temporary ),
 
 	   % 2-second termination allowed before brutal killing:
 	   shutdown => 2000,
@@ -121,8 +132,9 @@ get_scheduler_bridge_spec() ->
 	   start => { _Mod=us_common_scheduler_bridge_sup, _Fun=start_link,
 				  _Args=[] },
 
-	   % Always restarted:
-	   restart => permanent,
+	   % See get_config_bridge_spec/0:
+	   restart => cond_utils:if_defined( exec_target_is_production,
+			_AlwaysRestarted=permanent, _NeverRestarted=temporary ),
 
 	   % 2-second termination allowed before brutal killing:
 	   shutdown => 2000,

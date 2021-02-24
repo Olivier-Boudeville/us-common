@@ -60,7 +60,8 @@
 
 
 
-% Starts and links a US-Common supervision bridge to the US configuration server.
+% Starts and links a US-Common supervision bridge to the US configuration
+% server.
 %
 % Note: typically spawned as a supervised child of the US-Common root supervisor
 % (see us_common_sup:init/1), hence generally triggered by the application

@@ -33,13 +33,21 @@
 
 % Shorthands:
 
+-type execution_context() :: basic_utils:execution_context().
+
 -type ustring() :: text_utils:ustring().
 
+-type file_name() :: file_utils:file_name().
+-type file_path() :: file_utils:file_path().
+-type bin_file_path() :: file_utils:bin_file_path().
 -type directory_path() :: file_utils:directory_path().
 -type bin_directory_path() :: file_utils:bin_directory_path().
 
--type bin_file_path() :: file_utils:bin_file_path().
+-type registration_name() :: naming_utils:registration_name().
+-type registration_scope() :: naming_utils:registration_scope().
+
 -type server_pid() :: class_UniversalServer:server_pid().
+
 
 
 % A table holding US configuration information:
@@ -60,16 +68,15 @@
 %
 % See
 % https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
-% and
-% https://stackoverflow.com/questions/1024114/location-of-ini-config-files-in-linux-unix
-% for more information.
+% and location-of-ini-config-files-in-linux-unix in
+% https://stackoverflow.com/questions/1024114 for more information.
 %
 %
 % All base directories shall be absolute directories.
 %
 % The configuration directory is defined as the ?app_subdir sub-directory of the
-% base directories that contains the ?config_filename files, and all other
-% related configuration files.
+% base directory that contains the ?config_filename files, and all other related
+% configuration files.
 %
 % Ex: "~/.config/universal-server".
 
@@ -92,7 +99,7 @@
 	  "the range (if any) of TCP ports to use for out-of-band inter-VM "
 	  "communication (not using the Erlang carrier; ex: for send_file)" },
 
-	{ execution_context, basic_utils:execution_context(),
+	{ execution_context, execution_context(),
 	  "tells whether this server is to run in development or production mode" },
 
 	{ log_directory, bin_directory_path(),
@@ -116,14 +123,14 @@
 	  "the group that shall be common to all US-related users" },
 
 
-	{ us_server_registration_name, naming_utils:registration_name(),
+	{ us_server_registration_name, registration_name(),
 	  "the name under which the US server may be registered" },
 
 	{ us_web_config_server_pid, maybe( class_UniversalServer:server_pid() ),
 	  "the PID of the US web configuration server (if any)" },
 
 	% Cannot easily be obtained otherwise:
-	{ registration_name, naming_utils:registration_name(),
+	{ registration_name, registration_name(),
 	  "the name under which this configuration server is registered" },
 
 	{ app_base_directory, bin_directory_path(),
@@ -192,6 +199,7 @@
 
 -define( default_log_base_dir, "/var/log" ).
 
+
 % Exported helpers:
 -export([ get_execution_target/0 ]).
 
@@ -210,6 +218,8 @@
 % Constructs the US configuration server, using the default logic to find its
 % configuration file.
 %
+% Note: must be kept in line with the next constructor.
+%
 -spec construct( wooper:state() ) -> wooper:state().
 construct( State ) ->
 
@@ -218,15 +228,15 @@ construct( State ) ->
 
 	% First the direct mother classes, then this class-specific actions:
 	TraceState = class_USServer:construct( State,
-									?trace_categorize("Configuration Server") ),
+							?trace_categorize("Configuration main server") ),
 
-	?send_info( TraceState, "Creating a US configuration server." ),
+	?send_info( TraceState, "Creating the overall US configuration server." ),
 
 	BinCfgDir = case get_us_config_directory() of
 
 		{ undefined, CfgMsg } ->
 			?send_error_fmt( TraceState, "Unable to determine the US "
-							 "configuration directory: ~s.", [ CfgMsg ] ),
+							 "configuration directory; ~s", [ CfgMsg ] ),
 			throw( us_configuration_directory_not_found );
 
 		{ BinFoundCfgDir, CfgMsg } ->
@@ -235,71 +245,35 @@ construct( State ) ->
 
 	end,
 
-	CfgState = load_configuration( BinCfgDir, TraceState ),
-
-	% Enforce security in all cases ("chmod 700"); if it fails here, the
-	% combined path/user configuration must be incorrect; however this server
-	% may be run from another US application (typically US-web), possibly
-	% running as a user of their own, different from the main US user (yet
-	% supposedly in the same US group).
-	%
-	% So:
-
-	CurrentUserId = system_utils:get_user_id(),
-
-	LogDir = getAttribute( CfgState, log_directory ),
-
-	case file_utils:get_owner_of( LogDir ) of
-
-		CurrentUserId ->
-			file_utils:change_permissions( LogDir,
-			  [ owner_read, owner_write, owner_execute,
-				group_read, group_write, group_execute ] );
-
-		% Not owned, do nothing:
-		_OtherId ->
-			ok
-
-	end,
-
-	ReadyState = setAttributes( CfgState, [
-					{ config_base_directory, BinCfgDir },
-					{ us_server_pid, undefined },
-					{ us_web_config_server_pid, undefined } ] ),
-
-	?send_info_fmt( TraceState, "Now ready: ~s.", [ to_string( ReadyState ) ] ),
-
-	ReadyState.
-
+	% Final trace sent by:
+	perform_setup( BinCfgDir, TraceState ).
 
 
 
 % Constructs the US configuration server, using specified configuration
 % directory.
 %
-% Useful for example to create auxiliary universal servers.
+% Useful for example to create auxiliary universal servers or perform tests.
+%
+% Note: must be kept in line with the next constructor.
 %
 -spec construct( wooper:state(), directory_path() ) -> wooper:state().
 construct( State, ConfigDir ) when is_list( ConfigDir ) ->
 
+	ServerName = text_utils:format( "Configuration Server from ~s",
+		[ file_utils:get_last_path_element( ConfigDir ) ] ),
+
 	% First the direct mother classes, then this class-specific actions:
 	TraceState = class_USServer:construct( State,
-									   ?trace_categorize("USConfigServer") ),
+										   ?trace_categorize(ServerName) ),
 
-	?send_info_fmt( TraceState, "Creating the overall US configuration server, "
+	?send_info_fmt( TraceState, "Creating a  US configuration server, "
 		"using the '~s' configuration directory for that.", [ ConfigDir ] ),
 
 	BinCfgDir = text_utils:string_to_binary( ConfigDir ),
 
-	CfgState = load_configuration( BinCfgDir, TraceState ),
-
-	ReadyState = setAttributes( CfgState, [
-					{ config_base_directory, BinCfgDir },
-					{ us_web_config_server_pid, undefined } ] ),
-
-	?send_info( TraceState, to_string( ReadyState ) ),
-
-	ReadyState.
+	% Final trace sent by:
+	perform_setup( BinCfgDir, TraceState ).
 
 
 
@@ -322,8 +296,8 @@ destruct( State ) ->
 % requests web-information from it.
 %
 -spec getWebRuntimeSettings( wooper:state() ) -> request_return(
-				{ bin_directory_path(), basic_utils:execution_context(),
-					maybe( bin_file_path() ), maybe( server_pid() ) } ).
+		{ bin_directory_path(), execution_context(), maybe( bin_file_path() ),
+		  maybe( server_pid() ) } ).
 getWebRuntimeSettings( State ) ->
 
 	USWebConfigServerPid = ?getSender(),
@@ -358,9 +332,9 @@ getWebRuntimeSettings( State ) ->
 % Returns the main default settings regarding the US configuration server, for
 % its clients.
 %
--spec get_default_settings() -> static_return(
-		{ file_utils:file_name(), basic_utils:atom_key(),
-			naming_utils:registration_name(), naming_utils:look_up_scope() } ).
+-spec get_default_settings() -> static_return( { file_name(),
+		basic_utils:atom_key(), registration_name(),
+		naming_utils:look_up_scope() } ).
 get_default_settings() ->
 
 	wooper:return_static( { ?us_config_filename,
@@ -373,10 +347,11 @@ get_default_settings() ->
 % Returns any found configuration directory and a corresponding trace message.
 %
 % This is a static method (no state involved), so that both this kind of servers
-% and others (ex: web configuration ones) can use the same, factored, logic.
+% and others (ex: web configuration ones), and even tests, can use the same,
+% factored, logic.
 %
--spec get_us_config_directory() -> static_return(
-			{ maybe( bin_directory_path() ), ustring() } ).
+-spec get_us_config_directory() ->
+			static_return( { maybe( bin_directory_path() ), ustring() } ).
 get_us_config_directory() ->
 
 	HomeDir = system_utils:get_user_home_directory(),
@@ -491,6 +466,77 @@ find_file_in( _AllBasePaths=[ Path | T ], CfgSuffix, BaseMsg, Msgs ) ->
 
 
 
+% Static method to be available from external code such as clients or tests.
+-spec get_configuration_table( bin_directory_path() ) -> static_return(
+		fallible( { us_config_table(), file_path() } ) ).
+get_configuration_table( BinCfgDir ) ->
+
+	CfgFilename = file_utils:join( BinCfgDir, ?us_config_filename ),
+
+	% Should, by design, never fail (already checked):
+	Res = case file_utils:is_existing_file_or_link( CfgFilename ) of
+
+		true ->
+			%trace_bridge:info_fmt( "Reading the Universal Server "
+			%    "configuration "from '~s'.", [ CfgFilename ] ),
+
+			% Ensures as well that all top-level terms are pairs indeed:
+			ConfigTable = table:new_from_unique_entries(
+							file_utils:read_terms( CfgFilename ) ),
+			{ ok, { ConfigTable, CfgFilename } };
+
+		false ->
+			{ error, { us_config_file_not_found, CfgFilename } }
+
+	end,
+
+	wooper:return_static( Res ).
+
+
+
+% Performs set-up actions common to all constructors.
+-spec perform_setup( bin_directory_path(), wooper:state() ) ->
+								wooper:state().
+perform_setup( BinCfgDir, State ) ->
+
+	LoadState = load_configuration( BinCfgDir, State ),
+
+	ReadyState = setAttributes( LoadState, [
+					{ config_base_directory, BinCfgDir },
+					{ us_server_pid, undefined },
+					{ us_web_config_server_pid, undefined } ] ),
+
+	% Enforce security in all cases ("chmod 700"); if it fails here, the
+	% combined path/user configuration must be incorrect; however this server
+	% may be run from another US application (typically US-Web), possibly
+	% running as a user of their own, different from the main US user (yet
+	% supposedly in the same US group).
+	%
+	% So:
+
+	CurrentUserId = system_utils:get_user_id(),
+
+	LogDir = getAttribute( ReadyState, log_directory ),
+
+	case file_utils:get_owner_of( LogDir ) of
+
+		CurrentUserId ->
+			file_utils:change_permissions( LogDir,
+			  [ owner_read, owner_write, owner_execute,
+				group_read, group_write, group_execute ] );
+
+		% Not owned, do nothing:
+		_OtherId ->
+			ok
+
+	end,
+
+	?info_fmt( "Constructed: ~s.", [ to_string( ReadyState ) ] ),
+
+	ReadyState.
+
+
+
 % Returns the Universal Server configuration table (i.e. the one of US, not
 % specifically of US web), and directly applies some of the read settings.
 %
@@ -498,30 +544,22 @@ find_file_in( _AllBasePaths=[ Path | T ], CfgSuffix, BaseMsg, Msgs ) ->
 								wooper:state().
 load_configuration( BinCfgDir, State ) ->
 
-	CfgFilename = file_utils:join( BinCfgDir, ?us_config_filename ),
+	{ ConfigTable, ConfigFilePath } =
+			case get_configuration_table( BinCfgDir ) of
 
-	% Should, by design, never fail:
-	case file_utils:is_existing_file_or_link( CfgFilename ) of
+		{ ok, P } ->
+			P;
 
-		true ->
-			ok;
-
-		false ->
+		{ error, P={ us_config_file_not_found, CfgFileP } } ->
 			?error_fmt( "The overall US configuration file ('~s') "
-				"could not be found.", [ CfgFilename ] ),
+				"could not be found.", [ CfgFileP ] ),
 			% Must have disappeared then:
-			throw( { us_config_file_not_found, CfgFilename } )
+			throw( P )
 
 	end,
 
-	?info_fmt( "Reading the Universal Server configuration from '~s'.",
-			   [ CfgFilename ] ),
-
-	% Ensures as well that all top-level terms are pairs indeed:
-	ConfigTable = table:new_from_unique_entries(
-					file_utils:read_terms( CfgFilename ) ),
-
-	?info_fmt( "Read US configuration ~s", [ table:to_string( ConfigTable ) ] ),
+	?info_fmt( "Read US configuration from '~s': ~s",
+			   [ ConfigFilePath, table:to_string( ConfigTable ) ] ),
 
 	% We follow the usual order in the configuration file:
 
@@ -554,9 +592,10 @@ load_configuration( BinCfgDir, State ) ->
 
 		UnexpectedKeys ->
 			?error_fmt( "Unknown key(s) in '~s': ~s~nLicit keys: ~s",
-				[ CfgFilename, text_utils:terms_to_string( UnexpectedKeys ),
+				[ ConfigFilePath, text_utils:terms_to_string( UnexpectedKeys ),
 				  text_utils:terms_to_string( LicitKeys ) ] ),
-			throw( { invalid_configuration_keys, UnexpectedKeys, CfgFilename } )
+			throw( { invalid_configuration_keys, UnexpectedKeys,
+					 ConfigFilePath } )
 
 	end.
 
@@ -709,8 +748,7 @@ manage_execution_context( ConfigTable, State ) ->
 		_OtherContext ->
 			?warning_fmt( "The runtime user-configured execution context (~s) "
 				"does not match the compile-time execution target of "
-				"this Universal Server (~s).",
-				[ Context, USCommonExecTarget ] )
+				"this Universal Server (~s).", [ Context, USCommonExecTarget ] )
 
 	end,
 
@@ -809,37 +847,30 @@ manage_os_user_group( ConfigTable, State ) ->
 										wooper:state().
 manage_registration_names( ConfigTable, State ) ->
 
-	ThisRegName = case table:lookup_entry(
-		   ?us_config_server_registration_name_key, ConfigTable ) of
+	{ CfgRegName, RegScope, CfgMsg } =
+		case get_us_config_server_naming( ConfigTable ) of
 
-		key_not_found ->
-			DefaultThisRegName = ?default_us_config_reg_name,
-			?info_fmt( "No user-configured registration name for this server, "
-					   "using default name '~s'.", [ DefaultThisRegName ] ),
-			DefaultThisRegName;
+			{ ok, T } ->
+				T;
 
-		{ value, UserThisRegName } when is_atom( UserThisRegName ) ->
-			?info_fmt( "Using user-configured registration name '~s' for "
-					   "this server.", [ UserThisRegName ] ),
-			UserThisRegName;
-
-		{ value, InvalidThisRegName } ->
-			?error_fmt( "Read invalid user-configured registration name for "
-						"this server: '~p'.", [ InvalidThisRegName ] ),
-			throw( { invalid_us_config_registration_name, InvalidThisRegName,
-					 ?us_config_server_registration_name_key } )
+			{ error, { InvalidThisRegName, CfgRefNameKey } } ->
+				?error_fmt( "Read invalid user-configured registration name "
+					"for this US configuration server (key: '~s'): '~p'.",
+					 [ CfgRefNameKey, InvalidThisRegName ] ),
+				throw( { invalid_us_config_registration_name,
+						 InvalidThisRegName, CfgRefNameKey } )
 
 	end,
 
-	Scope = ?default_registration_scope,
+	?info( CfgMsg ),
 
-	naming_utils:register_as( ThisRegName, Scope ),
+	naming_utils:register_as( CfgRegName, RegScope ),
 
-	?info_fmt( "Registered as '~s' (scope: ~s).", [ ThisRegName, Scope ] ),
+	?info_fmt( "Registered as '~s' (scope: ~s).", [ CfgRegName, RegScope ] ),
 
-
-	% We read the registration name of the US server knowing that its upcoming
-	% creation is likely (it will have to be told about the name it shall use):
+	% We then read the registration name of the US server knowing that its
+	% upcoming creation is likely (it will have to be told about the name it
+	% shall use):
 
 	USRegName = case table:lookup_entry( ?us_server_registration_name_key,
 										 ConfigTable ) of
@@ -863,9 +894,42 @@ manage_registration_names( ConfigTable, State ) ->
 
 	end,
 
-	setAttributes( State, [ { registration_name, ThisRegName },
-							{ registration_scope, Scope },
+	setAttributes( State, [ { registration_name, CfgRegName },
+							{ registration_scope, RegScope },
 							{ us_server_registration_name, USRegName } ] ).
+
+
+
+% Static for sharing with clients, tests, etc.
+-spec get_us_config_server_naming( us_config_table() ) -> static_return(
+	   fallible( { registration_name(), registration_scope(), ustring() } ) ).
+get_us_config_server_naming( ConfigTable ) ->
+
+	Scope = ?default_registration_scope,
+
+	Res = case table:lookup_entry(
+		   ?us_config_server_registration_name_key, ConfigTable ) of
+
+		key_not_found ->
+			DefaultCfgServRegName = ?default_us_config_reg_name,
+			Msg = text_utils:format( "No user-configured registration name "
+				"for this US configuration server, using default name '~s'.",
+				[ DefaultCfgServRegName ] ),
+			{ ok, { DefaultCfgServRegName, Scope, Msg } };
+
+		{ value, UserCfgServRegName } when is_atom( UserCfgServRegName ) ->
+			Msg = text_utils:format( "Using user-configured registration name "
+				"'~s' for this US configuration server.",
+				[ UserCfgServRegName ] ),
+			{ ok, { UserCfgServRegName, Scope, Msg } };
+
+		{ value, InvalidCfgServRegName } ->
+			{ error, { InvalidCfgServRegName,
+					   ?us_config_server_registration_name_key } }
+
+	end,
+
+	wooper:return_static( Res ).
 
 
 

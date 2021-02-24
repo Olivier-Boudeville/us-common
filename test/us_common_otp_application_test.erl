@@ -30,9 +30,93 @@
 % For run/0 export and test traces:
 -include_lib("traces/include/traces_for_tests.hrl").
 
+% For us_common_scheduler_registration_{name,scope}:
+% (path not set yet from here)
+%
+%-include_lib("us_common/include/us_common_defines.hrl").
+-include("us_common_defines.hrl").
+
+
 
 % Actual test:
 test_us_common_application( OrderedAppNames ) ->
+
+	test_facilities:display( "Starting the US-Common OTP active application." ),
+
+	% We did not trap EXIT messages, as we wanted this test to crash (thanks to
+	% the links below) in case of problem (and not to receive an EXIT message
+	% bound not to be read, as it happened when no US configuration file was
+	% found).
+	%
+	% However this test was crashing even when stopping (normally) applications,
+	% as apparently an OTP application has its child processes terminated with
+	% reason 'shutdown' (not 'normal').
+	%
+	% So now this test process traps EXIT messages, and ensures that none
+	% besides {'EXIT',P,shutdown}, P being the PID of a US-Common process, is
+	% received.
+	%
+	false = erlang:process_flag( trap_exit, true ),
+
+	% We have to link notably to the upcoming US-Common configuration
+	% server. However starting an application does not provide a means of
+	% knowing its PID (none returned) and this server is not registered under a
+	% fixed name, as it may be read from the US configuration file. So this test
+	% has also to locate and read that file in order to determine the name to
+	% query:
+
+	BinCfgDir = case class_USConfigServer:get_us_config_directory() of
+
+		{ undefined, CfgDirMsg } ->
+
+			trace_bridge:error_fmt( "Test is unable to determine the US "
+				"configuration directory; ~s", [ CfgDirMsg ] ),
+
+			% CfgDirMsg too verbose for:
+			throw( us_configuration_directory_not_found );
+
+		{ BinFoundCfgDir, CfgDirMsg } ->
+			trace_bridge:info( CfgDirMsg ),
+			BinFoundCfgDir
+
+	end,
+
+	{ ConfigTable, CfgFilename } = case
+			class_USConfigServer:get_configuration_table( BinCfgDir ) of
+
+		{ ok, P } ->
+			P;
+
+		{ error, Reason } ->
+			trace_bridge:error_fmt( "Test is unable to determine the US "
+				"configuration from directory '~s': ~s.",
+				[ BinCfgDir, Reason ] ),
+			throw( Reason )
+
+	end,
+
+	test_facilities:display( "Read configuration from '~s'.", [ CfgFilename ] ),
+
+	{ CfgRegName, CfgRegScope, CfgNamingMsg } =
+		case class_USConfigServer:get_us_config_server_naming( ConfigTable ) of
+
+			{ ok, T } ->
+				T;
+
+			{ error, { InvalidThisRegName, CfgRefNameKey } } ->
+				trace_bridge:error_fmt( "Read invalid user-configured "
+					"registration name for this US configuration server "
+					 "(key: '~s'): '~p'.",
+					 [ CfgRefNameKey, InvalidThisRegName ] ),
+				throw( { invalid_us_config_registration_name,
+						 InvalidThisRegName, CfgRefNameKey } )
+
+	end,
+
+	trace_bridge:info( CfgNamingMsg ),
+
+	% Now we are able to link to the future US configuration server.
+
 
 	% No ?test_start/?test_stop here, as we start/stop Traces through
 	% OTP-related operations.
@@ -44,6 +128,25 @@ test_us_common_application( OrderedAppNames ) ->
 	%
 	otp_utils:start_applications( OrderedAppNames ),
 
+	USCfgSrvPid = naming_utils:wait_for_registration_of( CfgRegName,
+		naming_utils:registration_to_look_up_scope( CfgRegScope ) ),
+
+	% The top-level user process may not be aware that an OTP application fails
+	% (ex: because its main process crashed), which is a problem for a test. So
+	% here we link explicitly this test process to the US configuration server,
+	% to have a chance of detecting issues:
+	%
+	erlang:link( USCfgSrvPid ),
+
+	% The same (simpler - less choices) for the US-Common scheduler:
+	SchedPid = naming_utils:wait_for_registration_of(
+		?us_common_scheduler_registration_name,
+		naming_utils:registration_to_look_up_scope(
+		  ?us_common_scheduler_registration_scope ) ),
+
+	erlang:link( SchedPid ),
+
+
 	% If not in batch mode, this renaming will trigger the launch of the trace
 	% supervisor whose activation was deferred until then:
 	%
@@ -54,13 +157,20 @@ test_us_common_application( OrderedAppNames ) ->
 	?test_info_fmt( "US-Common version: ~p.",
 					[ system_utils:get_application_version( us_common ) ] ),
 
+
 	% Of course shall be sent before the stopping of Traces:
-	?test_info(
-	  "Successful end of test of the US-Common OTP application." ),
+	?test_info( "Successful test (not fully ended yet) of the US-Common OTP "
+				"application." ),
 
 	% Including US-Common:
 	?test_info( "Stopping all user applications." ),
-	otp_utils:stop_user_applications( OrderedAppNames ).
+	otp_utils:stop_user_applications( OrderedAppNames ),
+
+	% None expected to be left:
+	basic_utils:check_no_pending_message(),
+
+	test_facilities:display(
+	  "Successful end of test of the US-Common OTP application." ).
 
 
 
@@ -81,8 +191,8 @@ run() ->
 	OrderedAppNames = otp_utils:prepare_for_execution( _ThisApp=us_common,
 													   BuildRootDir ),
 
-	trace_utils:info_fmt( "Resulting applications to start, in order: ~w.",
-						  [ OrderedAppNames ] ),
+	trace_bridge:info_fmt( "Resulting applications to start, in order: ~w.",
+						   [ OrderedAppNames ] ),
 
 	test_us_common_application( OrderedAppNames ),
 

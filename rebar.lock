@@ -4,7 +4,7 @@
   0},
  {<<"traces">>,
   {git,"git://github.com/Olivier-Boudeville/Ceylan-Traces",
-       {ref,"4f804bec852b8cde74938f5a2c05024fa9dfbb42"}},
+       {ref,"c5aa7a872c434755fa70b3442b00888b9b458463"}},
   0},
  {<<"wooper">>,
   {git,"git://github.com/Olivier-Boudeville/Ceylan-WOOPER",

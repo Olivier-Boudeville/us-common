@@ -952,31 +952,46 @@ manage_app_base_directory( ConfigTable, State ) ->
 				   ?us_app_env_variable ) of
 
 				false ->
-					% Guessing then, typically current directory was with rebar:
+
+					CurrentDir = file_utils:get_current_directory(),
+
+					% Guessing then; typically current directory was with rebar:
 					% [...]/universal_server/_build/default/rel/universal_server
 					% and we want the first universal_server, so:
 					%
-					%GuessedDir = file_utils:normalise_path( file_utils:join( [
-					%	file_utils:get_current_directory(), "..", "..", "..",
-					%											 ".." ] ) ),
+					RebarGuessedDir = file_utils:join(
+						[ CurrentDir, "..", "..", "..", ".." ] ),
 
 					% Now, with our native build we shall be in
-					% us_{common,main,web}/src for example, so:
+					% us_{common,main,web}/test for example, so:
 					%
 					% (their own app base directory shall not selected here,
 					% even though they all respect the same structure), we want
 					% the US-Common one)
 					%
-					GuessedDir = file_utils:normalise_path( file_utils:join( [
-						file_utils:get_current_directory(), "..", "..",
-						"us_common" ] ) ),
+					NativeGuessedDir = file_utils:join(
+						[ CurrentDir , "..", "..", "us_common" ] ),
+
+					% Other builds (ex: continuous integration ones) may clone
+					% with the original name (with no "us_common" renaming), so:
+					%
+					OtherGuessedDir = file_utils:join(
+						[ CurrentDir , "..", "..", "us-common" ] ),
+
+					CandidateDirs = [ RebarGuessedDir, NativeGuessedDir,
+									  OtherGuessedDir ],
+
+					GuessedDir = file_utils:get_first_existing_directory_in(
+								   CandidateDirs ),
+
+					GuessedNormDir = file_utils:normalise_path( GuessedDir ),
 
 					?info_fmt( "No user-configured US application base "
 						"directory set (neither in configuration file nor "
 						"through the '~s' environment variable), "
-						"hence trying to guess it as '~s'.",
-						[ ?us_app_env_variable, GuessedDir ] ),
-					GuessedDir;
+						"hence guessing it as '~s'.",
+						[ ?us_app_env_variable, GuessedNormDir ] ),
+					GuessedNormDir;
 
 				EnvDir ->
 					?info_fmt( "No user-configured US application base "

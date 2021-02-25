@@ -21,6 +21,6 @@ jobs:
       run: rebar3 compile
     - name: Run tests
       run: |
-	    mkdir -p ${HOME}/.config/universal-server/
-	    cd ${HOME}/.config/universal-server/ && ln -s $(pwd)/priv/for-testing/us.config
-	    make test NODE_NAMING="--sn"
+        mkdir -p ${HOME}/.config/universal-server/
+        cd ${HOME}/.config/universal-server/ && ln -s $(pwd)/priv/for-testing/us.config
+        make test NODE_NAMING="--sn"

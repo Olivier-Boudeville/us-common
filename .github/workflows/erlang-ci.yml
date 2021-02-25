@@ -21,6 +21,11 @@ jobs:
       run: rebar3 compile
     - name: Run tests
       run: |
-        mkdir -p ${HOME}/.config/universal-server/
-        cd ${HOME}/.config/universal-server/ && ln -s $(pwd)/priv/for-testing/us.config
+        base_dir="$(pwd)"
+        echo "Base directory is: '${base_dir}'."
+        cfg_dir="${HOME}/.config/universal-server/"
+        echo "Configuration directory is: '${cfg_dir}'."
+        mkdir -p "${cfg_dir}"
+        cd "${cfg_dir}" && ln -s "${base_dir}/priv/for-testing/us.config"
+        cd "${base_dir}"
         make test NODE_NAMING="--sn"

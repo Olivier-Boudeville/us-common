@@ -29,6 +29,14 @@
 {erl_opts, [ {d,myriad_debug_mode}, {d,wooper_debug_mode}, {d,traces_debug_mode}, {d,us_common_debug_mode}, {d,tracing_activated}, debug_info, {debug_info_key,"DEBUG_KEY_FOR_REBAR"}, report_warnings, warn_export_all, warn_export_vars, warn_shadow_vars, warn_obsolete_guards, warn_unused_import, warnings_as_errors, {parse_transform,wooper_parse_transform}, INCS_FOR_REBAR ]}.
 
 
+% Otherwise spurious, ill-configured compilations will be wrongly attempted by
+% rebar3:
+%
+% (could not set REBAR_PROFILE=$(REBAR_PROFILE))
+%
+{pre_hooks,  [ {compile, "make -s rebar3-compile-pre-hook"} ]}.
+{post_hooks, [ {compile, "make -s rebar3-compile-post-hook"} ]}.
+
 
 % For release generation:
 %

@@ -21,7 +21,7 @@
 
 {application, us_common,
  [{description, "US-Common, the base OTP active application on which the various Universal Service elements are built (see http://us-common.esperide.org)"},
-  {vsn, "VERSION_FOR_REBAR3"},
+  {vsn, "VERSION_FOR_REBAR"},
   {registered, []},
 
   % Regarding:
@@ -36,7 +36,7 @@
   {env,[]},
 
   % Flat hierarchy in ebin here:
-  {modules, [MODULES_FOR_REBAR3]},
+  {modules, [MODULES_FOR_REBAR]},
 
   {licenses, ["US-Common is licensed by its author (Olivier Boudeville) under the GNU Affero General Public License (AGPL), version 3.0 or later"]},
 

@@ -56,7 +56,7 @@
 -spec start_link() -> supervisor:startlink_ret().
 start_link() ->
 
-	trace_utils:debug( "Starting the US-Common root supervisor." ),
+	trace_bridge:debug( "Starting the US-Common root supervisor." ),
 
 	% Local registration is better, to avoid clashes:
 	supervisor:start_link( _Reg={ local, ?root_supervisor_name },
@@ -73,7 +73,7 @@ init( Args=[] ) ->
 
 	ExecTarget = class_USConfigServer:get_execution_target(),
 
-	trace_utils:debug_fmt( "Initializing the US-Common root supervisor "
+	trace_bridge:debug_fmt( "Initializing the US-Common root supervisor "
 		"(args: ~p, execution target: ~s).", [ Args, ExecTarget ] ),
 
 	% We always create a US configuration server and a scheduler that are
@@ -94,8 +94,8 @@ init( Args=[] ) ->
 
 	ChildSpecs = [ CfgBridgeChildSpec, SchedBridgeChildSpec ],
 
-	%trace_utils:debug_fmt( "Supervisor settings: ~p~nChild spec: ~p",
-	%					   [ SupSettings, ChildSpecs ] ),
+	%trace_bridge:debug_fmt( "Supervisor settings: ~p~nChild spec: ~p",
+	%						[ SupSettings, ChildSpecs ] ),
 
 	{ ok, { SupSettings, ChildSpecs } }.
 

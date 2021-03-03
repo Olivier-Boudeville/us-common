@@ -364,8 +364,8 @@ init_common( State ) ->
 										 { timer_table, EmptyTable },
 										 { next_task_id, 1 } ] ),
 
-	trace_utils:info_fmt( "Scheduler ready, at ~s.",
-						  [ get_current_timestamp_string( ReadyState ) ] ),
+	trace_bridge:info_fmt( "Scheduler ready, at ~s.",
+						   [ get_current_timestamp_string( ReadyState ) ] ),
 
 	ReadyState.
 
@@ -945,7 +945,7 @@ insert_task_at( TaskId, ScheduleOffset, DurationFromNow, Plan, TimerTable ) ->
 	NewP = insert_task_at( TaskId, ScheduleOffset, DurationFromNow, Plan,
 						   _AccPlan=[], TimerTable ),
 
-	%trace_utils:debug_fmt( "After having inserted task ~B at offset #~B "
+	%trace_bridge:debug_fmt( "After having inserted task ~B at offset #~B "
 	%	"(duration from now: ~s), new plan is:~n ~p",
 	%	[ TaskId, ScheduleOffset,
 	%	  time_utils:duration_to_string( DurationFromNow ), NewPlan ] ),
@@ -1022,7 +1022,7 @@ unschedule_task( TaskId, PlannedNextSchedule,
 				%
 				[] ->
 
-					%trace_utils:debug_fmt(
+					%trace_bridge:debug_fmt(
 					%  "Removing empty schedule slot at #~B.",
 					%  [ PlannedNextSchedule ] ),
 
@@ -1079,7 +1079,7 @@ add_timer( ScheduleOffset, DurationFromNow, TimerTable ) ->
 -spec remove_timer( schedule_offset(), timer_table() ) -> timer_table().
 remove_timer( ScheduleOffset, TimerTable ) ->
 
-	%trace_utils:debug_fmt( "Removing timer for #~B.", [ ScheduleOffset ] ),
+	%trace_bridge:debug_fmt( "Removing timer for #~B.", [ ScheduleOffset ] ),
 
 	{ TimerRef, ShrunkTimerTable } =
 		table:extract_entry( ScheduleOffset, TimerTable ),
@@ -1090,7 +1090,7 @@ remove_timer( ScheduleOffset, TimerTable ) ->
 			ok;
 
 		{ error, Reason } ->
-			trace_utils:error_fmt( "The cancellation of timer '~p' "
+			trace_bridge:error_fmt( "The cancellation of timer '~p' "
 				"failed for schedule offset #~B (reason: '~p').",
 				[ TimerRef, ScheduleOffset, Reason ] )
 			%throw( { timer_cancellation_failed, Reason,

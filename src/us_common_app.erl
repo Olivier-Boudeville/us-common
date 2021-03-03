@@ -41,8 +41,8 @@
 		| { 'ok', pid(), State :: term() } | { 'error', Reason :: term() }.
 start( Type, StartArgs ) ->
 
-	trace_utils:debug_fmt( "Starting the US-Common application (type: ~w, "
-						   "start arguments: ~w).", [ Type, StartArgs ] ),
+	trace_bridge:debug_fmt( "Starting the US-Common application (type: ~w, "
+							"start arguments: ~w).", [ Type, StartArgs ] ),
 
 	case us_common_sup:start_link() of
 
@@ -52,8 +52,8 @@ start( Type, StartArgs ) ->
 
 		% Includes 'ignore':
 		Other ->
-			trace_utils:error_fmt( "The US-Common root supervisor did not "
-								   "start properly:~n  ~p.", [ Other ] ),
+			trace_bridge:error_fmt( "The US-Common root supervisor did not "
+									"start properly:~n  ~p.", [ Other ] ),
 			{ error, Other }
 
 	end.
@@ -64,7 +64,7 @@ start( Type, StartArgs ) ->
 -spec stop( State :: term() ) -> void().
 stop( State ) ->
 
-	trace_utils:debug_fmt( "Stopping the US-Common application (state: ~w).",
-						   [ State ] ),
+	trace_bridge:debug_fmt( "Stopping the US-Common application (state: ~w).",
+							[ State ] ),
 
 	ok.

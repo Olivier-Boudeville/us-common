@@ -72,8 +72,8 @@
 start_link() ->
 
 	% Apparently not displaying, yet executed:
-	trace_utils:info( "Starting the US-Common supervisor bridge for "
-					  "the US main scheduler." ),
+	trace_bridge:info( "Starting the US-Common supervisor bridge for "
+					   "the US main scheduler." ),
 
 	supervisor_bridge:start_link( { local, ?bridge_name },
 								  _Module=?MODULE, _Args=[] ).
@@ -87,8 +87,8 @@ start_link() ->
 							| 'ignore' | { 'error', Error :: term() }.
 init( _Args=[] ) ->
 
-	trace_utils:info( "Initializing the US-Common supervisor bridge for "
-					  "the US main scheduler." ),
+	trace_bridge:info( "Initializing the US-Common supervisor bridge for "
+					   "the US main scheduler." ),
 
 	SchedServerPid = class_USScheduler:new_link( "US-Common Scheduler",
 		?us_common_scheduler_registration_name,
@@ -102,7 +102,7 @@ init( _Args=[] ) ->
 -spec terminate( Reason :: 'shutdown' | term(), State :: term() ) -> void().
 terminate( Reason, _State=SchedServerPid ) when is_pid( SchedServerPid ) ->
 
-	trace_utils:info_fmt( "Terminating the US-Common supervisor bridge for "
+	trace_bridge:info_fmt( "Terminating the US-Common supervisor bridge for "
 		"the US scheduler (reason: ~w, scheduler: ~w).",
 		[ Reason, SchedServerPid ] ),
 

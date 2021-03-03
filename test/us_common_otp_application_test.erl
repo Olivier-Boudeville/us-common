@@ -27,6 +27,10 @@
 -module(us_common_otp_application_test).
 
 
+% Exported for re-use by other tests (ex: in US-Web):
+-export([ get_us_information/0 ]).
+
+
 % For run/0 export and test traces:
 -include_lib("traces/include/traces_for_tests.hrl").
 
@@ -37,26 +41,20 @@
 -include("us_common_defines.hrl").
 
 
+% Shorthands:
 
-% Actual test:
-test_us_common_application( OrderedAppNames ) ->
+-type bin_directory_path() :: file_utils:bin_directory_path().
+-type file_path() :: file_utils:file_path().
 
-	test_facilities:display( "Starting the US-Common OTP active application." ),
+-type registration_name() :: naming_utils:registration_scope().
+-type registration_scope() :: naming_utils:registration_scope().
 
-	% We did not trap EXIT messages, as we wanted this test to crash (thanks to
-	% the links below) in case of problem (and not to receive an EXIT message
-	% bound not to be read, as it happened when no US configuration file was
-	% found).
-	%
-	% However this test was crashing even when stopping (normally) applications,
-	% as apparently an OTP application has its child processes terminated with
-	% reason 'shutdown' (not 'normal').
-	%
-	% So now this test process traps EXIT messages, and ensures that none
-	% besides {'EXIT',P,shutdown}, P being the PID of a US-Common process, is
-	% received.
-	%
-	false = erlang:process_flag( trap_exit, true ),
+-type us_config_table() :: class_USConfigServer:us_config_table().
+
+
+-spec get_us_information() -> { bin_directory_path(), file_path(),
+			us_config_table(), registration_name(), registration_scope() }.
+get_us_information() ->
 
 	% We have to link notably to the upcoming US-Common configuration
 	% server. However starting an application does not provide a means of
@@ -81,24 +79,22 @@ test_us_common_application( OrderedAppNames ) ->
 
 	end,
 
-	{ ConfigTable, CfgFilename } = case
+	{ ConfigTable, CfgFilePath } = case
 			class_USConfigServer:get_configuration_table( BinCfgDir ) of
 
 		{ ok, P } ->
 			P;
 
-		{ error, Reason } ->
-			trace_bridge:error_fmt( "Test is unable to determine the US "
-				"configuration from directory '~s': ~s.",
-				[ BinCfgDir, Reason ] ),
-			throw( Reason )
+		{ error, DiagnosedReason } ->
+			basic_utils:throw_diagnosed( DiagnosedReason )
 
 	end,
 
-	test_facilities:display( "Read configuration from '~s'.", [ CfgFilename ] ),
+	test_facilities:display( "Read US configuration from '~s'.",
+							 [ CfgFilePath ] ),
 
 	{ CfgRegName, CfgRegScope, CfgNamingMsg } =
-		case class_USConfigServer:get_us_config_server_naming( ConfigTable ) of
+		case class_USConfigServer:get_registration_info( ConfigTable ) of
 
 			{ ok, T } ->
 				T;
@@ -117,6 +113,33 @@ test_us_common_application( OrderedAppNames ) ->
 
 	% Now we are able to link to the future US configuration server.
 
+	{ BinCfgDir, CfgFilePath, ConfigTable, CfgRegName, CfgRegScope }.
+
+
+
+% Actual test:
+test_us_common_application( OrderedAppNames ) ->
+
+	test_facilities:display( "Starting the US-Common OTP active application." ),
+
+	% We did not trap EXIT messages, as we wanted this test to crash (thanks to
+	% the links below) in case of problem (and not to receive an EXIT message
+	% bound not to be read, as it happened when no US configuration file was
+	% found).
+	%
+	% However such tests may crash even when stopping (normally) applications,
+	% as apparently an OTP application has its child processes terminated with
+	% reason 'shutdown' (not 'normal').
+	%
+	% So now this test process traps EXIT messages, and ensures that none
+	% besides {'EXIT',P,shutdown}, P being the PID of a US-Common process, is
+	% received (actually for US-Common no such message is received, unlike for
+	% the WOOPER counterpart test case).
+	%
+	false = erlang:process_flag( trap_exit, true ),
+
+	{ _BinCfgDir, _CfgFilePath, _ConfigTable, CfgRegName, CfgRegScope } =
+		get_us_information(),
 
 	% No ?test_start/?test_stop here, as we start/stop Traces through
 	% OTP-related operations.

@@ -413,9 +413,79 @@ get_us_config_directory() ->
 
 
 
+% Returns the US-Common configuration table, as read from the main US
+% configuration file, together with the path of this file.
+%
+% Static method, to be available from external code such as clients or tests.
+%
+-spec get_configuration_table( bin_directory_path() ) ->
+	static_return( diagnosed_fallible( { us_config_table(), file_path() } ) ).
+get_configuration_table( BinCfgDir ) ->
+
+	CfgFilePath = file_utils:join( BinCfgDir, ?us_config_filename ),
+
+	% Should, by design, never fail (already checked):
+	Res = case file_utils:is_existing_file_or_link( CfgFilePath ) of
+
+		true ->
+			%trace_bridge:info_fmt( "Reading the Universal Server "
+			%    "configuration "from '~s'.", [ CfgFilePath ] ),
+
+			% Ensures as well that all top-level terms are pairs indeed:
+			ConfigTable = table:new_from_unique_entries(
+							file_utils:read_terms( CfgFilePath ) ),
+
+			{ ok, { ConfigTable, CfgFilePath } };
+
+		false ->
+			ErrorMsg = text_utils:format( "Unable to find the US configuration "
+				"file from '~s', searched as '~s'.",
+				[ BinCfgDir, CfgFilePath ] ),
+			{ error, { { us_config_file_not_found, CfgFilePath }, ErrorMsg } }
+
+	end,
+
+	wooper:return_static( Res ).
+
+
+
+% Returns the name of the expected US-Web configuration file.
+%
+% Static method, to be available from outside, typically for tests.
+%
+-spec get_us_web_configuration_filename( us_config_table() ) ->
+			static_return( diagnosed_fallible( maybe( file_name() ) ) ).
+get_us_web_configuration_filename( ConfigTable ) ->
+
+	CfgKey = ?us_web_config_filename_key,
+
+	Res = case table:lookup_entry( CfgKey, ConfigTable ) of
+
+		key_not_found ->
+			{ ok, undefined };
+
+		{ value, WebFilename } when is_list( WebFilename ) ->
+			{ ok, WebFilename };
+
+		{ value, InvalidWebFilename } ->
+
+			ErrorTuploid = { invalid_us_web_config_filename, InvalidWebFilename,
+							 CfgKey },
+
+			ErrorMsg = text_utils:format( "Obtained invalid user-configured "
+				"configuration filename for webservers and virtual hosting: "
+				" '~p', for key '~s'.", [ InvalidWebFilename, CfgKey ] ),
+
+			{ error, { ErrorTuploid, ErrorMsg } }
+
+	end,
+
+	wooper:return_static( Res ).
+
+
+
 
 % Helper section.
-
 
 
 % (helper)
@@ -463,34 +533,6 @@ find_file_in( _AllBasePaths=[ Path | T ], CfgSuffix, BaseMsg, Msgs ) ->
 			find_file_in( T, CfgSuffix, BaseMsg, NewMsgs )
 
 	end.
-
-
-
-% Static method to be available from external code such as clients or tests.
--spec get_configuration_table( bin_directory_path() ) -> static_return(
-		fallible( { us_config_table(), file_path() } ) ).
-get_configuration_table( BinCfgDir ) ->
-
-	CfgFilename = file_utils:join( BinCfgDir, ?us_config_filename ),
-
-	% Should, by design, never fail (already checked):
-	Res = case file_utils:is_existing_file_or_link( CfgFilename ) of
-
-		true ->
-			%trace_bridge:info_fmt( "Reading the Universal Server "
-			%    "configuration "from '~s'.", [ CfgFilename ] ),
-
-			% Ensures as well that all top-level terms are pairs indeed:
-			ConfigTable = table:new_from_unique_entries(
-							file_utils:read_terms( CfgFilename ) ),
-			{ ok, { ConfigTable, CfgFilename } };
-
-		false ->
-			{ error, { us_config_file_not_found, CfgFilename } }
-
-	end,
-
-	wooper:return_static( Res ).
 
 
 
@@ -847,18 +889,17 @@ manage_os_user_group( ConfigTable, State ) ->
 										wooper:state().
 manage_registration_names( ConfigTable, State ) ->
 
-	{ CfgRegName, RegScope, CfgMsg } =
-		case get_us_config_server_naming( ConfigTable ) of
+	{ CfgRegName, RegScope, CfgMsg } = case get_registration_info( ConfigTable ) of
 
 			{ ok, T } ->
 				T;
 
-			{ error, { InvalidThisRegName, CfgRefNameKey } } ->
+			{ error, { InvalidCfgServRegName, CfgRefNameKey } } ->
 				?error_fmt( "Read invalid user-configured registration name "
 					"for this US configuration server (key: '~s'): '~p'.",
-					 [ CfgRefNameKey, InvalidThisRegName ] ),
+					 [ CfgRefNameKey, InvalidCfgServRegName ] ),
 				throw( { invalid_us_config_registration_name,
-						 InvalidThisRegName, CfgRefNameKey } )
+						 InvalidCfgServRegName, CfgRefNameKey } )
 
 	end,
 
@@ -899,11 +940,13 @@ manage_registration_names( ConfigTable, State ) ->
 							{ us_server_registration_name, USRegName } ] ).
 
 
-
+% Returns information about the naming registration of various US servers.
+%
 % Static for sharing with clients, tests, etc.
--spec get_us_config_server_naming( us_config_table() ) -> static_return(
-	   fallible( { registration_name(), registration_scope(), ustring() } ) ).
-get_us_config_server_naming( ConfigTable ) ->
+%
+-spec get_registration_info( us_config_table() ) -> static_return(
+		fallible( { registration_name(), registration_scope(), ustring() } ) ).
+get_registration_info( ConfigTable ) ->
 
 	Scope = ?default_registration_scope,
 
@@ -1088,10 +1131,10 @@ manage_log_directory( ConfigTable, State ) ->
 -spec manage_web_config( us_config_table(), wooper:state() ) -> wooper:state().
 manage_web_config( ConfigTable, State ) ->
 
-	MaybeBinWebFilename = case table:lookup_entry( ?us_web_config_filename_key,
-												   ConfigTable ) of
+	MaybeBinWebFilename = case get_us_web_configuration_filename(
+								 ConfigTable ) of
 
-		key_not_found ->
+		{ ok, undefined } ->
 			?info( "No user-configured configuration filename for webservers "
 				   "and virtual hosting." ),
 			undefined;
@@ -1099,21 +1142,18 @@ manage_web_config( ConfigTable, State ) ->
 		% Read but not checked intentionally (to be done by the web
 		% configuration server):
 		%
-		{ value, WebFilename } when is_list( WebFilename ) ->
+		{ ok, WebFilename } ->
 			?info_fmt( "Obtained user-configured configuration filename for "
 				"webservers and virtual hosting: '~s'.", [ WebFilename ] ),
 			text_utils:string_to_binary( WebFilename );
 
-		{ value, InvalidWebFilename } ->
-			?error_fmt( "Obtained invalid user-configured configuration "
-				"filename for webservers and virtual hosting: '~p'.",
-				[ InvalidWebFilename ] ),
-			throw( { invalid_us_web_config_filename, InvalidWebFilename,
-					 ?us_web_config_filename_key } )
+		{ error, DiagnosedReason } ->
+			basic_utils:throw_diagnosed( DiagnosedReason )
 
 	end,
 
 	setAttribute( State, web_config_filename, MaybeBinWebFilename ).
+
 
 
 

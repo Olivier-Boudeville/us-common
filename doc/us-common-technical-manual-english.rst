@@ -12,11 +12,6 @@
 .. role:: raw-latex(raw)
    :format: latex
 
-.. comment Would appear too late, can only be an be used only in preamble:
-.. comment :raw-latex:`\usepackage{graphicx}`
-.. comment As a result, in this document at least a '.. figure:: XXXX' must
-.. exist, otherwise: 'Undefined control sequence \includegraphics.'.
-
 
 :raw-html:`<a name="us-common_top"></a>`
 
@@ -24,8 +19,8 @@
 
 
 
-:raw-html:`<center><img src="us-common-title.png" width="70%"></img></center>`
-:raw-latex:`\includegraphics[scale=1.2]{us-common-title.png}`
+:raw-html:`<center><img src="us-common-title.png" width="40%"></img></center>`
+:raw-latex:`\centering \includegraphics[scale=1.1]{us-common-title.png}`
 
 
 
@@ -37,7 +32,7 @@ Technical Manual of the ``US-Common`` Layer
 :Organisation: Copyright (C) 2019-2021 Olivier Boudeville
 :Contact: about (dash) us-common (at) esperide (dot) com
 :Creation date: Saturday, May 2, 2020
-:Lastly updated: Sunday, February 21, 2021
+:Lastly updated: Friday, March 12, 2021
 :Status: Work in progress
 :Version: 0.0.5
 :Dedication: Users and maintainers of the ``US-Common`` layer.
@@ -243,12 +238,8 @@ Ending Word
 
 Have fun with US-Common!
 
-.. comment Mostly added to ensure there is at least one figure directive,
-.. otherwise the LateX graphic support will not be included:
 
-.. figure:: us-common-title.png
-   :alt: US-Common logo
-   :width: 35%
-   :align: center
+:raw-html:`<center><img src="us-common-title.png" width="25%"></img></center>`
+:raw-latex:`\begin{figure}[h] \centering \includegraphics[scale=0.75]{us-common-title.png} \end{figure}`
 
 :raw-html:`<a name="us-common_bottom"></a>`

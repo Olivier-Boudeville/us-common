@@ -240,6 +240,6 @@ Have fun with US-Common!
 
 
 :raw-html:`<center><img src="us-common-title.png" width="25%"></img></center>`
-:raw-latex:`\begin{figure}[h] \centering \includegraphics[scale=0.75]{us-common-title.png} \end{figure}`
+:raw-latex:`\begin{figure}[h] \centering \includegraphics[scale=0.7]{us-common-title.png} \end{figure}`
 
 :raw-html:`<a name="us-common_bottom"></a>`

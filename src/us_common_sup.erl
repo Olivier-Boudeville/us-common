@@ -68,13 +68,13 @@ start_link() ->
 % answer to start_link/0 above being executed.
 %
 -spec init( list() ) -> { 'ok',
-	   { supervisor:sup_flags(), [ supervisor:child_spec() ] } } | 'ignore'.
+		{ supervisor:sup_flags(), [ supervisor:child_spec() ] } } | 'ignore'.
 init( Args=[] ) ->
 
 	ExecTarget = class_USConfigServer:get_execution_target(),
 
 	trace_bridge:debug_fmt( "Initializing the US-Common root supervisor "
-		"(args: ~p, execution target: ~s).", [ Args, ExecTarget ] ),
+		"(args: ~p, execution target: ~ts).", [ Args, ExecTarget ] ),
 
 	% We always create a US configuration server and a scheduler that are
 	% specific to the current US application so that they can all be started,

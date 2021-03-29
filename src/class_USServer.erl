@@ -175,7 +175,7 @@ init_common( ServerName, RegistrationName, RegistrationScope, TrapExits,
 -spec destruct( wooper:state() ) -> wooper:state().
 destruct( State ) ->
 
-	?info_fmt( "Deleting server ~s.", [ to_string( State ) ] ),
+	?info_fmt( "Deleting server ~ts.", [ to_string( State ) ] ),
 
 	UnregState = unregister_name( State ),
 
@@ -251,7 +251,7 @@ register_name( RegistrationName, RegistrationScope, State ) ->
 	naming_utils:register_as( RegistrationName, RegistrationScope ),
 
 	cond_utils:if_defined( us_common_debug_registration,
-		?debug_fmt( "Registered (~s) as '~s'.",
+		?debug_fmt( "Registered (~ts) as '~ts'.",
 					[ RegistrationScope, RegistrationName ] ) ),
 
 	setAttributes( State, [ { registration_name, RegistrationName },
@@ -278,7 +278,7 @@ unregister_name( State ) ->
 			RegScope = ?getAttr(registration_scope),
 
 			cond_utils:if_defined( us_common_debug_registration, ?info_fmt(
-				"Unregistering from name '~s' (scope: ~s).",
+				"Unregistering from name '~ts' (scope: ~ts).",
 				[ RegName, RegScope ] ) ),
 
 			naming_utils:unregister( RegName, RegScope ),
@@ -297,9 +297,9 @@ to_string( State ) ->
 						?getAttr(server_gregorian_start) ),
 
 	UptimeStr = time_utils:duration_to_string(
-		 time_utils:get_monotonic_time() - ?getAttr(server_start) ),
+			time_utils:get_monotonic_time() - ?getAttr(server_start) ),
 
-	TimeStr = text_utils:format( "started on ~s (uptime: ~s)",
+	TimeStr = text_utils:format( "started on ~ts (uptime: ~ts)",
 		[ time_utils:timestamp_to_string( StartTimestamp ), UptimeStr ] ),
 
 	RegString = case ?getAttr(registration_name) of
@@ -308,10 +308,10 @@ to_string( State ) ->
 			"with no registration name defined";
 
 		RegName ->
-			text_utils:format( "whose registration name is '~s' (scope: ~s)",
+			text_utils:format( "whose registration name is '~ts' (scope: ~ts)",
 							   [ RegName, ?getAttr(registration_scope) ] )
 
 	end,
 
-	text_utils:format( "server named '~s', ~s, ~s",
+	text_utils:format( "server named '~ts', ~ts, ~ts",
 					   [ ?getAttr(name), TimeStr, RegString ] ).

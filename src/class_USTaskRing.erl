@@ -192,7 +192,7 @@ construct( State, RingName, Actuators, TaskOnewayName, TaskOnewayArgs,
 
 	end,
 
-	?send_info_fmt( FinalState, "Started ~s.", [ to_string( FinalState ) ] ),
+	?send_info_fmt( FinalState, "Started ~ts.", [ to_string( FinalState ) ] ),
 
 	FinalState.
 
@@ -295,7 +295,7 @@ notifyTaskDone( State, ActuatorPid ) ->
 
 % Sets new actuators (no interaction done with the scheduler).
 -spec set_actuators( [ actuator_pid() ], ms_duration(), wooper:state() ) ->
-						   { unit_utils:seconds(), wooper:state() }.
+							{ unit_utils:seconds(), wooper:state() }.
 set_actuators( _NewActuators=[], _TaskPeriodicity, _State ) ->
 	throw( no_actuator_defined );
 
@@ -308,8 +308,8 @@ set_actuators( NewActuators, TaskPeriodicity, State ) ->
 	% By design not a division by zero; seconds wanted for the scheduler:
 	RingPeriodicity = erlang:round( TaskPeriodicity / ActuatorCount ),
 
-	?debug_fmt( "This ring is to be triggered by its scheduler every ~s, as "
-	  "task-level periodicity is ~s, and ~B actuators are being synchronised.",
+	?debug_fmt( "This ring is to be triggered by its scheduler every ~ts, as "
+	  "task-level periodicity is ~ts, and ~B actuators are being synchronised.",
 	  [ time_utils:duration_to_string( RingPeriodicity ),
 		time_utils:duration_to_string( TaskPeriodicity ), ActuatorCount ] ),
 
@@ -330,8 +330,8 @@ to_string( State ) ->
 
 	TaskPeriodicity = ?getAttr(task_periodicity),
 
-	text_utils:format( "task ring '~s' alternating between ~B actuators (~s) "
-		"each with a periodicity of ~s (hence ~s between triggers; "
+	text_utils:format( "task ring '~ts' alternating between ~B actuators (~ts) "
+		"each with a periodicity of ~ts (hence ~ts between triggers; "
 		"using for that task id ~B, assigned by scheduler ~w) for the sending "
 		"of following synchronised call:~n'~p'",
 		[ ?getAttr(name), RingSize,

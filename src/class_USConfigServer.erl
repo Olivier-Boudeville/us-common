@@ -236,7 +236,7 @@ construct( State ) ->
 
 		{ undefined, CfgMsg } ->
 			?send_error_fmt( TraceState, "Unable to determine the US "
-							 "configuration directory; ~s", [ CfgMsg ] ),
+							 "configuration directory; ~ts", [ CfgMsg ] ),
 			throw( us_configuration_directory_not_found );
 
 		{ BinFoundCfgDir, CfgMsg } ->
@@ -260,7 +260,7 @@ construct( State ) ->
 -spec construct( wooper:state(), directory_path() ) -> wooper:state().
 construct( State, ConfigDir ) when is_list( ConfigDir ) ->
 
-	ServerName = text_utils:format( "Configuration Server from ~s",
+	ServerName = text_utils:format( "Configuration Server from ~ts",
 		[ file_utils:get_last_path_element( ConfigDir ) ] ),
 
 	% First the direct mother classes, then this class-specific actions:
@@ -268,7 +268,7 @@ construct( State, ConfigDir ) when is_list( ConfigDir ) ->
 										   ?trace_categorize(ServerName) ),
 
 	?send_info_fmt( TraceState, "Creating a  US configuration server, "
-		"using the '~s' configuration directory for that.", [ ConfigDir ] ),
+		"using the '~ts' configuration directory for that.", [ ConfigDir ] ),
 
 	BinCfgDir = text_utils:string_to_binary( ConfigDir ),
 
@@ -340,7 +340,7 @@ get_default_settings() ->
 	wooper:return_static( { ?us_config_filename,
 		?us_config_server_registration_name_key, ?default_us_config_reg_name,
 		naming_utils:registration_to_look_up_scope(
-		  ?default_registration_scope ) } ).
+			?default_registration_scope ) } ).
 
 
 
@@ -367,13 +367,13 @@ get_us_config_directory() ->
 		false ->
 			CfgHomeDefaultPath = file_utils:join( HomeDir, ".config" ),
 			CfgHomeMsg = text_utils:format(
-					"no '~s' environment variable defined, defaulting to '~s'",
-					[ FirstEnvVar, CfgHomeDefaultPath ] ),
+				"no '~ts' environment variable defined, defaulting to '~ts'",
+				[ FirstEnvVar, CfgHomeDefaultPath ] ),
 			{ CfgHomeDefaultPath, CfgHomeMsg };
 
 		Path ->
-			{ Path, text_utils:format( "path '~s' was obtained from "
-					   "environment variable '~s'", [ Path, FirstEnvVar ] ) }
+			{ Path, text_utils:format( "path '~ts' was obtained from "
+					   "environment variable '~ts'", [ Path, FirstEnvVar ] ) }
 
 	end,
 
@@ -386,13 +386,13 @@ get_us_config_directory() ->
 			% A single one here:
 			DefaultCfgDirs = "/etc/xdg",
 			CfgDirsMsg = text_utils:format(
-				"no '~s' environment variable defined, defaulting to '~s'",
+				"no '~ts' environment variable defined, defaulting to '~ts'",
 				[ SecondEnvVar, DefaultCfgDirs ] ),
 			{ DefaultCfgDirs, CfgDirsMsg };
 
 		Paths ->
-			{ Paths, text_utils:format( "paths '~s' was obtained from "
-						"environment variable '~s'", [ Paths, SecondEnvVar ] ) }
+			{ Paths, text_utils:format( "paths '~ts' was obtained from "
+					"environment variable '~ts'", [ Paths, SecondEnvVar ] ) }
 
 	end,
 
@@ -403,7 +403,7 @@ get_us_config_directory() ->
 	CfgSuffix = file_utils:join( ?app_subdir, ?us_config_filename ),
 
 	BaseMsg = text_utils:format( "searched for Universal Server "
-		"configuration directory, based on suffix '~s', knowing that: ~s~n"
+		"configuration directory, based on suffix '~ts', knowing that: ~ts~n"
 		"Configuration directory ", [ CfgSuffix,
 				text_utils:strings_to_string( [ FirstMsg, SecondMsg ] ) ] ),
 
@@ -429,7 +429,7 @@ get_configuration_table( BinCfgDir ) ->
 
 		true ->
 			%trace_bridge:info_fmt( "Reading the Universal Server "
-			%    "configuration "from '~s'.", [ CfgFilePath ] ),
+			%    "configuration "from '~ts'.", [ CfgFilePath ] ),
 
 			% Ensures as well that all top-level terms are pairs indeed:
 			ConfigTable = table:new_from_unique_entries(
@@ -439,7 +439,7 @@ get_configuration_table( BinCfgDir ) ->
 
 		false ->
 			ErrorMsg = text_utils:format( "Unable to find the US configuration "
-				"file from '~s', searched as '~s'.",
+				"file from '~ts', searched as '~ts'.",
 				[ BinCfgDir, CfgFilePath ] ),
 			{ error, { { us_config_file_not_found, CfgFilePath }, ErrorMsg } }
 
@@ -474,7 +474,7 @@ get_us_web_configuration_filename( ConfigTable ) ->
 
 			ErrorMsg = text_utils:format( "Obtained invalid user-configured "
 				"configuration filename for webservers and virtual hosting: "
-				" '~p', for key '~s'.", [ InvalidWebFilename, CfgKey ] ),
+				" '~p', for key '~ts'.", [ InvalidWebFilename, CfgKey ] ),
 
 			{ error, { ErrorTuploid, ErrorMsg } }
 
@@ -494,7 +494,7 @@ find_file_in( _AllBasePaths=[], CfgSuffix, BaseMsg, Msgs ) ->
 	% Configuration directory not found:
 
 	FullMsg = BaseMsg ++ text_utils:format( "could not be determined, "
-		"short of locating a relevant configuration file ('~s') for that: ",
+		"short of locating a relevant configuration file ('~ts') for that: ",
 		[ CfgSuffix ] )
 		++ text_utils:strings_to_enumerated_string( lists:reverse( Msgs ) ),
 
@@ -512,7 +512,7 @@ find_file_in( _AllBasePaths=[ Path | T ], CfgSuffix, BaseMsg, Msgs ) ->
 			CfgDir = filename:dirname( CfgFilePath ),
 
 			FullMsg = text_utils:format( "Configuration directory found "
-				"as '~s', as containing '~s'", [ CfgDir, CfgFilePath ] )
+				"as '~ts', as containing '~ts'", [ CfgDir, CfgFilePath ] )
 				++ case Msgs of
 
 					   [] ->
@@ -528,7 +528,7 @@ find_file_in( _AllBasePaths=[ Path | T ], CfgSuffix, BaseMsg, Msgs ) ->
 			{ text_utils:string_to_binary( CfgDir ), FullMsg };
 
 		false ->
-			NewMsgs = [ text_utils:format( "not found as '~s'",
+			NewMsgs = [ text_utils:format( "not found as '~ts'",
 										   [ CfgFilePath ] ) | Msgs ],
 			find_file_in( T, CfgSuffix, BaseMsg, NewMsgs )
 
@@ -573,7 +573,7 @@ perform_setup( BinCfgDir, State ) ->
 
 	end,
 
-	?info_fmt( "Constructed: ~s.", [ to_string( ReadyState ) ] ),
+	?info_fmt( "Constructed: ~ts.", [ to_string( ReadyState ) ] ),
 
 	ReadyState.
 
@@ -593,14 +593,14 @@ load_configuration( BinCfgDir, State ) ->
 			P;
 
 		{ error, P={ us_config_file_not_found, CfgFileP } } ->
-			?error_fmt( "The overall US configuration file ('~s') "
+			?error_fmt( "The overall US configuration file ('~ts') "
 				"could not be found.", [ CfgFileP ] ),
 			% Must have disappeared then:
 			throw( P )
 
 	end,
 
-	?info_fmt( "Read US configuration from '~s': ~s",
+	?info_fmt( "Read US configuration from '~ts': ~ts",
 			   [ ConfigFilePath, table:to_string( ConfigTable ) ] ),
 
 	% We follow the usual order in the configuration file:
@@ -633,14 +633,13 @@ load_configuration( BinCfgDir, State ) ->
 			WebState;
 
 		UnexpectedKeys ->
-			?error_fmt( "Unknown key(s) in '~s': ~s~nLicit keys: ~s",
+			?error_fmt( "Unknown key(s) in '~ts': ~ts~nLicit keys: ~ts",
 				[ ConfigFilePath, text_utils:terms_to_string( UnexpectedKeys ),
 				  text_utils:terms_to_string( LicitKeys ) ] ),
 			throw( { invalid_configuration_keys, UnexpectedKeys,
 					 ConfigFilePath } )
 
 	end.
-
 
 
 
@@ -653,13 +652,13 @@ manage_vm_cookie( ConfigTable, State ) ->
 		key_not_found ->
 			CurrentCookie = net_utils:get_cookie(),
 			?info_fmt( "No user-configured cookie, sticking to original one, "
-					   "'~s'.", [ CurrentCookie ] );
+					   "'~ts'.", [ CurrentCookie ] );
 
 		{ value, UserCookie } when is_atom( UserCookie ) ->
 			InitialCookie = net_utils:get_cookie(),
 
 			?info_fmt( "Switching the Erlang cookie of the current VM from "
-				"the current one, '~s', to the specified one, '~s'.",
+				"the current one, '~ts', to the specified one, '~ts'.",
 				[ InitialCookie, UserCookie ] ),
 
 			net_utils:set_cookie( UserCookie );
@@ -737,22 +736,22 @@ manage_tcp_port_range( ConfigTable, State ) ->
 									wooper:state().
 manage_execution_context( ConfigTable, State ) ->
 
-	MyriadExecStr= text_utils:format( "for Ceylan-Myriad: ~s",
+	MyriadExecStr= text_utils:format( "for Ceylan-Myriad: ~ts",
 									  [ basic_utils:get_execution_target() ] ),
 
-	WOOPERExecStr = text_utils:format( "for Ceylan-WOOPER: ~s",
+	WOOPERExecStr = text_utils:format( "for Ceylan-WOOPER: ~ts",
 									   [ wooper:get_execution_target() ] ),
 
-	TracesExecStr = text_utils:format( "for Ceylan-Traces: ~s",
+	TracesExecStr = text_utils:format( "for Ceylan-Traces: ~ts",
 									   [ traces:get_execution_target() ] ),
 
 	USCommonExecTarget = get_execution_target(),
 
-	USCommonExecStr = text_utils:format( "for US-Common: ~s",
+	USCommonExecStr = text_utils:format( "for US-Common: ~ts",
 										 [ USCommonExecTarget ] ),
 
 	CompileContextStr = text_utils:format( "while the following compilation "
-		"contexts were applied: ~s", [ text_utils:strings_to_string( [
+		"contexts were applied: ~ts", [ text_utils:strings_to_string( [
 		MyriadExecStr, WOOPERExecStr, TracesExecStr, USCommonExecStr ] ) ] ),
 
 	Context = case table:lookup_entry( ?execution_context_key, ConfigTable ) of
@@ -760,18 +759,18 @@ manage_execution_context( ConfigTable, State ) ->
 		key_not_found ->
 			DefaultContext = production,
 			?info_fmt( "No user-configured execution context, "
-				"defaulting to '~s', ~s.",
+				"defaulting to '~ts', ~ts.",
 				[ DefaultContext, CompileContextStr ] ),
 			DefaultContext;
 
 		{ value, development } ->
 			?info_fmt( "The 'development' execution context has been "
-					   "configured by the user, ~s.", [ CompileContextStr ] ),
+					   "configured by the user, ~ts.", [ CompileContextStr ] ),
 			development;
 
 		{ value, production } ->
 			?info_fmt( "The 'production' execution context has been configured "
-					   "by the user, ~s.", [ CompileContextStr ] ),
+					   "by the user, ~ts.", [ CompileContextStr ] ),
 			production;
 
 		{ value, InvalidContext } ->
@@ -788,9 +787,9 @@ manage_execution_context( ConfigTable, State ) ->
 			ok;
 
 		_OtherContext ->
-			?warning_fmt( "The runtime user-configured execution context (~s) "
-				"does not match the compile-time execution target of "
-				"this Universal Server (~s).", [ Context, USCommonExecTarget ] )
+			?warning_fmt( "The runtime user-configured execution context (~ts) "
+				"does not match the compile-time execution target of this "
+				"Universal Server (~ts).", [ Context, USCommonExecTarget ] )
 
 	end,
 
@@ -811,7 +810,7 @@ manage_os_user_group( ConfigTable, State ) ->
 		key_not_found ->
 			ActualUsername = system_utils:get_user_name(),
 			?info_fmt( "No user-configured US operating-system username set "
-			  "for this server; runtime-detected: '~s'.", [ ActualUsername ] ),
+			  "for this server; runtime-detected: '~ts'.", [ ActualUsername ] ),
 			ActualUsername;
 
 		{ value, Username } when is_list( Username ) ->
@@ -820,7 +819,7 @@ manage_os_user_group( ConfigTable, State ) ->
 
 				Username ->
 					?info_fmt( "Using user-configured US operating-system "
-						"username '~s' for this server, which matches "
+						"username '~ts' for this server, which matches "
 						"the current runtime user.", [ Username ] ),
 					Username;
 
@@ -831,8 +830,8 @@ manage_os_user_group( ConfigTable, State ) ->
 					% its username, which might differ.
 
 					?warning_fmt( "The user-configured US operating-system "
-						"username '~s' for this server does not match the "
-						"current runtime user, '~s' (acceptable if created "
+						"username '~ts' for this server does not match the "
+						"current runtime user, '~ts' (acceptable if created "
 						"on behalf on a US-related service - typically a "
 						"standalone US-web server, i.e. one with no prior "
 						"US-server companion running).",
@@ -851,7 +850,8 @@ manage_os_user_group( ConfigTable, State ) ->
 		key_not_found ->
 			ActualGroupname = system_utils:get_group_name(),
 			?info_fmt( "No group-configured US operating-system group name set "
-			  "for this server; runtime-detected: '~s'.", [ ActualGroupname ] ),
+				"for this server; runtime-detected: '~ts'.",
+				[ ActualGroupname ] ),
 			ActualGroupname;
 
 		{ value, Groupname } when is_list( Groupname ) ->
@@ -859,14 +859,14 @@ manage_os_user_group( ConfigTable, State ) ->
 
 				Groupname ->
 					?info_fmt( "Using group-configured US operating-system "
-						"groupname '~s' for this server, which matches "
+						"groupname '~ts' for this server, which matches "
 						"the current runtime group.", [ Groupname ] ),
 					Groupname;
 
 				OtherGroupname ->
 					?error_fmt( "The group-configured US operating-system "
-						"groupname '~s' for this server does not match "
-						"the current runtime group, '~s'.",
+						"groupname '~ts' for this server does not match "
+						"the current runtime group, '~ts'.",
 						[ Groupname, OtherGroupname ] ),
 					throw( { inconsistent_os_us_group, OtherGroupname,
 							 Groupname, ?us_groupname_key } )
@@ -889,15 +889,18 @@ manage_os_user_group( ConfigTable, State ) ->
 										wooper:state().
 manage_registration_names( ConfigTable, State ) ->
 
-	{ CfgRegName, RegScope, CfgMsg } = case get_registration_info( ConfigTable ) of
+	{ CfgRegName, RegScope, CfgMsg } =
+		case get_registration_info( ConfigTable ) of
 
 			{ ok, T } ->
 				T;
 
 			{ error, { InvalidCfgServRegName, CfgRefNameKey } } ->
+
 				?error_fmt( "Read invalid user-configured registration name "
-					"for this US configuration server (key: '~s'): '~p'.",
+					"for this US configuration server (key: '~ts'): '~p'.",
 					 [ CfgRefNameKey, InvalidCfgServRegName ] ),
+
 				throw( { invalid_us_config_registration_name,
 						 InvalidCfgServRegName, CfgRefNameKey } )
 
@@ -907,7 +910,7 @@ manage_registration_names( ConfigTable, State ) ->
 
 	naming_utils:register_as( CfgRegName, RegScope ),
 
-	?info_fmt( "Registered as '~s' (scope: ~s).", [ CfgRegName, RegScope ] ),
+	?info_fmt( "Registered as '~ts' (scope: ~ts).", [ CfgRegName, RegScope ] ),
 
 	% We then read the registration name of the US server knowing that its
 	% upcoming creation is likely (it will have to be told about the name it
@@ -919,11 +922,11 @@ manage_registration_names( ConfigTable, State ) ->
 		key_not_found ->
 			DefaultRegName = ?default_us_reg_name,
 			?info_fmt( "No user-configured registration name for the US "
-				"server, using default name '~s'.", [ DefaultRegName ] ),
+				"server, using default name '~ts'.", [ DefaultRegName ] ),
 			DefaultRegName;
 
 		{ value, UserRegName } when is_atom( UserRegName ) ->
-			?info_fmt( "Using user-configured registration name '~s' for "
+			?info_fmt( "Using user-configured registration name '~ts' for "
 					   "the US server.", [ UserRegName ] ),
 			UserRegName;
 
@@ -938,6 +941,7 @@ manage_registration_names( ConfigTable, State ) ->
 	setAttributes( State, [ { registration_name, CfgRegName },
 							{ registration_scope, RegScope },
 							{ us_server_registration_name, USRegName } ] ).
+
 
 
 % Returns information about the naming registration of various US servers.
@@ -956,13 +960,13 @@ get_registration_info( ConfigTable ) ->
 		key_not_found ->
 			DefaultCfgServRegName = ?default_us_config_reg_name,
 			Msg = text_utils:format( "No user-configured registration name "
-				"for this US configuration server, using default name '~s'.",
+				"for this US configuration server, using default name '~ts'.",
 				[ DefaultCfgServRegName ] ),
 			{ ok, { DefaultCfgServRegName, Scope, Msg } };
 
 		{ value, UserCfgServRegName } when is_atom( UserCfgServRegName ) ->
 			Msg = text_utils:format( "Using user-configured registration name "
-				"'~s' for this US configuration server.",
+				"'~ts' for this US configuration server.",
 				[ UserCfgServRegName ] ),
 			{ ok, { UserCfgServRegName, Scope, Msg } };
 
@@ -1031,15 +1035,15 @@ manage_app_base_directory( ConfigTable, State ) ->
 
 					?info_fmt( "No user-configured US application base "
 						"directory set (neither in configuration file nor "
-						"through the '~s' environment variable), "
-						"hence guessing it as '~s'.",
+						"through the '~ts' environment variable), "
+						"hence guessing it as '~ts'.",
 						[ ?us_app_env_variable, GuessedNormDir ] ),
 					GuessedNormDir;
 
 				EnvDir ->
 					?info_fmt( "No user-configured US application base "
 						"directory set in configuration file, using the value "
-						"of the '~s' environment variable: '~s'.",
+						"of the '~ts' environment variable: '~ts'.",
 						[ ?us_app_env_variable, EnvDir ] ),
 					EnvDir
 
@@ -1068,7 +1072,7 @@ manage_app_base_directory( ConfigTable, State ) ->
 
 		false ->
 			?error_fmt( "No US application base directory could be determined "
-						"(tried '~s').", [ BaseDir ] ),
+						"(tried '~ts').", [ BaseDir ] ),
 			throw( { non_existing_us_app_base_directory, BaseDir,
 					 ?us_app_base_dir_key } )
 
@@ -1107,7 +1111,7 @@ manage_log_directory( ConfigTable, State ) ->
 			ok;
 
 		false ->
-			?warning_fmt( "The log directory '~s' does not exist, "
+			?warning_fmt( "The log directory '~ts' does not exist, "
 						  "creating it.", [ BaseDir ] )
 			%throw( { non_existing_log_directory, BaseDir } )
 
@@ -1144,7 +1148,7 @@ manage_web_config( ConfigTable, State ) ->
 		%
 		{ ok, WebFilename } ->
 			?info_fmt( "Obtained user-configured configuration filename for "
-				"webservers and virtual hosting: '~s'.", [ WebFilename ] ),
+				"webservers and virtual hosting: '~ts'.", [ WebFilename ] ),
 			text_utils:string_to_binary( WebFilename );
 
 		{ error, DiagnosedReason } ->
@@ -1161,7 +1165,7 @@ manage_web_config( ConfigTable, State ) ->
 -spec to_string( wooper:state() ) -> ustring().
 to_string( State ) ->
 
-	RegString = text_utils:format( "registered as '~s' (scope: ~s)",
+	RegString = text_utils:format( "registered as '~ts' (scope: ~ts)",
 		 [ ?getAttr(registration_name), ?default_registration_scope ] ),
 
 	SrvString = case ?getAttr(us_server_pid) of
@@ -1184,10 +1188,10 @@ to_string( State ) ->
 
 	end,
 
-	text_utils:format( "US overall configuration server, ~s, running in "
-		"the ~s execution context, presumably on a VM using EPMD port #~B, "
-		"using configuration directory '~s' and log directory '~s', "
-		"having found as US-web configuration file '~s', knowing ~s and ~s",
+	text_utils:format( "US overall configuration server, ~ts, running in "
+		"the ~ts execution context, presumably on a VM using EPMD port #~B, "
+		"using configuration directory '~ts' and log directory '~ts', "
+		"having found as US-web configuration file '~ts', knowing ~ts and ~ts",
 		[ RegString, ?getAttr(execution_context), ?getAttr(epmd_port),
 		  ?getAttr(config_base_directory), ?getAttr(log_directory),
 		  ?getAttr(web_config_filename), SrvString, WebString ] ).

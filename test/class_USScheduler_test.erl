@@ -40,7 +40,7 @@ operate_loop() ->
 
 		{ operate, [ Pid, Name ] } ->
 			trace_utils:debug_fmt( "--> Actuator ~w just operated on behalf "
-								   "of ~s.", [ self(), Name ] ),
+								   "of ~ts.", [ self(), Name ] ),
 			Pid ! { operated, Name, self() },
 			operate_loop();
 
@@ -56,12 +56,12 @@ check_command_acks( TotalExpectedSchedulings ) ->
 
 	% Hopefully at their right moment:
 	test_facilities:display(
-	  "Checking that all commands were actually executed." ),
+		"Checking that all commands were actually executed." ),
 
 	wait_for_command_acks( TotalExpectedSchedulings ),
 
 	test_facilities:display(
-	  "Checking that no extraneous command has been executed." ),
+		"Checking that no extraneous command has been executed." ),
 
 	% Wait for any extraneous, faulty command ack:
 	receive
@@ -88,8 +88,8 @@ wait_for_command_acks( Count ) ->
 
 		{ operated, Name, _AnyPid } ->
 			NewCount = Count - 1,
-			trace_utils:debug_fmt( "Received a command ack regarding ~s; "
-				   "still waiting for ~B of them.", [ Name, NewCount ] ),
+			trace_utils:debug_fmt( "Received a command ack regarding ~ts; "
+				"still waiting for ~B of them.", [ Name, NewCount ] ),
 			wait_for_command_acks( NewCount )
 
 	end.
@@ -173,8 +173,7 @@ run() ->
 
 	% Actually a single scheduling:
 	SchedPid ! { registerTask, [ get_command( sixth ), SixthDHMSDuration,
-		_SixthPeriodicity=once, _SixthCount=1, FirstActuatorPid ],
-		self() },
+		_SixthPeriodicity=once, _SixthCount=1, FirstActuatorPid ], self() },
 
 	{ task_registered, IdSixthTask=6 } = test_receive(),
 
@@ -195,7 +194,7 @@ run() ->
 	% To wait for the seventh task to be fully over:
 	%WaitMs = 15000,
 
-	test_facilities:display( "Waiting ~s before unregistering tasks.",
+	test_facilities:display( "Waiting ~ts before unregistering tasks.",
 							 [ time_utils:duration_to_string( WaitMs ) ] ),
 
 	timer:sleep( WaitMs ),
@@ -271,7 +270,7 @@ run() ->
 	end,
 
 	test_facilities:display(
-	  "Checking that no extraneous registration ack was received." ),
+		"Checking that no extraneous registration ack was received." ),
 
 	receive
 

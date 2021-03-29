@@ -68,7 +68,7 @@ get_us_information() ->
 		{ undefined, CfgDirMsg } ->
 
 			trace_bridge:error_fmt( "Test is unable to determine the US "
-				"configuration directory; ~s", [ CfgDirMsg ] ),
+				"configuration directory; ~ts", [ CfgDirMsg ] ),
 
 			% CfgDirMsg too verbose for:
 			throw( us_configuration_directory_not_found );
@@ -90,7 +90,7 @@ get_us_information() ->
 
 	end,
 
-	test_facilities:display( "Read US configuration from '~s'.",
+	test_facilities:display( "Read US configuration from '~ts'.",
 							 [ CfgFilePath ] ),
 
 	{ CfgRegName, CfgRegScope, CfgNamingMsg } =
@@ -102,7 +102,7 @@ get_us_information() ->
 			{ error, { InvalidThisRegName, CfgRefNameKey } } ->
 				trace_bridge:error_fmt( "Read invalid user-configured "
 					"registration name for this US configuration server "
-					 "(key: '~s'): '~p'.",
+					 "(key: '~ts'): '~p'.",
 					 [ CfgRefNameKey, InvalidThisRegName ] ),
 				throw( { invalid_us_config_registration_name,
 						 InvalidThisRegName, CfgRefNameKey } )
@@ -165,7 +165,7 @@ test_us_common_application( OrderedAppNames ) ->
 	SchedPid = naming_utils:wait_for_registration_of(
 		?us_common_scheduler_registration_name,
 		naming_utils:registration_to_look_up_scope(
-		  ?us_common_scheduler_registration_scope ) ),
+			?us_common_scheduler_registration_scope ) ),
 
 	erlang:link( SchedPid ),
 

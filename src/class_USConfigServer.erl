@@ -996,7 +996,7 @@ manage_app_base_directory( ConfigTable, State ) ->
 		key_not_found ->
 
 			case system_utils:get_environment_variable(
-				   ?us_app_env_variable ) of
+					?us_app_env_variable ) of
 
 				false ->
 
@@ -1029,7 +1029,7 @@ manage_app_base_directory( ConfigTable, State ) ->
 									  OtherGuessedDir ],
 
 					GuessedDir = file_utils:get_first_existing_directory_in(
-								   CandidateDirs ),
+									CandidateDirs ),
 
 					GuessedNormDir = file_utils:normalise_path( GuessedDir ),
 
@@ -1123,7 +1123,8 @@ manage_log_directory( ConfigTable, State ) ->
 
 	file_utils:create_directory_if_not_existing( LogDir, create_parents ),
 
-	BinLogDir = text_utils:string_to_binary( LogDir ),
+	% Already binary if made absolute thanks to app_base one:
+	BinLogDir = text_utils:ensure_binary( LogDir ),
 
 	setAttribute( State, log_directory, BinLogDir ).
 

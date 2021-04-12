@@ -102,8 +102,8 @@ get_us_information() ->
 			{ error, { InvalidThisRegName, CfgRefNameKey } } ->
 				trace_bridge:error_fmt( "Read invalid user-configured "
 					"registration name for this US configuration server "
-					 "(key: '~ts'): '~p'.",
-					 [ CfgRefNameKey, InvalidThisRegName ] ),
+					"(key: '~ts'): '~p'.",
+					[ CfgRefNameKey, InvalidThisRegName ] ),
 				throw( { invalid_us_config_registration_name,
 						 InvalidThisRegName, CfgRefNameKey } )
 
@@ -163,9 +163,9 @@ test_us_common_application( OrderedAppNames ) ->
 
 	% The same (simpler - less choices) for the US-Common scheduler:
 	SchedPid = naming_utils:wait_for_registration_of(
-		?us_common_scheduler_registration_name,
-		naming_utils:registration_to_look_up_scope(
-			?us_common_scheduler_registration_scope ) ),
+					?us_common_scheduler_registration_name,
+					naming_utils:registration_to_look_up_scope(
+						?us_common_scheduler_registration_scope ) ),
 
 	erlang:link( SchedPid ),
 
@@ -193,7 +193,7 @@ test_us_common_application( OrderedAppNames ) ->
 	basic_utils:check_no_pending_message(),
 
 	test_facilities:display(
-	  "Successful end of test of the US-Common OTP application." ).
+		"Successful end of test of the US-Common OTP application." ).
 
 
 
@@ -211,8 +211,8 @@ run() ->
 	%
 	BuildRootDir = "..",
 
-	OrderedAppNames = otp_utils:prepare_for_execution( _ThisApp=us_common,
-													   BuildRootDir ),
+	OrderedAppNames =
+		otp_utils:prepare_for_execution( _ThisApp=us_common, BuildRootDir ),
 
 	trace_bridge:info_fmt( "Resulting applications to start, in order: ~w.",
 						   [ OrderedAppNames ] ),

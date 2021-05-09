@@ -230,7 +230,8 @@ construct( State ) ->
 	TraceState = class_USServer:construct( State,
 							?trace_categorize("Configuration main server") ),
 
-	?send_info( TraceState, "Creating the overall US configuration server." ),
+	?send_info_fmt( TraceState, "Creating the overall US configuration server, "
+					"on node '~ts'.", [ node() ] ),
 
 	BinCfgDir = case get_us_config_directory() of
 

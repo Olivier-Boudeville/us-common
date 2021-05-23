@@ -1,0 +1,5 @@
+%% encoding: UTF-8
+{application,'US-Common'}.
+{modules,[class_USConfigServer,class_USScheduler,class_USServer,
+          class_USTaskRing,us_common_app,us_common_config_bridge_sup,
+          us_common_scheduler_bridge_sup,us_common_sup]}.

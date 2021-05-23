@@ -16,11 +16,11 @@
 
 
 <span class="target" id="top"></span><p><span class="raw-html"><a name="us-common_top"></a></span></p>
-<p><span class="raw-html"><div class="banner"><p><em>US-Common documentation</em> <a href="http://us-common.esperide.org">browse latest</a> <a href="https://olivier-boudeville.github.io/us-common/index.html">browse mirror</a> <a href="us-common-technical-manual-english.pdf">get PDF</a> <a href="#us-common_top">go to top</a> <a href="#us-common_bottom">go to bottom</a> <a href="https://github.com/Olivier-Boudeville/us-common">go to project</a> <a href="mailto:about(dash)us-common(at)esperide(dot)com?subject=[US-Common]%20Remark">email us</a></p></div></span></p>
+<p><span class="raw-html"><div class="banner"><p><em>US-Common documentation</em> <a href="http://us-common.esperide.org">browse latest</a> <a href="https://olivier-boudeville.github.io/us-common/index.html">browse mirror</a> <a href="us-common-technical-manual-english.pdf">get PDF</a> <a href="#us-common_top">go to top</a> <a href="#us-common_toc">go to toc</a> <a href="#us-common_bottom">go to bottom</a> <a href="api-doc/index.html">browse API</a> <a href="https://github.com/Olivier-Boudeville/us-common">go to project</a> <a href="mailto:about(dash)us-common(at)esperide(dot)com?subject=[US-Common]%20Remark">email us</a></p></div></span></p>
 <p><span class="raw-html"><center><img src="us-common-title.png" width="40%"></img></center></span>
 </p>
 <div class="section" id="technical-manual-of-the-us-common-layer">
-<h1><a class="toc-backref" href="#id15">Technical Manual of the <tt class="docutils literal"><span class="pre">US-Common</span></tt> Layer</a></h1>
+<h1><a class="toc-backref" href="#id16">Technical Manual of the <tt class="docutils literal"><span class="pre">US-Common</span></tt> Layer</a></h1>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -37,10 +37,10 @@
 <tr class="field"><th class="field-name">Lastly updated:</th><td class="field-body"><p class="first">Friday, March 12, 2021</p>
 </td>
 </tr>
-<tr class="field"><th class="field-name">Status:</th><td class="field-body"><p class="first">Work in progress</p>
+<tr class="field"><th class="field-name">Version:</th><td class="field-body"><p class="first">0.0.2</p>
 </td>
 </tr>
-<tr class="field"><th class="field-name">Version:</th><td class="field-body"><p class="first">0.0.5</p>
+<tr class="field"><th class="field-name">Status:</th><td class="field-body"><p class="first">Stable</p>
 </td>
 </tr>
 <tr class="field"><th class="field-name">Dedication:</th><td class="field-body"><p class="first">Users and maintainers of the <tt class="docutils literal"><span class="pre">US-Common</span></tt> layer.</p>
@@ -61,29 +61,30 @@
 <p><span class="raw-html">This US-Common documentation is also available in the PDF format (see <a href="us-common-technical-manual-english.pdf">us-common-Layer-technical-manual-english.pdf</a>), and mirrored <a href="https://olivier-boudeville.github.io/us-common/">here</a>.</span></p>
 <p></p>
 <p></p>
-<div class="contents topic" id="table-of-contents">
-<p class="topic-title">Table of Contents</p>
+<p><span class="raw-html"><a name="us-common_toc"></a></span></p>
+<div class="contents topic" id="id1">
+<span id="table-of-contents"></span><p class="topic-title"><strong>Table of Contents</strong></p>
 <ul class="simple">
-<li><a class="reference internal" href="#technical-manual-of-the-us-common-layer" id="id15">Technical Manual of the <tt class="docutils literal"><span class="pre">US-Common</span></tt> Layer</a><ul>
-<li><a class="reference internal" href="#overview" id="id16">Overview</a></li>
-<li><a class="reference internal" href="#layer-stack" id="id17">Layer Stack</a></li>
-<li><a class="reference internal" href="#facilities-provided-by-this-layer" id="id18">Facilities Provided by this Layer</a></li>
-<li><a class="reference internal" href="#licence" id="id19">Licence</a></li>
-<li><a class="reference internal" href="#current-stable-version-download" id="id20">Current Stable Version &amp; Download</a><ul>
-<li><a class="reference internal" href="#using-cutting-edge-git" id="id21">Using Cutting-Edge GIT</a></li>
-<li><a class="reference internal" href="#using-otp-related-build-runtime-conventions" id="id22">Using OTP-Related Build/Runtime Conventions</a></li>
+<li><a class="reference internal" href="#technical-manual-of-the-us-common-layer" id="id16">Technical Manual of the <tt class="docutils literal"><span class="pre">US-Common</span></tt> Layer</a><ul>
+<li><a class="reference internal" href="#overview" id="id17">Overview</a></li>
+<li><a class="reference internal" href="#layer-stack" id="id18">Layer Stack</a></li>
+<li><a class="reference internal" href="#facilities-provided-by-this-layer" id="id19">Facilities Provided by this Layer</a></li>
+<li><a class="reference internal" href="#licence" id="id20">Licence</a></li>
+<li><a class="reference internal" href="#current-stable-version-download" id="id21">Current Stable Version &amp; Download</a><ul>
+<li><a class="reference internal" href="#using-cutting-edge-git" id="id22">Using Cutting-Edge GIT</a></li>
+<li><a class="reference internal" href="#using-otp-related-build-runtime-conventions" id="id23">Using OTP-Related Build/Runtime Conventions</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#support" id="id23">Support</a></li>
-<li><a class="reference internal" href="#please-react" id="id24">Please React!</a></li>
-<li><a class="reference internal" href="#ending-word" id="id25">Ending Word</a></li>
+<li><a class="reference internal" href="#support" id="id24">Support</a></li>
+<li><a class="reference internal" href="#please-react" id="id25">Please React!</a></li>
+<li><a class="reference internal" href="#ending-word" id="id26">Ending Word</a></li>
 </ul>
 </li>
 </ul>
 </div>
 <p></p>
 <div class="section" id="overview">
-<h2><a class="toc-backref" href="#id16">Overview</a></h2>
+<h2><a class="toc-backref" href="#id17">Overview</a></h2>
 <p>The <a class="reference external" href="http://us-common.esperide.org/">US-Common</a> layer is the basis (lowest-level) of the <a class="reference external" href="https://github.com/Olivier-Boudeville/Universal-Server">Universal Server</a> project.</p>
 <p>Its purpose is to provide base elements on which the various <em>Universal Services</em> are built, notably:</p>
 <ul class="simple">
@@ -95,7 +96,7 @@
 <p>The project repository is located <a class="reference external" href="https://github.com/Olivier-Boudeville/us-common">here</a>.</p>
 </div>
 <div class="section" id="layer-stack">
-<h2><a class="toc-backref" href="#id17">Layer Stack</a></h2>
+<h2><a class="toc-backref" href="#id18">Layer Stack</a></h2>
 <p>From the highest level to the lowest, as shown <a class="reference external" href="https://github.com/Olivier-Boudeville/Universal-Server">here</a>, usually a software stack involving US-Common is structured that way:</p>
 <ul class="simple">
 <li>an applicative layer such as <a class="reference external" href="http://us-main.esperide.org/">US-Main</a> or <a class="reference external" href="http://us-web.esperide.org/">US-Web</a>, etc.</li>
@@ -110,7 +111,7 @@
 <p></p>
 </div>
 <div class="section" id="facilities-provided-by-this-layer">
-<h2><a class="toc-backref" href="#id18">Facilities Provided by this Layer</a></h2>
+<h2><a class="toc-backref" href="#id19">Facilities Provided by this Layer</a></h2>
 <p>These are mainly common services centralised here so that the various US applications can make use of them:</p>
 <ul class="simple">
 <li><a class="reference external" href="https://github.com/Olivier-Boudeville/us-common/blob/master/src/class_USServer.erl">USServer</a>: a general <strong>abstraction of a server</strong>, so that all US ones inherit the corresponding base features (ex: name registration, uptime information, applicative ping, state description, etc.)</li>
@@ -120,18 +121,18 @@
 </ul>
 </div>
 <div class="section" id="licence">
-<span id="free-software"></span><h2><a class="toc-backref" href="#id19">Licence</a></h2>
+<span id="free-software"></span><h2><a class="toc-backref" href="#id20">Licence</a></h2>
 <p><tt class="docutils literal"><span class="pre">US-Common</span></tt> is licensed by its author (Olivier Boudeville) under the <a class="reference external" href="https://www.gnu.org/licenses/agpl-3.0.en.html">GNU Affero General Public License</a> as published by the Free Software Foundation, either version 3 of this license, or (at your option) any later version.</p>
 <p>This allows the use of the US-Common code in a wide a variety of software projects, while still maintaining copyleft on this code, ensuring improvements are shared.</p>
 <p>We hope indeed that enhancements will be back-contributed (ex: thanks to merge requests), so that everyone will be able to benefit from them.</p>
 </div>
 <div class="section" id="current-stable-version-download">
-<h2><a class="toc-backref" href="#id20">Current Stable Version &amp; Download</a></h2>
+<h2><a class="toc-backref" href="#id21">Current Stable Version &amp; Download</a></h2>
 <p>We prefer using GNU/Linux, sticking to the latest stable release of Erlang, and building it from sources, thanks to GNU <tt class="docutils literal">make</tt>.</p>
 <p>As mentioned, the single, direct prerequisite of <a class="reference external" href="https://github.com/Olivier-Boudeville/US-Common">US-Common</a> is <a class="reference external" href="https://github.com/Olivier-Boudeville/Ceylan-Traces">Ceylan-Traces</a>, which implies in turn <a class="reference external" href="https://github.com/Olivier-Boudeville/Ceylan-WOOPER">Ceylan-WOOPER</a>, then <a class="reference external" href="https://github.com/Olivier-Boudeville/Ceylan-Myriad">Ceylan-Myriad</a> and <a class="reference external" href="http://erlang.org">Erlang</a>.</p>
 <p>Refer to the corresponding <a class="reference external" href="http://myriad.esperide.org#prerequisites">Myriad prerequisite section</a>  for more precise guidelines, knowing that US-Common does not need modules with conditional support such as <tt class="docutils literal">crypto</tt> or <tt class="docutils literal">wx</tt>.</p>
 <div class="section" id="using-cutting-edge-git">
-<h3><a class="toc-backref" href="#id21">Using Cutting-Edge GIT</a></h3>
+<h3><a class="toc-backref" href="#id22">Using Cutting-Edge GIT</a></h3>
 <p>This is the installation method that we use and recommend; the US-Common <tt class="docutils literal">master</tt> branch is meant to stick to the latest stable version: we try to ensure that this main line always stays functional (sorry for the pun). Evolutions are to take place in feature branches and to be merged only when ready.</p>
 <p>Once Erlang is available, it should be just a matter of executing:</p>
 <pre class="code bash literal-block">
@@ -159,21 +160,21 @@ $ make class_USScheduler_run
 <p><span class="raw-html"><a name="otp"></a></span></p>
 </div>
 <div class="section" id="using-otp-related-build-runtime-conventions">
-<span id="otp-build"></span><h3><a class="toc-backref" href="#id22">Using OTP-Related Build/Runtime Conventions</a></h3>
+<span id="otp-build"></span><h3><a class="toc-backref" href="#id23">Using OTP-Related Build/Runtime Conventions</a></h3>
 <p>As discussed in these sections of <a class="reference external" href="http://myriad.esperide.org/myriad.html#otp">Myriad</a>, <a class="reference external" href="http://wooper.esperide.org/index.html#otp">WOOPER</a> and <a class="reference external" href="http://traces.esperide.org/index.html#otp">Traces</a>, we added the (optional) possibility of generating a US-Common <em>OTP application</em> out of the build tree, ready to be integrated into an <em>(OTP) release</em>. For that we rely on <a class="reference external" href="https://www.rebar3.org/">rebar3</a>, <a class="reference external" href="https://github.com/erlware/relx">relx</a> and <a class="reference external" href="https://hex.pm/">hex</a>.</p>
 <p>Unlike Myriad (which is an OTP <em>library</em> application), US-Common is (like WOOPER and Traces) an OTP <em>active</em> application, meaning the reliance on an application that can be started/stopped (<tt class="docutils literal">us_common_app</tt>), a root supervisor (<tt class="docutils literal">us_common_sup</tt>) and, here, two proper supervisor bridges (<tt class="docutils literal">us_common_scheduler_bridge_sup</tt> and <tt class="docutils literal">us_common_config_bridge_sup</tt>).</p>
 </div>
 </div>
 <div class="section" id="support">
-<h2><a class="toc-backref" href="#id23">Support</a></h2>
+<h2><a class="toc-backref" href="#id24">Support</a></h2>
 <p>Bugs, questions, remarks, patches, requests for enhancements, etc. are to be reported to the <a class="reference external" href="https://github.com/Olivier-Boudeville/us-common">project interface</a> (typically <a class="reference external" href="https://github.com/Olivier-Boudeville/us-common/issues">issues</a>) or directly at the email address mentioned at the beginning of this document.</p>
 </div>
 <div class="section" id="please-react">
-<h2><a class="toc-backref" href="#id24">Please React!</a></h2>
+<h2><a class="toc-backref" href="#id25">Please React!</a></h2>
 <p>If you have information more detailed or more recent than those presented in this document, if you noticed errors, neglects or points insufficiently discussed, drop us a line! (for that, follow the <a class="reference internal" href="#support">Support</a> guidelines).</p>
 </div>
 <div class="section" id="ending-word">
-<h2><a class="toc-backref" href="#id25">Ending Word</a></h2>
+<h2><a class="toc-backref" href="#id26">Ending Word</a></h2>
 <p>Have fun with US-Common!</p>
 <p><span class="raw-html"><center><img src="us-common-title.png" width="25%"></img></center></span>
 </p>

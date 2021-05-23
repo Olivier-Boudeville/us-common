@@ -20,6 +20,9 @@
 % Creation date: Tuesday, December 24, 2019.
 
 
+% @doc Class defining the singleton server holding the <b>configuration
+% information</b> of the Universal Server, at the level of US-Common.
+%
 -module(class_USConfigServer).
 
 -define( class_description,
@@ -49,9 +52,8 @@
 -type server_pid() :: class_UniversalServer:server_pid().
 
 
-
-% A table holding US configuration information:
 -type us_config_table() :: table( atom(), term() ).
+% A table holding US configuration information.
 
 
 
@@ -215,8 +217,8 @@
 
 
 
-% Constructs the US configuration server, using the default logic to find its
-% configuration file.
+% @doc Constructs the US configuration server, using the default logic to find
+% its configuration file.
 %
 % Note: must be kept in line with the next constructor.
 %
@@ -251,7 +253,7 @@ construct( State ) ->
 
 
 
-% Constructs the US configuration server, using specified configuration
+% @doc Constructs the US configuration server, using specified configuration
 % directory.
 %
 % Useful for example to create auxiliary universal servers or perform tests.
@@ -278,7 +280,7 @@ construct( State, ConfigDir ) when is_list( ConfigDir ) ->
 
 
 
-% Overridden destructor.
+% @doc Overridden destructor.
 -spec destruct( wooper:state() ) -> wooper:state().
 destruct( State ) ->
 
@@ -293,7 +295,7 @@ destruct( State ) ->
 % Method section.
 
 
-% Notifies this server about the specified US web configuration server, and
+% @doc Notifies this server about the specified US web configuration server, and
 % requests web-information from it.
 %
 -spec getWebRuntimeSettings( wooper:state() ) -> request_return(
@@ -330,8 +332,8 @@ getWebRuntimeSettings( State ) ->
 % Static section.
 
 
-% Returns the main default settings regarding the US configuration server, for
-% its clients.
+% @doc Returns the main default settings regarding the US configuration server,
+% for its clients.
 %
 -spec get_default_settings() -> static_return( { file_name(),
 		basic_utils:atom_key(), registration_name(),
@@ -345,7 +347,8 @@ get_default_settings() ->
 
 
 
-% Returns any found configuration directory and a corresponding trace message.
+% @doc Returns any found configuration directory and a corresponding trace
+% message.
 %
 % This is a static method (no state involved), so that both this kind of servers
 % and others (ex: web configuration ones), and even tests, can use the same,
@@ -414,7 +417,7 @@ get_us_config_directory() ->
 
 
 
-% Returns the US-Common configuration table, as read from the main US
+% @doc Returns the US-Common configuration table, as read from the main US
 % configuration file, together with the path of this file.
 %
 % Static method, to be available from external code such as clients or tests.
@@ -450,7 +453,7 @@ get_configuration_table( BinCfgDir ) ->
 
 
 
-% Returns the name of the expected US-Web configuration file.
+% @doc Returns the name of the expected US-Web configuration file.
 %
 % Static method, to be available from outside, typically for tests.
 %
@@ -537,7 +540,7 @@ find_file_in( _AllBasePaths=[ Path | T ], CfgSuffix, BaseMsg, Msgs ) ->
 
 
 
-% Performs set-up actions common to all constructors.
+% @doc Performs set-up actions common to all constructors.
 -spec perform_setup( bin_directory_path(), wooper:state() ) ->
 								wooper:state().
 perform_setup( BinCfgDir, State ) ->
@@ -580,8 +583,8 @@ perform_setup( BinCfgDir, State ) ->
 
 
 
-% Returns the Universal Server configuration table (i.e. the one of US, not
-% specifically of US web), and directly applies some of the read settings.
+% @doc Returns the Universal Server configuration table (that is the one of US,
+% not specifically of US web), and directly applies some of the read settings.
 %
 -spec load_configuration( bin_directory_path(), wooper:state() ) ->
 								wooper:state().
@@ -644,7 +647,7 @@ load_configuration( BinCfgDir, State ) ->
 
 
 
-% Manages any user-configured VM cookie.
+% @doc Manages any user-configured VM cookie.
 -spec manage_vm_cookie( us_config_table(), wooper:state() ) -> void().
 manage_vm_cookie( ConfigTable, State ) ->
 
@@ -673,7 +676,7 @@ manage_vm_cookie( ConfigTable, State ) ->
 
 
 
-% Manages any user-configured EPMD port.
+% @doc Manages any user-configured EPMD port.
 -spec manage_epmd_port( us_config_table(), wooper:state() ) -> wooper:state().
 manage_epmd_port( ConfigTable, State ) ->
 
@@ -702,7 +705,7 @@ manage_epmd_port( ConfigTable, State ) ->
 
 
 
-% Manages any user-configured TCP port range.
+% @doc Manages any user-configured TCP port range.
 -spec manage_tcp_port_range( us_config_table(), wooper:state() ) ->
 									wooper:state().
 manage_tcp_port_range( ConfigTable, State ) ->
@@ -732,7 +735,7 @@ manage_tcp_port_range( ConfigTable, State ) ->
 
 
 
-% Manages any user-configured execution context.
+% @doc Manages any user-configured execution context.
 -spec manage_execution_context( us_config_table(), wooper:state() ) ->
 									wooper:state().
 manage_execution_context( ConfigTable, State ) ->
@@ -798,7 +801,7 @@ manage_execution_context( ConfigTable, State ) ->
 
 
 
-% Manages any user-configured specification regarding the (operating-system
+% @doc Manages any user-configured specification regarding the (operating-system
 % level) US user and group.
 %
 -spec manage_os_user_group( us_config_table(), wooper:state() ) ->
@@ -883,8 +886,8 @@ manage_os_user_group( ConfigTable, State ) ->
 
 
 
-% Manages any user-configured registration names for this instance and for the
-% US server.
+% @doc Manages any user-configured registration names for this instance and for
+% the US server.
 %
 -spec manage_registration_names( us_config_table(), wooper:state() ) ->
 										wooper:state().
@@ -945,7 +948,7 @@ manage_registration_names( ConfigTable, State ) ->
 
 
 
-% Returns information about the naming registration of various US servers.
+% @doc Returns information about the naming registration of various US servers.
 %
 % Static for sharing with clients, tests, etc.
 %
@@ -981,7 +984,7 @@ get_registration_info( ConfigTable ) ->
 
 
 
-% Manages any user-configured application base directory.
+% @doc Manages any user-configured application base directory.
 -spec manage_app_base_directory( us_config_table(), wooper:state() ) ->
 										wooper:state().
 manage_app_base_directory( ConfigTable, State ) ->
@@ -1083,7 +1086,7 @@ manage_app_base_directory( ConfigTable, State ) ->
 
 
 
-% Manages any user-configured log directory to rely on, creating it if
+% @doc Manages any user-configured log directory to rely on, creating it if
 % necessary.
 %
 -spec manage_log_directory( us_config_table(), wooper:state() ) ->
@@ -1131,8 +1134,8 @@ manage_log_directory( ConfigTable, State ) ->
 
 
 
-% Manages any user-configured configuration filename for webservers and virtual
-% hosting.
+% @doc Manages any user-configured configuration filename for webservers and
+% virtual hosting.
 %
 -spec manage_web_config( us_config_table(), wooper:state() ) -> wooper:state().
 manage_web_config( ConfigTable, State ) ->
@@ -1163,7 +1166,7 @@ manage_web_config( ConfigTable, State ) ->
 
 
 
-% Returns a textual description of this server.
+% @doc Returns a textual description of this server.
 -spec to_string( wooper:state() ) -> ustring().
 to_string( State ) ->
 

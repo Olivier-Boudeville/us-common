@@ -20,7 +20,7 @@
 % Creation date: Sunday, July 14, 2019.
 
 
-% Module implementing the root supervisor of US-Common.
+% @doc Module implementing the <b>root OTP supervisor of US-Common</b>.
 %
 % In practice, it will supervise a single process, the one of the (singleton) US
 % configuration server, through a dedicated supervision bridge, defined in the
@@ -37,9 +37,9 @@
 -export([ start_link/0 ]).
 
 
-% Callback of the supervisor behaviour:
+% Callback of the supervisor behaviour.
 %
-% (see https://erlang.org/doc/design_principles/sup_princ.html)
+% See [https://erlang.org/doc/design_principles/sup_princ.html].
 %
 -export([ init/1 ]).
 
@@ -47,7 +47,7 @@
 -define( root_supervisor_name, ?MODULE ).
 
 
-% Starts and links the US-Common root supervisor, creating in turn a proper
+% @doc Starts and links the US-Common root supervisor, creating in turn a proper
 % supervision bridge.
 %
 % Note: typically called by us_common_app:start/2, hence generally triggered by
@@ -64,8 +64,8 @@ start_link() ->
 
 
 
-% Callback to initialise this US-Common root supervisor bridge, typically in
-% answer to start_link/0 above being executed.
+% @doc Callback to initialise this US-Common root supervisor bridge, typically
+% in answer to start_link/0 above being executed.
 %
 -spec init( list() ) -> { 'ok',
 		{ supervisor:sup_flags(), [ supervisor:child_spec() ] } } | 'ignore'.
@@ -100,7 +100,7 @@ init( Args=[] ) ->
 	{ ok, { SupSettings, ChildSpecs } }.
 
 
-
+% @doc Returns the bridge spec for the US-Common configuration server.
 get_config_bridge_spec() ->
 	#{ id => us_common_config_bridge_id,
 
@@ -126,6 +126,7 @@ get_config_bridge_spec() ->
 
 
 
+% @doc Returns the bridge spec for the US-Common scheduler.
 get_scheduler_bridge_spec() ->
 	#{ id => us_common_scheduler_bridge_id,
 

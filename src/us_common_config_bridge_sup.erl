@@ -20,10 +20,10 @@
 % Creation date: Wednesday, May 6, 2020.
 
 
-% Module implementing the supervisor bridge for the US-Common configuration
-% server, so that this (singleton) server is attached to the US-Common
-% supervision tree, through the US-Common root supervisor, defined in the
-% us_common_sup module.
+% @doc Module implementing the <b>OTP supervisor bridge for the US-Common
+% configuration server</b>, so that this (singleton) server is attached to the
+% US-Common supervision tree, through the US-Common root supervisor, defined in
+% the us_common_sup module.
 %
 -module(us_common_config_bridge_sup).
 
@@ -60,7 +60,7 @@
 
 
 
-% Starts and links a US-Common supervision bridge to the US configuration
+% @doc Starts and links a US-Common supervision bridge to the US configuration
 % server.
 %
 % Note: typically spawned as a supervised child of the US-Common root supervisor
@@ -79,8 +79,8 @@ start_link() ->
 
 
 
-% Callback to initialise this supervisor bridge, typically in answer to
-% start_link/1 above being executed.
+% @doc Callback to initialise this supervisor bridge, typically in answer to
+% start_link/1 being executed.
 %
 -spec init( list() ) -> { 'ok', pid(), State :: term() }
 							| 'ignore' | { 'error', Error :: term() }.
@@ -96,7 +96,7 @@ init( _Args=[] ) ->
 
 
 
-% Callback to terminate this supervisor bridge.
+% @doc Callback to terminate this supervisor bridge.
 -spec terminate( Reason :: 'shutdown' | term(), State :: term() ) -> void().
 terminate( Reason, _State=CfgServerPid ) when is_pid( CfgServerPid ) ->
 

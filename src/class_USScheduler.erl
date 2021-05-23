@@ -20,6 +20,7 @@
 % Creation date: Wednesday, March 18, 2020.
 
 
+% @doc Class corresponding to the <b>task scheduler</b> of the US framework.
 -module(class_USScheduler).
 
 
@@ -36,14 +37,14 @@
 -type server_pid() :: class_UniversalServer:server_pid().
 
 
+-type task_command() :: wooper:oneway_call().
 % The command corresponding to a task to execute respects the general form of a
 % WOOPER oneway, i.e. OnewayName or {OnewayName, Args}, where Args is
 % conventionally a single non-list term or a list of any arguments.
 %
 % We considered, yet finally did not keep, the idea of always adding as last
 % element the PID of the sending scheduler.
-%
--type task_command() :: wooper:oneway_call().
+
 
 
 
@@ -62,15 +63,14 @@
 %-type ms_since_year_0() :: unit_utils:milliseconds().
 
 
-% Since start of this scheduler (in monotonic time):
 -type ms_since_start() :: unit_utils:milliseconds().
+% Since start of this scheduler (in monotonic time).
 
 
 -type timestamp() :: time_utils:timestamp().
 -type dhms_duration() :: time_utils:dhms_duration().
 
 
-% Specifies the start time of a task scheduling:
 -type start_time() ::
 
 		% As soon as possible:
@@ -85,10 +85,10 @@
 
 		% Preferably at this specified (future) time:
 	  | timestamp().
+% Specifies the start time of a task scheduling.
 
 
 
-% Time between two schedulings of a task, as expressed by the user:
 -type user_periodicity() ::
 
 		% Just to be executed once (one shot):
@@ -98,24 +98,24 @@
 	  | dhms_duration()
 
 	  | unit_utils:seconds().
+% Time between two schedulings of a task, as expressed by the user.
 
 
-% Time between two schedulings of a task, as used internally:
 -type periodicity() :: maybe( ms_duration() ).
+% Time between two schedulings of a task, as used internally.
 
 
-% The number of times a task shall be scheduled:
 -type schedule_count() :: 'unlimited' | basic_utils:count().
+% The number of times a task shall be scheduled.
 
 
-% The PID of the process requesting a task to be scheduled:
 -type requester_pid() :: pid().
+% The PID of the process requesting a task to be scheduled.
 
 
-% The PID of the process to which a task command will be sent whenever
-% scheduled:
-%
 -type actuator_pid() :: pid().
+% The PID of the process to which a task command will be sent whenever
+% scheduled.
 
 
 -type task_registration_outcome() :: 'task_done'
@@ -125,17 +125,17 @@
 			| { 'task_unregistration_failed', basic_utils:error_reason() }.
 
 
-
-% Identifier of a task, as assigned by a scheduler.
 -type task_id() :: basic_utils:count().
+% Identifier of a task, as assigned by a scheduler.
 
 
-% Reference to a timer:
 -type timer_ref() :: timer:tref().
+% Reference to a timer.
 
 
-% Associates the reference of a live timer to a schedule offset:
 -type timer_table() :: table( schedule_offset(), timer_ref() ).
+% Associates the reference of a live timer to a schedule offset.
+
 
 -export_type([ server_pid/0, task_command/0, start_time/0, user_periodicity/0,
 			   requester_pid/0, actuator_pid/0,
@@ -144,13 +144,11 @@
 
 
 
-% A millisecond offset relative to the start time of this scheduler:
-% (hence designed to be rather small)
-%
 -type schedule_offset() :: ms_since_start().
+% A millisecond-based offset relative to the start time of this scheduler (hence
+% designed to be rather small).
 
 
-% Describes a task to schedule.
 -record( task_entry, {
 
 		   % Unique identifier of this task:
@@ -193,18 +191,19 @@
 
 
 -type task_entry() :: #task_entry{}.
+% Describes a task to schedule.
 
 
-% To keep track of task information:
 -type task_table() :: table( task_id(), task_entry() ).
+% To keep track of task information.
 
 
-% Registers which tasks shall be scheduled at a given time offset.
 -type schedule_pair() :: { schedule_offset(), [ task_id() ] }.
+% Registers which tasks shall be scheduled at a given time offset.
 
-% Schedule pairs, ordered from closest future to most remote one:
+
 -type schedule_plan() :: [ schedule_pair() ].
-
+% Schedule pairs, ordered from closest future to most remote one.
 
 
 % The class-specific attributes:
@@ -315,20 +314,20 @@
 
 
 
-% Constructs the main (singleton), default US scheduler.
+% @doc Constructs the main (singleton), default US scheduler.
 -spec construct( wooper:state() ) -> wooper:state().
 construct( State ) ->
 
 	% First the direct mother classes, then this class-specific actions:
 	SrvState = class_USServer:construct( State,
-		?trace_categorize(_DefaultTraceEmitterName="Main US Scheduler"),
+		?trace_categorize("Main US Scheduler"),
 		?registration_name, ?registration_scope ),
 
 	init_common( SrvState ).
 
 
 
-% Constructs a (named, unregistered) US scheduler.
+% @doc Constructs a (named, unregistered) US scheduler.
 -spec construct( wooper:state(), ustring() ) -> wooper:state().
 construct( State, SchedulerName ) ->
 
@@ -340,7 +339,7 @@ construct( State, SchedulerName ) ->
 
 
 
-% Constructs a (named, registered) US scheduler.
+% @doc Constructs a (named, registered with specified scope) US scheduler.
 -spec construct( wooper:state(), ustring(), naming_utils:registration_name(),
 				 naming_utils:registration_name() ) -> wooper:state().
 construct( State, SchedulerName, RegistrationName, RegistrationScope ) ->
@@ -371,7 +370,7 @@ init_common( State ) ->
 
 
 
-% Overridden destructor.
+% @doc Overridden destructor.
 -spec destruct( wooper:state() ) -> wooper:state().
 destruct( State ) ->
 
@@ -388,7 +387,7 @@ destruct( State ) ->
 % Method section.
 
 
-% Triggers immediately specified one-shot task: specified command will be
+% @doc Triggers immediately specified one-shot task: specified command will be
 % triggered at once, a single time, being assigned to actuator process.
 %
 % Returns either 'task_done' if the task was done on the fly (hence is already
@@ -409,8 +408,9 @@ triggerOneshotTask( State, UserTaskCommand, UserActPid ) ->
 
 
 
-% Registers specified one-shot task: specified command will be executed once, at
-% specified time, as assigned to requesting and specified actuator process.
+% @doc Registers specified one-shot task: specified command will be executed
+% once, at specified time, as assigned to requesting and specified actuator
+% process.
 %
 % Returns either 'task_done' if the task was done on the fly (hence is already
 % triggered, and no task identifier applies), or {'task_registered', TaskId} if
@@ -434,9 +434,9 @@ registerOneshotTask( State, UserTaskCommand, UserStartTime, UserActPid ) ->
 
 
 
-% Registers specified task: specified command will be executed starting from
-% specified time, at specified periodicity, for specified number of times, being
-% assigned to requesting and specified actuator process.
+% @doc Registers specified task: specified command will be executed starting
+% from specified time, at specified periodicity, for specified number of times,
+% being assigned to requesting and specified actuator process.
 %
 % Returns either 'task_done' if the task was done on the fly (hence is already
 % triggered, and no task identifier applies since it is fully completed), or
@@ -530,7 +530,6 @@ registerTask( State, UserTaskCommand, UserStartTime, UserPeriodicity, UserCount,
 
 			end;
 
-
 		% Deferred launch here:
 		_ ->
 			TaskId = ?getAttr(next_task_id),
@@ -559,7 +558,7 @@ registerTask( State, UserTaskCommand, UserStartTime, UserPeriodicity, UserCount,
 
 
 
-% Unregisters specified task, based on its identifier.
+% @doc Unregisters specified task, based on its identifier.
 %
 % Returns either 'task_unregistered' if the operation succeeded, or
 % 'task_already_done' if the task was already fully done, or
@@ -573,7 +572,7 @@ unregisterTask( State, TaskId ) when is_integer( TaskId ) andalso TaskId > 0 ->
 
 
 
-% Unregisters specified tasks, based on their identifier.
+% @doc Unregisters specified tasks, based on their identifier.
 %
 % Returns, in order, for each task either 'task_unregistered' if the operation
 % succeeded, 'task_already_done' if the task was already fully done, or
@@ -596,7 +595,7 @@ unregisterTasks( State, TaskIds ) when is_list( TaskIds ) ->
 
 
 % (helper)
--spec unregisterTask( task_id(), wooper:state() ) ->
+-spec unregister_task( task_id(), wooper:state() ) ->
 							{ task_unregistration_outcome(), wooper:state() }.
 unregister_task( TaskId, State ) when is_integer( TaskId ) andalso TaskId > 0 ->
 
@@ -666,7 +665,7 @@ unregister_task( TaskId, State ) ->
 
 
 
-% Triggers specified scheduling.
+% @doc Triggers specified scheduling.
 %
 % Expected to be called through a timer having set beforehand.
 %
@@ -788,8 +787,8 @@ perform_schedule( ScheduleOffset, _NowMs, SchedulePlan, TimerTable, TaskTable,
 
 
 
-% Triggers specified tasks, and returns updated schedule plan, timer and task
-% tables.
+% @doc Triggers specified tasks, and returns updated schedule plan, timer and
+% task tables.
 %
 % Note that:
 %
@@ -884,7 +883,7 @@ trigger_tasks( _TaskIds=[ TaskId | T ], ScheduleOffset, NowMs, SchedulePlan,
 
 
 
-% Effective launching of specified task.
+% @doc Effective launching of specified task.
 -spec launch_task( task_command(), actuator_pid(), wooper:state() ) -> void().
 launch_task( Cmd, ActuatorPid, State ) ->
 
@@ -904,7 +903,7 @@ launch_task( Cmd, ActuatorPid, State ) ->
 % Helper section.
 
 
-% Registers a future scheduling of the specified task.
+% @doc Registers a future scheduling of the specified task.
 %
 % (both ScheduleOffset and DurationFromNow specified to avoid a recomputation)
 %
@@ -936,7 +935,7 @@ register_task_schedule( TaskId, TaskEntry, ScheduleOffset, DurationFromNow,
 
 
 
-% Inserts specified task at specified offset in plan.
+% @doc Inserts specified task at specified offset in plan.
 -spec insert_task_at( task_id(), schedule_offset(), ms_duration(),
 		schedule_plan(), timer_table() ) -> { schedule_plan(), timer_table() }.
 insert_task_at( TaskId, ScheduleOffset, DurationFromNow, Plan, TimerTable ) ->
@@ -951,7 +950,6 @@ insert_task_at( TaskId, ScheduleOffset, DurationFromNow, Plan, TimerTable ) ->
 	%	  time_utils:duration_to_string( DurationFromNow ), NewPlan ] ),
 
 	NewP.
-
 
 
 % (helper)
@@ -995,7 +993,7 @@ insert_task_at( TaskId, ScheduleOffset, DurationFromNow,
 
 
 
-% Removes specified task from schedule plan.
+% @doc Removes specified task from schedule plan.
 -spec unschedule_task( task_id(), schedule_offset(), schedule_plan(),
 			timer_table() ) -> 'not_found' | { schedule_plan(), timer_table() }.
 unschedule_task( TaskId, PlannedNextSchedule, SchedulePlan, TimerTable ) ->
@@ -1052,7 +1050,7 @@ unschedule_task( TaskId, PlannedNextSchedule, _SchedulePlan=[ P | T ], Acc,
 
 
 
-% Adds a timer to trigger a future scheduler.
+% @doc Adds a timer to trigger a future scheduler.
 -spec add_timer( schedule_offset(), ms_duration(), timer_table() ) ->
 						timer_table().
 add_timer( ScheduleOffset, DurationFromNow, TimerTable ) ->
@@ -1075,7 +1073,7 @@ add_timer( ScheduleOffset, DurationFromNow, TimerTable ) ->
 
 
 
-% Removes a timer.
+% @doc Removes a timer.
 -spec remove_timer( schedule_offset(), timer_table() ) -> timer_table().
 remove_timer( ScheduleOffset, TimerTable ) ->
 
@@ -1103,7 +1101,7 @@ remove_timer( ScheduleOffset, TimerTable ) ->
 
 
 
-% Returns the time offset of specified (absolute) time, thus expressed in
+% @doc Returns the time offset of specified (absolute) time, thus expressed in
 % internal time, hence relative to the start time of this scheduler.
 %
 % Corresponds to the (real, actual) number of milliseconds since the start of
@@ -1114,14 +1112,16 @@ get_current_schedule_offset( State ) ->
 	time_utils:get_monotonic_time() - ?getAttr(server_start).
 
 
-% Returns the (approximate) user-level timestamp corresponding to now.
+
+% @doc Returns the (approximate) user-level timestamp corresponding to now.
 -spec get_current_timestamp( wooper:state() ) -> timestamp().
 get_current_timestamp( State ) ->
 	% Better (more homogeneous) than using calendar:local_time/0 for example:
 	get_timestamp_for( get_current_schedule_offset( State ), State ).
 
 
-% Returns a textual description of the (approximate) user-level timestamp
+
+% @doc Returns a textual description of the (approximate) user-level timestamp
 % corresponding to now.
 %
 -spec get_current_timestamp_string( wooper:state() ) -> ustring().
@@ -1130,8 +1130,8 @@ get_current_timestamp_string( State ) ->
 
 
 
-% Returns the internal time offset corresponding to this user-level timestamp
-% (such as {{2020,3,23},{16,44,0}}).
+% @doc Returns the internal time offset corresponding to this user-level
+% timestamp (such as {{2020,3,23},{16,44,0}}).
 %
 -spec get_schedule_offset_for( timestamp(), wooper:state() ) ->
 									schedule_offset().
@@ -1146,8 +1146,9 @@ get_schedule_offset_for( UserTimestamp, State ) ->
 
 
 
-% Returns the (approximate) user-level timestamp (ex: {{2020,3,23},{16,44,0}}),
-% in VM system time (UTC), corresponding to specified internal time offset.
+% @doc Returns the (approximate) user-level timestamp (ex:
+% {{2020,3,23},{16,44,0}}), in VM system time (UTC), corresponding to specified
+% internal time offset.
 %
 -spec get_timestamp_for( schedule_offset(), wooper:state() ) -> timestamp().
 get_timestamp_for( Offset, State ) ->
@@ -1160,8 +1161,8 @@ get_timestamp_for( Offset, State ) ->
 
 
 
-% Returns a textual description of the user-level timestamp corresponding to
-% specified internal time offset.
+% @doc Returns a textual description of the user-level timestamp corresponding
+% to specified internal time offset.
 %
 -spec get_timestamp_string_for( schedule_offset(), wooper:state() ) ->
 										ustring().
@@ -1170,7 +1171,7 @@ get_timestamp_string_for( Offset, State ) ->
 
 
 
-% Registers the fact that a task has just been triggered once more.
+% @doc Registers the fact that a task has just been triggered once more.
 -spec decrement_count( schedule_count() ) -> maybe( schedule_count() ).
 decrement_count( _Count=unlimited ) ->
 	unlimited;
@@ -1184,7 +1185,7 @@ decrement_count( Count ) when Count > 0 ->
 % Vet helpers, to check and canonicalise.
 
 
-% Checks and canonicalises this user-specified task command.
+% @doc Checks and canonicalises this user-specified task command.
 vet_task_command( UserTaskCommand=Oneway, _State ) when is_atom( Oneway ) ->
 	UserTaskCommand;
 
@@ -1203,8 +1204,8 @@ vet_task_command( UserTaskCommand, State ) ->
 
 
 
-% Checks and canonicalises this user-specified start time: returns the number of
-% milliseconds before starting any corresponding task (possibly zero).
+% @doc Checks and canonicalises this user-specified start time: returns the
+% number of milliseconds before starting any corresponding task (possibly zero).
 %
 -spec vet_start_time( term(), wooper:state() ) -> ms_duration().
 vet_start_time( _UserStartTime=asap, _State ) ->
@@ -1290,7 +1291,7 @@ vet_start_time( _UserStartTime=StartTime, State ) ->
 
 
 
-% Returns the user-specified schedule count.
+% @doc Returns the user-specified schedule count.
 -spec vet_count( term(), wooper:state() ) -> schedule_count().
 vet_count( ScheduleCount=unlimited, _State ) ->
 	ScheduleCount;
@@ -1304,9 +1305,9 @@ vet_count( Other, State ) ->
 
 
 
-% Returns any user-specified periodicity.
+% @doc Returns any user-specified periodicity.
 -spec vet_periodicity( term(), term(), wooper:state() ) ->
-							 maybe( periodicity() ).
+								maybe( periodicity() ).
 vet_periodicity( _UserPeriodicity=once, _Count=1, _State ) ->
 	undefined;
 
@@ -1322,7 +1323,7 @@ vet_periodicity( UserPeriodicity, _Count, State ) ->
 
 
 
-% Returns a vetted periodicity.
+% @doc Returns a vetted periodicity.
 %
 % (helper, defined for reuse)
 %
@@ -1362,7 +1363,7 @@ vet_user_periodicity( UserPeriodicity, State ) ->
 
 
 
-% Returns the user-specified actuator PID.
+% @doc Returns the user-specified actuator PID.
 -spec vet_actuator_pid( term() ) -> actuator_pid().
 vet_actuator_pid( Pid ) when is_pid( Pid ) ->
 	Pid;
@@ -1376,7 +1377,7 @@ vet_actuator_pid( Other ) ->
 % Section for textual representations.
 
 
-% Returns a textual description of this server.
+% @doc Returns a textual description of this server.
 -spec to_string( wooper:state() ) -> ustring().
 to_string( State ) ->
 
@@ -1406,7 +1407,7 @@ to_string( State ) ->
 
 
 
-% Returns a textual description of the specified schedule plan.
+% @doc Returns a textual description of the specified schedule plan.
 -spec schedule_plan_to_string( schedule_plan(), wooper:state() ) -> ustring().
 schedule_plan_to_string( _SchedulePlan=[], _State ) ->
 	"is empty";
@@ -1422,7 +1423,7 @@ schedule_plan_to_string( SchedulePlan, State ) ->
 
 
 
-% Returns a textual description of the specified timer table.
+% @doc Returns a textual description of the specified timer table.
 -spec timer_table_to_string( timer_table(), wooper:state() ) -> ustring().
 timer_table_to_string( TimerTable, State ) ->
 
@@ -1445,7 +1446,7 @@ timer_table_to_string( TimerTable, State ) ->
 
 
 
-% Returns a textual description of the specified schedule pair.
+% @doc Returns a textual description of the specified schedule pair.
 -spec trigger_to_string( schedule_pair(), wooper:state() ) -> ustring().
 trigger_to_string( { Offset, TaskIds }, State ) ->
 	text_utils:format( "at offset #~B (~ts), ~B task(s) registered: ~w",
@@ -1454,7 +1455,7 @@ trigger_to_string( { Offset, TaskIds }, State ) ->
 
 
 
-% Returns a textual description of the specified task entry.
+% @doc Returns a textual description of the specified task entry.
 -spec task_entry_to_string( task_entry(), wooper:state() ) -> ustring().
 task_entry_to_string( #task_entry{ id=_TaskId,
 							 command=Cmd,
@@ -1512,7 +1513,7 @@ task_entry_to_string( #task_entry{ id=_TaskId,
 
 
 
-% Returns a textual description of specified periodicity.
+% @doc Returns a textual description of specified periodicity.
 -spec periodicity_to_string( periodicity() ) -> ustring().
 % Should never happen:
 periodicity_to_string( _Periodicity=undefined ) ->
@@ -1524,7 +1525,7 @@ periodicity_to_string( Periodicity ) ->
 
 
 
-% Returns a textual description of specified schedule count.
+% @doc Returns a textual description of specified schedule count.
 -spec schedule_count_to_string( schedule_count() ) -> ustring().
 schedule_count_to_string( _Count=unlimited ) ->
 	"an unlimited number of times";

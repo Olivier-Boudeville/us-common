@@ -7,7 +7,6 @@ US_COMMON_TOP = .
 
 MODULES_DIRS = src doc conf test
 
-
 # To override the 'all' default target with a parallel version:
 BASE_MAKEFILE = true
 

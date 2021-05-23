@@ -20,6 +20,9 @@
 % Creation date: Wednesday, April 22, 2020.
 
 
+% @doc Class implementing a <b>task ring</b>, in order to schedule evenly and
+% synchronously a set of tasks.
+%
 -module(class_USTaskRing).
 
 
@@ -141,10 +144,10 @@
 
 
 
-% Creates a task ring for specified actuators, so that they are (immediately,
-% yet flexibly) triggered with the specified request (a synchronous task
-% command) at the specified overall periodicity, for the specified number of
-% times, by the specified scheduler.
+% @doc Creates a task ring for specified actuators, so that they are
+% (immediately, yet flexibly) triggered with the specified request (a
+% synchronous task command) at the specified overall periodicity, for the
+% specified number of times, by the specified scheduler.
 %
 -spec construct( wooper:state(), ustring(), [ actuator_pid() ],
 		wooper:oneway_name(), wooper:method_arguments(), user_periodicity(),
@@ -152,7 +155,6 @@
 construct( _State, _RingName, _Actuators=[], _TaskOnewayName, _TaskOnewayArgs,
 		   _TaskPeriodicity, _ScheduleCount, _SchedulerPid ) ->
 	throw( no_actuator_defined );
-
 
 construct( State, RingName, Actuators, TaskOnewayName, TaskOnewayArgs,
 		   UserTaskPeriodicity, ScheduleCount, SchedulerPid )
@@ -198,7 +200,7 @@ construct( State, RingName, Actuators, TaskOnewayName, TaskOnewayArgs,
 
 
 
-% Overridden destructor.
+% @doc Overridden destructor.
 -spec destruct( wooper:state() ) -> wooper:state().
 destruct( State ) ->
 
@@ -233,8 +235,8 @@ destruct( State ) ->
 % Method section.
 
 
-% Requires this ring to trigger its next task (typically triggered itself by a
-% scheduler, as a class_USScheduler:task_command()).
+% @doc Requires this ring to trigger its next task (typically triggered itself
+% by a scheduler, as a class_USScheduler:task_command()).
 %
 % Expects this task, triggered synchronously, to call back notifyTaskDone/2.
 %
@@ -274,7 +276,7 @@ triggerNextTask( State ) ->
 
 
 
-% Notifies this ring that the specified actuator completed its task.
+% @doc Notifies this ring that the specified actuator completed its task.
 -spec notifyTaskDone( wooper:state(), actuator_pid() ) -> oneway_return().
 notifyTaskDone( State, ActuatorPid ) ->
 
@@ -293,7 +295,7 @@ notifyTaskDone( State, ActuatorPid ) ->
 % Helper section.
 
 
-% Sets new actuators (no interaction done with the scheduler).
+% @doc Sets new actuators (no interaction done with the scheduler).
 -spec set_actuators( [ actuator_pid() ], ms_duration(), wooper:state() ) ->
 							{ unit_utils:seconds(), wooper:state() }.
 set_actuators( _NewActuators=[], _TaskPeriodicity, _State ) ->
@@ -320,7 +322,7 @@ set_actuators( NewActuators, TaskPeriodicity, State ) ->
 
 
 
-% Returns a textual description of this task ring.
+% @doc Returns a textual description of this task ring.
 -spec to_string( wooper:state() ) -> ustring().
 to_string( State ) ->
 

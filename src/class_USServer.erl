@@ -19,7 +19,7 @@
 % Author: Olivier Boudeville [olivier (dot) boudeville (at) esperide (dot) com]
 % Creation date: Saturday, June 28, 2014.
 
-
+% @doc The <b>mother class</b> of all US servers.
 -module(class_USServer).
 
 -define( class_description, "Mother class of all US servers." ).
@@ -93,7 +93,7 @@
 
 
 
-% Constructs a new server instance.
+% @doc Constructs a new server instance.
 %
 % Parameter is ServerName, the name of that server.
 %
@@ -103,7 +103,7 @@ construct( State, ServerName ) ->
 				 _RegistrationScope=undefined, _TrapExits=true, State ).
 
 
-% Constructs a new server instance.
+% @doc Constructs a new server instance, with may trap exits.
 %
 % Parameter is ServerName, the name of that server, and whether it should trap
 % EXITS, if wanting a better control by resisting to exit messages being
@@ -116,12 +116,14 @@ construct( State, ServerName, TrapExits ) ->
 
 
 
-% Constructs a new, registered, server instance.
+% @doc Constructs a new, registered, server instance.
 %
 % Parameters are:
 %
 % - ServerName, the name of that server
+%
 % - RegistrationName, the name under which this server shall be registered
+%
 % - RegistrationScope, the scope at which this server shall be registered
 %
 -spec construct( wooper:state(), server_name(), registration_name(),
@@ -129,7 +131,6 @@ construct( State, ServerName, TrapExits ) ->
 construct( State, ServerName, RegistrationName, RegistrationScope ) ->
 	init_common( ServerName, RegistrationName, RegistrationScope,
 				 _TrapExits=true, State ).
-
 
 
 % (helper)
@@ -171,7 +172,7 @@ init_common( ServerName, RegistrationName, RegistrationScope, TrapExits,
 
 
 
-% Destructor.
+% @doc Overridden destructor.
 -spec destruct( wooper:state() ) -> wooper:state().
 destruct( State ) ->
 
@@ -188,6 +189,8 @@ destruct( State ) ->
 % Method section.
 
 
+% @doc Pings this server.
+%
 % Any server must be able to answer to (asynchronous) ping requests from a
 % monitoring server.
 %
@@ -204,8 +207,8 @@ ping( State, PingId, MonitorPid ) ->
 
 
 
-% Callback triggered, if this server enabled the trapping of exits, whenever a
-% linked process stops.
+% @doc Callback triggered, if this server enabled the trapping of exits,
+% whenever a linked process terminates.
 %
 -spec onWOOPERExitReceived( wooper:state(), pid(),
 		basic_utils:exit_reason() ) -> const_oneway_return().
@@ -229,7 +232,7 @@ onWOOPERExitReceived( State, CrashPid, ExitType ) ->
 % Exported helpers.
 
 
-% Registers this (supposedly not registered) server to naming server.
+% @doc Registers this (supposedly not registered) server to naming server.
 %
 % (exported helper)
 %
@@ -259,7 +262,7 @@ register_name( RegistrationName, RegistrationScope, State ) ->
 
 
 
-% Unregisters this (supposedly registered) server from naming server.
+% @doc Unregisters this (supposedly registered) server from naming server.
 %
 % (exported helper)
 %
@@ -289,7 +292,7 @@ unregister_name( State ) ->
 
 
 
-% Returns a textual description of this server.
+% @doc Returns a textual description of this server.
 -spec to_string( wooper:state() ) -> ustring().
 to_string( State ) ->
 

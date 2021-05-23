@@ -15,7 +15,7 @@
 
 :raw-html:`<a name="us-common_top"></a>`
 
-:raw-html:`<div class="banner"><p><em>US-Common documentation</em> <a href="http://us-common.esperide.org">browse latest</a> <a href="https://olivier-boudeville.github.io/us-common/index.html">browse mirror</a> <a href="us-common-technical-manual-english.pdf">get PDF</a> <a href="#us-common_top">go to top</a> <a href="#us-common_bottom">go to bottom</a> <a href="https://github.com/Olivier-Boudeville/us-common">go to project</a> <a href="mailto:about(dash)us-common(at)esperide(dot)com?subject=[US-Common]%20Remark">email us</a></p></div>`
+:raw-html:`<div class="banner"><p><em>US-Common documentation</em> <a href="http://us-common.esperide.org">browse latest</a> <a href="https://olivier-boudeville.github.io/us-common/index.html">browse mirror</a> <a href="us-common-technical-manual-english.pdf">get PDF</a> <a href="#us-common_top">go to top</a> <a href="#us-common_toc">go to toc</a> <a href="#us-common_bottom">go to bottom</a> <a href="api-doc/index.html">browse API</a> <a href="https://github.com/Olivier-Boudeville/us-common">go to project</a> <a href="mailto:about(dash)us-common(at)esperide(dot)com?subject=[US-Common]%20Remark">email us</a></p></div>`
 
 
 
@@ -33,8 +33,8 @@ Technical Manual of the ``US-Common`` Layer
 :Contact: about (dash) us-common (at) esperide (dot) com
 :Creation date: Saturday, May 2, 2020
 :Lastly updated: Friday, March 12, 2021
-:Status: Work in progress
-:Version: 0.0.5
+:Version: PROJECT_VERSION
+:Status: Stable
 :Dedication: Users and maintainers of the ``US-Common`` layer.
 :Abstract:
 
@@ -61,7 +61,11 @@ The latest version of this documentation is to be found at the `official US-Comm
 
 :raw-latex:`\pagebreak`
 
-.. contents:: Table of Contents
+:raw-html:`<a name="us-common_toc"></a>`
+
+.. _`table of contents`:
+
+.. contents:: **Table of Contents**
 	:depth: 3
 
 

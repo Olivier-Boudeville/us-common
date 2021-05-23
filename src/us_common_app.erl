@@ -20,13 +20,15 @@
 % Creation date: Saturday, July 20, 2019.
 
 
-% Module implementing the US-Common (active) application behaviour.
+% @doc Module implementing the <b>US-Common (active) OTP application
+% behaviour</b>.
+%
 -module(us_common_app).
 
 
 % Implementing the (active, OTP) application behaviour:
 %
-% (see https://erlang.org/doc/design_principles/applications.html)
+% See [https://erlang.org/doc/design_principles/applications.html].
 %
 -behaviour(application).
 
@@ -36,7 +38,7 @@
 
 
 
-% Starts the US-Common services.
+% @doc Starts the US-Common services.
 -spec start( application:start_type(), StartArgs :: term() ) -> { 'ok', pid() }
 		| { 'ok', pid(), State :: term() } | { 'error', Reason :: term() }.
 start( Type, StartArgs ) ->
@@ -60,7 +62,7 @@ start( Type, StartArgs ) ->
 
 
 
-% Stops the US-Common services.
+% @doc Stops the US-Common services.
 -spec stop( State :: term() ) -> void().
 stop( State ) ->
 

@@ -45,7 +45,7 @@ Technical Manual of the ``US-Common`` Layer
 
 	We present here a short overview of these services, to introduce them to newcomers.
 
-	The next level of information is to read the corresponding `source files <https://github.com/Olivier-Boudeville/us-common/>`_, which are intensely commented and generally straightforward.
+	The next level of information is either to browse the `US-Common API documentation <api-doc/index.html>`_ or simply to read the corresponding `source files <https://github.com/Olivier-Boudeville/us-common/tree/master/src>`_, which are intensely commented and generally straightforward.
 
 
 .. meta::

@@ -182,7 +182,7 @@ else
 		ifneq ($(wildcard $(US_COMMON_TOP)/_build/default/lib/traces/.),)
 			TRACES_TOP = $(US_COMMON_TOP)/_build/default/lib/traces
 		else
-			FORCE_EVAL := $(error Unable to find the build root of Ceylan-Traces from $(realpath .).)
+			FORCE_EVAL := $(error Unable to find the build root of Ceylan-Traces from '$(realpath .)'.)
 		endif
 	endif
 endif

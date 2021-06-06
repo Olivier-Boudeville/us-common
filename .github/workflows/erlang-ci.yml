@@ -19,14 +19,12 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Compile
-      run: rebar3 compile
-    - name: Run tests
       run: |
-        base_dir="$(pwd)"
-        echo "Base directory is: '${base_dir}'."
-        cfg_dir="${HOME}/.config/universal-server/"
-        echo "Configuration directory is: '${cfg_dir}'."
-        mkdir -p "${cfg_dir}"
-        cd "${cfg_dir}" && ln -s "${base_dir}/priv/for-testing/us.config"
-        cd "${base_dir}"
-        make test NODE_NAMING="--sn"
+        rebar3 compile
+        #echo " - building from: $(pwd)"
+        #echo " - content of parent directory: $(ls .. 2>/dev/null | tr '\n' ' ')"
+        #echo " - content of _checkouts directory: $(ls _checkouts 2>/dev/null)"
+        #echo " - content of _build/default/lib directory: $(ls _build/default/lib 2>/dev/null)"
+        make info-context
+    - name: Run tests
+      run: make test NODE_NAMING="--sn"

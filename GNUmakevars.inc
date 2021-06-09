@@ -124,6 +124,11 @@ US_COMMON_SRC := $(US_COMMON_TOP)/src
 US_COMMON_BEAM := $(US_COMMON_TOP)/src
 
 
+
+# See Myriad counterpart variable (MYRIAD_BEAM_DIRS) for explanations:
+US_COMMON_BEAM_DIRS := $(US_COMMON_BEAM) $(US_COMMON_TOP)/..
+
+
 # We rely on Myriad, WOOPER and Traces as well:
 BEAM_DIRS += $(US_COMMON_BEAM_DIRS)
 
@@ -137,9 +142,6 @@ ifndef VM_TEST_NAME
 	VM_TEST_NAME := us_common_test
 endif
 
-
-# See Myriad counterpart variable (MYRIAD_BEAM_DIRS) for explanations:
-US_COMMON_BEAM_DIRS := $(US_COMMON_BEAM)
 
 
 # For later reuse in the next layer of the software stack:

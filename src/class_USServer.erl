@@ -65,15 +65,19 @@
 
 	% As Gregorian conventions are used for conversions (from a given measured
 	% duration, obtained through monotonic times), adding this value allows,
-	% with the Gregorian result, to establish directly a proper (absolut)
+	% with the Gregorian result, to establish directly a proper (absolute)
 	% timestamp:
 	%
 	{ server_gregorian_start, ms_since_year_0(),
 	 "the internal system time at which this server was started "
 	 "since year 0, to facilitate timestamp conversions to/from user time" },
 
+	% The reference to tell whether a server shall be registered (regardless of
+	% the scope):
+	%
 	{ registration_name, maybe( registration_name() ),
-	 "records the name of this server, as registered in the naming service" },
+	 "records the name of this server, as possibly registered in the "
+	  "naming service" },
 
 	{ registration_scope, maybe( registration_scope() ),
 	 "records the scope of the registration of this server in the naming "
@@ -134,10 +138,11 @@ construct( State, ServerName, RegistrationName, RegistrationScope ) ->
 
 
 % (helper)
--spec init_common( server_name(), registration_name(), registration_scope(),
-				   boolean(), wooper:state() ) -> wooper:state().
-init_common( ServerName, RegistrationName, RegistrationScope, TrapExits,
-			 State ) ->
+-spec init_common( server_name(), maybe( registration_name() ),
+		maybe( registration_scope() ), boolean(), wooper:state() ) ->
+							wooper:state().
+init_common( ServerName, MaybeRegistrationName, MaybeRegistrationScope,
+			 TrapExits, State ) ->
 
 	case TrapExits of
 
@@ -163,12 +168,13 @@ init_common( ServerName, RegistrationName, RegistrationScope, TrapExits,
 
 	SetState = setAttributes( TraceState, [
 
-	 { server_start, time_utils:get_monotonic_time() },
+		{ server_start, time_utils:get_monotonic_time() },
 
-	 % Hence since year 0 (so a large number), based on "user" time:
-	 { server_gregorian_start, MsOfEpoch + time_utils:get_system_time() } ] ),
+		% Hence since year 0 (so a large number), based on "user" time:
+		{ server_gregorian_start,
+		  MsOfEpoch + time_utils:get_system_time() } ] ),
 
-	register_name( RegistrationName, RegistrationScope, SetState ).
+	register_name( MaybeRegistrationName, MaybeRegistrationScope, SetState ).
 
 
 
@@ -238,7 +244,7 @@ onWOOPERExitReceived( State, CrashPid, ExitType ) ->
 %
 -spec register_name( registration_name(), registration_scope(),
 					 wooper:state() ) -> wooper:state().
-register_name( _RegistrationName=undefined, _RegistrationScope, State ) ->
+register_name( _RegistrationName=undefined, RegistrationScope, State ) ->
 
 	% May be done later in the construction of the actual instance (ex: based on
 	% a configuration file being then read):
@@ -247,7 +253,9 @@ register_name( _RegistrationName=undefined, _RegistrationScope, State ) ->
 		?debug( "As a US server: no name to register, "
 				"no registration performed." ) ),
 
-	State;
+	setAttributes( State, [ { registration_name, undefined },
+							{ registration_scope, RegistrationScope } ] );
+
 
 register_name( RegistrationName, RegistrationScope, State ) ->
 

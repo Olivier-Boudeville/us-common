@@ -34,7 +34,7 @@
 
 % Scheduling of tasks on behalf of the US framework.
 
--type server_pid() :: class_UniversalServer:server_pid().
+-type scheduler_pid() :: class_UniversalServer:server_pid().
 
 
 -type task_command() :: wooper:oneway_call().
@@ -118,8 +118,8 @@
 % scheduled.
 
 
--type task_registration_outcome() :: 'task_done'
-								   | { 'task_registered', task_id() }.
+-type task_registration_outcome() ::
+		'task_done' | { 'task_registered', task_id() }.
 
 -type task_unregistration_outcome():: 'task_unregistered' | 'task_already_done'
 			| { 'task_unregistration_failed', basic_utils:error_reason() }.
@@ -137,8 +137,8 @@
 % Associates the reference of a live timer to a schedule offset.
 
 
--export_type([ server_pid/0, task_command/0, start_time/0, user_periodicity/0,
-			   requester_pid/0, actuator_pid/0,
+-export_type([ scheduler_pid/0, task_command/0, start_time/0,
+			   user_periodicity/0, requester_pid/0, actuator_pid/0,
 			   task_registration_outcome/0, task_unregistration_outcome/0,
 			   task_id/0, timer_ref/0, timer_table/0 ]).
 
@@ -346,7 +346,7 @@ construct( State, SchedulerName, RegistrationName, RegistrationScope ) ->
 
 	% First the direct mother classes, then this class-specific actions:
 	SrvState = class_USServer:construct( State,
-	  ?trace_categorize(SchedulerName), RegistrationName, RegistrationScope ),
+		?trace_categorize(SchedulerName), RegistrationName, RegistrationScope ),
 
 	init_common( SrvState ).
 
@@ -378,7 +378,7 @@ destruct( State ) ->
 
 	% Cancelling all still live timers, while resisting to any error:
 	[ timer:cancel( TimerRef )
-	  || TimerRef <- table:values( ?getAttr(timer_table) ) ],
+		|| TimerRef <- table:values( ?getAttr(timer_table) ) ],
 
 	State.
 
@@ -435,6 +435,46 @@ registerOneshotTask( State, UserTaskCommand, UserStartTime, UserActPid ) ->
 
 
 % @doc Registers specified task: specified command will be executed starting
+% immediately (in a flexible manner), at specified periodicity and indefinitely,
+% being assigned to the requesting process (as actuator).
+%
+% Returns {'task_registered', TaskId}, where TaskId is its assigned task
+% identifier is returned).
+%
+-spec registerTask( wooper:state(), task_command(), periodicity() ) ->
+							request_return( task_registration_outcome() ).
+registerTask( State, UserTaskCommand, UserPeriodicity ) ->
+
+	{ RegOutcome, RegState } = register_task( UserTaskCommand,
+		_StartTime=flexible, UserPeriodicity, _Count=unlimited,
+		_UserActPid=?getSender(), State ),
+
+	wooper:return_state_result( RegState, RegOutcome ).
+
+
+
+% @doc Registers specified task: specified command will be executed starting
+% immediately (in a flexible manner), at specified periodicity, for specified
+% number of times, being assigned to the requesting process (as actuator).
+%
+% Returns either 'task_done' if the task was done on the fly (hence is already
+% triggered, and no task identifier applies since it is fully completed), or
+% {'task_registered', TaskId} if it is registered for a later trigger (then its
+% assigned task identifier is returned).
+%
+-spec registerTask( wooper:state(), task_command(), periodicity(),
+			schedule_count() ) -> request_return( task_registration_outcome() ).
+registerTask( State, UserTaskCommand, UserPeriodicity, UserCount ) ->
+
+	{ RegOutcome, RegState } = register_task( UserTaskCommand,
+		_StartTime=flexible, UserPeriodicity,  UserCount,
+		_UserActPid=?getSender(), State ),
+
+	wooper:return_state_result( RegState, RegOutcome ).
+
+
+
+% @doc Registers specified task: specified command will be executed starting
 % from specified time, at specified periodicity, for specified number of times,
 % being assigned to requesting and specified actuator process.
 %
@@ -454,6 +494,20 @@ registerOneshotTask( State, UserTaskCommand, UserStartTime, UserActPid ) ->
 						request_return( task_registration_outcome() ).
 registerTask( State, UserTaskCommand, UserStartTime, UserPeriodicity, UserCount,
 			  UserActPid ) ->
+
+	{ RegOutcome, RegState } = register_task( UserTaskCommand, UserStartTime,
+							UserPeriodicity, UserCount, UserActPid, State ),
+
+	wooper:return_state_result( RegState, RegOutcome ).
+
+
+
+% (helper)
+-spec register_task( task_command(), start_time(), periodicity(),
+					 schedule_count(), actuator_pid(), wooper:state() ) ->
+							{ task_registration_outcome(), wooper:state() }.
+register_task( UserTaskCommand, UserStartTime, UserPeriodicity, UserCount,
+			   UserActPid, State ) ->
 
 	% Checks and canonicalises specified elements:
 	TaskCommand = vet_task_command( UserTaskCommand, State ),
@@ -487,8 +541,7 @@ registerTask( State, UserTaskCommand, UserStartTime, UserPeriodicity, UserCount,
 					% Not even recording it then, it was just fire and forget:
 					% not task entry, just updating the task count.
 					%
-					wooper:return_state_result(
-					  incrementAttribute( State, next_task_id ), task_done );
+					{ incrementAttribute( State, next_task_id ), task_done };
 
 				MsPeriod ->
 					case decrement_count( Count ) of
@@ -497,8 +550,8 @@ registerTask( State, UserTaskCommand, UserStartTime, UserPeriodicity, UserCount,
 							% Here also, Count was 1, same case as before, no
 							% future for this task:
 							%
-							wooper:return_state_result( incrementAttribute(
-								State, next_task_id ), task_done );
+							{ incrementAttribute( State, next_task_id ),
+							  task_done };
 
 						NewCount ->
 							% The count is thus now still 1 or more, or
@@ -523,8 +576,7 @@ registerTask( State, UserTaskCommand, UserStartTime, UserPeriodicity, UserCount,
 							RegState = register_task_schedule( TaskId, TI,
 											NextSchedule, MsPeriod, State ),
 
-							wooper:return_state_result( RegState,
-											{ task_registered, TaskId } )
+							{ RegState, { task_registered, TaskId } }
 
 					end
 
@@ -552,7 +604,7 @@ registerTask( State, UserTaskCommand, UserStartTime, UserPeriodicity, UserCount,
 			RegState = register_task_schedule( TaskId, TI, NextSchedule,
 											   MsDurationBeforeStart, State ),
 
-			wooper:return_state_result( RegState, { task_registered, TaskId } )
+			{ RegState, { task_registered, TaskId } }
 
 	end.
 
@@ -897,6 +949,26 @@ launch_task( Cmd, ActuatorPid, State ) ->
 		basic_utils:ignore_unused( State ) ),
 
 	ActuatorPid ! Cmd.
+
+
+
+% Static section.
+
+
+% @doc Returns the main US scheduler (if any).
+-spec get_main_scheduler() -> static_return( maybe( scheduler_pid() ) ).
+get_main_scheduler() ->
+
+	case naming_utils:is_registered( _RegName=?registration_name,
+									 _RegScope=?registration_scope ) of
+
+		not_registered ->
+			wooper:return_static( undefined );
+
+		SchedPid ->
+			wooper:return_static( SchedPid )
+
+	end.
 
 
 

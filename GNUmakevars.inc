@@ -143,7 +143,6 @@ ifndef VM_TEST_NAME
 endif
 
 
-
 # For later reuse in the next layer of the software stack:
 US_COMMON_PLT_FILE := $(US_COMMON_TOP)/us_common.plt
 

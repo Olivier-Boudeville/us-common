@@ -89,7 +89,7 @@
 
 -type schedule_count() :: class_USScheduler:schedule_count().
 
--type scheduler_pid() :: class_USScheduler:server_pid().
+-type scheduler_pid() :: class_USScheduler:scheduler_pid().
 
 -type task_id() :: class_USScheduler:task_id().
 

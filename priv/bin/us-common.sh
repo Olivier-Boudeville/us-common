@@ -23,6 +23,14 @@ fi
 # Sets notably: us_config_dir, us_config_file, epmd_opt, vm_cookie,
 # execution_context, us_username, us_groupname, us_app_base_dir, us_log_dir.
 #
+# The US configuration file is searched in turn through following directories:
+#  1. any command-line specified US configuration directory
+#  2. any directory set in the XDG_CONFIG_HOME environment variable
+#  3. in $HOME/.config
+#
+# For each directory candidate D, the searched configuration file is:
+# '$D/universal-server/us.config'.
+#
 read_us_config_file()
 {
 
@@ -96,8 +104,8 @@ read_us_config_file()
 
 				# Pops the first element of that list:
 				#
-				# (note: currently the next - if any - directories in that list are
-				# not tested; not implemented yet)
+				# (note: currently the next - if any - directories in that list
+				# are not tested; not implemented yet)
 				#
 				base_path=$(echo "${XDG_CONFIG_DIRS}" | sed 's|:.*$||1')
 

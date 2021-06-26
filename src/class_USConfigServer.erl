@@ -185,6 +185,9 @@
 
 -define( us_log_dir_key, us_log_dir ).
 
+
+-define( us_main_config_filename_key, us_main_config_filename ).
+
 -define( us_web_config_filename_key, us_web_config_filename ).
 
 
@@ -193,7 +196,8 @@
 	?tcp_port_range_key, ?execution_context_key,
 	?us_username_key, ?us_groupname_key,
 	?us_server_registration_name_key, ?us_config_server_registration_name_key,
-	?us_app_base_dir_key, ?us_log_dir_key, ?us_web_config_filename_key ] ).
+	?us_app_base_dir_key, ?us_log_dir_key,
+	?us_main_config_filename_key, ?us_web_config_filename_key] ).
 
 
 % The last-resort environment variable:
@@ -295,7 +299,7 @@ destruct( State ) ->
 % Method section.
 
 
-% @doc Notifies this server about the specified US web configuration server, and
+% @doc Notifies this server about the specified US-Web configuration server, and
 % requests web-information from it.
 %
 -spec getWebRuntimeSettings( wooper:state() ) -> request_return(
@@ -453,6 +457,41 @@ get_configuration_table( BinCfgDir ) ->
 
 
 
+% @doc Returns the name of the expected US-Main configuration file.
+%
+% Static method, to be available from outside, typically for tests.
+%
+-spec get_us_main_configuration_filename( us_config_table() ) ->
+			static_return( diagnosed_fallible( maybe( file_name() ) ) ).
+get_us_main_configuration_filename( ConfigTable ) ->
+
+	CfgKey = ?us_main_config_filename_key,
+
+	Res = case table:lookup_entry( CfgKey, ConfigTable ) of
+
+		key_not_found ->
+			{ ok, undefined };
+
+		{ value, MainFilename } when is_list( MainFilename ) ->
+			{ ok, MainFilename };
+
+		{ value, InvalidMainFilename } ->
+
+			ErrorTuploid = { invalid_us_main_config_filename,
+							 InvalidMainFilename, CfgKey },
+
+			ErrorMsg = text_utils:format( "Obtained invalid user-configured "
+				"configuration filename for mainservers and virtual hosting: "
+				" '~p', for key '~ts'.", [ InvalidMainFilename, CfgKey ] ),
+
+			{ error, { ErrorTuploid, ErrorMsg } }
+
+	end,
+
+	wooper:return_static( Res ).
+
+
+
 % @doc Returns the name of the expected US-Web configuration file.
 %
 % Static method, to be available from outside, typically for tests.
@@ -485,7 +524,6 @@ get_us_web_configuration_filename( ConfigTable ) ->
 	end,
 
 	wooper:return_static( Res ).
-
 
 
 

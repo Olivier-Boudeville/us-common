@@ -541,7 +541,7 @@ register_task( UserTaskCommand, UserStartTime, UserPeriodicity, UserCount,
 					% Not even recording it then, it was just fire and forget:
 					% not task entry, just updating the task count.
 					%
-					{ incrementAttribute( State, next_task_id ), task_done };
+					{ task_done, incrementAttribute( State, next_task_id ) };
 
 				MsPeriod ->
 					case decrement_count( Count ) of
@@ -550,8 +550,8 @@ register_task( UserTaskCommand, UserStartTime, UserPeriodicity, UserCount,
 							% Here also, Count was 1, same case as before, no
 							% future for this task:
 							%
-							{ incrementAttribute( State, next_task_id ),
-							  task_done };
+							{ task_done,
+							  incrementAttribute( State, next_task_id ) };
 
 						NewCount ->
 							% The count is thus now still 1 or more, or
@@ -576,7 +576,7 @@ register_task( UserTaskCommand, UserStartTime, UserPeriodicity, UserCount,
 							RegState = register_task_schedule( TaskId, TI,
 											NextSchedule, MsPeriod, State ),
 
-							{ RegState, { task_registered, TaskId } }
+							{ { task_registered, TaskId }, RegState }
 
 					end
 
@@ -604,7 +604,7 @@ register_task( UserTaskCommand, UserStartTime, UserPeriodicity, UserCount,
 			RegState = register_task_schedule( TaskId, TI, NextSchedule,
 											   MsDurationBeforeStart, State ),
 
-			{ RegState, { task_registered, TaskId } }
+			{ { task_registered, TaskId }, RegState }
 
 	end.
 

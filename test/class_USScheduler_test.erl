@@ -33,7 +33,7 @@
 
 
 
-% Main loop of an actuator test process.
+% @doc Main loop of an actuator test process.
 operate_loop() ->
 
 	receive
@@ -51,7 +51,7 @@ operate_loop() ->
 
 
 
-% Checks that the exact number of command acks has been received.
+% @doc Checks that the exact number of command acks has been received.
 check_command_acks( TotalExpectedSchedulings ) ->
 
 	% Hopefully at their right moment:
@@ -77,7 +77,7 @@ check_command_acks( TotalExpectedSchedulings ) ->
 
 
 
-% Waits for the specified number of command acks.
+% @doc Waits for the specified number of command acks.
 wait_for_command_acks( _Count=0 ) ->
 	trace_utils:debug( "All command acks received." ),
 	ok;
@@ -96,14 +96,14 @@ wait_for_command_acks( Count ) ->
 
 
 
-% Returns a suitable task command for named requester.
+% @doc Returns a suitable task command for the specified named requester.
 get_command( Name ) ->
 	% Oneway call:
 	{ operate, [ self(), Name ] }.
 
 
 
-% Runs the tests.
+% @doc Runs the tests.
 -spec run() -> no_return().
 run() ->
 

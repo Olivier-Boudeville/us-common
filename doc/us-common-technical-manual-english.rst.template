@@ -6,6 +6,12 @@
 .. comment stylesheet specified through GNUmakefile
 
 
+
+===========================================
+Technical Manual of the ``US-Common`` Layer
+===========================================
+
+
 .. role:: raw-html(raw)
    :format: html
 
@@ -19,14 +25,9 @@
 
 
 
-:raw-html:`<center><img src="us-common-title.png" width="40%"></img></center>`
+:raw-html:`<center><img src="us-common-title.png" width="40%"></img>`
 :raw-latex:`\centering \includegraphics[scale=1.1]{us-common-title.png}`
 
-
-
-===========================================
-Technical Manual of the ``US-Common`` Layer
-===========================================
 
 
 :Organisation: Copyright (C) 2019-GENERATION_YEAR_TAG Olivier Boudeville
@@ -50,6 +51,8 @@ Technical Manual of the ``US-Common`` Layer
 
 .. meta::
    :keywords: US-Common
+
+:raw-html:`</center>`
 
 
 The latest version of this documentation is to be found at the `official US-Common website <http://us-common.esperide.org>`_ (``http://us-common.esperide.org``).

@@ -174,6 +174,9 @@ init_common( ServerName, MaybeRegistrationName, MaybeRegistrationScope,
 		{ server_gregorian_start,
 		  MsOfEpoch + time_utils:get_system_time() } ] ),
 
+	%trace_utils:debug_fmt( "Registering server as '~ts' for scope ~ts.",
+	%                       [ MaybeRegistrationName, MaybeRegistrationScope ] ),
+
 	register_name( MaybeRegistrationName, MaybeRegistrationScope, SetState ).
 
 
@@ -228,8 +231,9 @@ onWOOPERExitReceived( State, CrashPid, ExitType ) ->
 	%						{wooper_oneway_failed,<0.44.0>,class_XXX,
 	%							FunName,Arity,Args,AtomCause}}, [...]}"
 
-	?error_fmt( "Received and ignored an exit message '~p' from ~w.",
-				[ ExitType, CrashPid ] ),
+	% Redundant information yet useful for console outputs:
+	?warning_fmt( "US Server ~w received and ignored an exit message '~p' "
+				  "from ~w.", [ self(), ExitType, CrashPid ] ),
 
 	wooper:const_return().
 

@@ -43,7 +43,8 @@
 % conventionally a single non-list term or a list of any arguments.
 %
 % We considered, yet finally did not keep, the idea of always adding as last
-% element the PID of the sending scheduler.
+% element the PID of the sending scheduler. So specified commands are simply
+% sent verbatim to their actuators.
 
 
 
@@ -151,43 +152,43 @@
 
 -record( task_entry, {
 
-		   % Unique identifier of this task:
-		   id :: task_id(),
+		% Unique identifier of this task:
+		id :: task_id(),
 
-		   % The command to trigger on the actuator:
-		   command :: task_command(),
+		% The command to trigger on the actuator:
+		command :: task_command(),
 
-		   % The offset (relative to the start time of this scheduler) at which
-		   % the next scheduling of this task shall happen:
-		   %
-		   next_schedule :: schedule_offset(),
+		% The offset (relative to the start time of this scheduler) at which
+		% the next scheduling of this task shall happen:
+		%
+		next_schedule :: schedule_offset(),
 
-		   % The periodicity at which this task shall be scheduled:
-		   periodicity :: periodicity(),
+		% The periodicity at which this task shall be scheduled:
+		periodicity :: periodicity(),
 
-		   % The number of times this task shall still be scheduled:
-		   count :: schedule_count(),
+		% The number of times this task shall still be scheduled:
+		count :: schedule_count(),
 
-		   % The number of times this task has already been scheduled:
-		   schedule_count = 0 :: schedule_count(),
+		% The number of times this task has already been scheduled:
+		schedule_count = 0 :: schedule_count(),
 
-		   % The internal time offset (if any) at which this task was first
-		   % scheduled:
-		   %
-		   started_on = undefined :: maybe( schedule_offset() ),
+		% The internal time offset (if any) at which this task was first
+		% scheduled:
+		%
+		started_on = undefined :: maybe( schedule_offset() ),
 
-		   % The internal time offset (if any) at which this task was last
-		   % scheduled:
-		   %
-		   last_schedule = undefined :: maybe( schedule_offset() ),
+		% The internal time offset (if any) at which this task was last
+		% scheduled:
+		%
+		last_schedule = undefined :: maybe( schedule_offset() ),
 
-		   % The PID of the process having registered this task:
-		   requester_pid :: requester_pid(),
+		% The PID of the process having registered this task:
+		requester_pid :: requester_pid(),
 
-		   % The PID of the process that will be triggered whenever this task is
-		   % scheduled:
-		   %
-		   actuator_pid :: actuator_pid() } ).
+		% The PID of the process that will be triggered whenever this task is
+		% scheduled:
+		%
+		actuator_pid :: actuator_pid() } ).
 
 
 -type task_entry() :: #task_entry{}.
@@ -223,10 +224,8 @@
 % Used by the trace_categorize/1 macro to use the right emitter:
 -define( trace_emitter_categorization, "US.Scheduling" ).
 
-
--define( registration_name, us_scheduler ).
-
--define( registration_scope, global_only ).
+% For us_common_scheduler_registration_{name,scope}:
+-include("us_common_defines.hrl").
 
 
 % Exported helpers:
@@ -321,7 +320,8 @@ construct( State ) ->
 	% First the direct mother classes, then this class-specific actions:
 	SrvState = class_USServer:construct( State,
 		?trace_categorize("Main US Scheduler"),
-		?registration_name, ?registration_scope ),
+		?us_common_scheduler_registration_name,
+		?us_common_scheduler_registration_scope ),
 
 	init_common( SrvState ).
 
@@ -959,8 +959,14 @@ launch_task( Cmd, ActuatorPid, State ) ->
 -spec get_main_scheduler() -> static_return( maybe( scheduler_pid() ) ).
 get_main_scheduler() ->
 
-	case naming_utils:is_registered( _RegName=?registration_name,
-									 _RegScope=?registration_scope ) of
+	LookupScope = naming_utils:registration_to_look_up_scope(
+		_RegScope=?us_common_scheduler_registration_scope ),
+
+	% Supposing here that no ongoing launch is happening (no race condition):
+	%case naming_utils:wait_for_registration_of( _RegName=?registration_name,
+	%											LookupScope ) of
+	case naming_utils:is_registered(
+		   _RegName=?us_common_scheduler_registration_name, LookupScope ) of
 
 		not_registered ->
 			wooper:return_static( undefined );
@@ -1164,7 +1170,7 @@ remove_timer( ScheduleOffset, TimerTable ) ->
 				"failed for schedule offset #~B (reason: '~p').",
 				[ TimerRef, ScheduleOffset, Reason ] )
 			%throw( { timer_cancellation_failed, Reason,
-			%		 TimerRef, ScheduleOffset } )
+			%         TimerRef, ScheduleOffset } )
 
 	end,
 
@@ -1461,7 +1467,7 @@ to_string( State ) ->
 		TaskPairs ->
 			TaskDescs = [ text_utils:format( "task #~B: ~ts",
 				[ TId, task_entry_to_string( TE, State ) ] )
-						  || { TId, TE } <- lists:sort( TaskPairs ) ],
+							|| { TId, TE } <- lists:sort( TaskPairs ) ],
 			text_utils:format( "~B tasks: ~ts", [ length( TaskPairs ),
 				text_utils:strings_to_string( TaskDescs ) ] )
 

@@ -100,10 +100,14 @@
 
 	  | unit_utils:seconds().
 % Time between two schedulings of a task, as expressed by the user.
+% Note that user periodicities are significantly coarser than internal ones.
 
 
 -type periodicity() :: maybe( ms_duration() ).
 % Time between two schedulings of a task, as used internally.
+%
+% Not to be mixed up with user periodicities, which are significantly coarser
+% than internal ones.
 
 
 -type schedule_count() :: 'unlimited' | basic_utils:count().
@@ -435,13 +439,13 @@ registerOneshotTask( State, UserTaskCommand, UserStartTime, UserActPid ) ->
 
 
 % @doc Registers specified task: specified command will be executed starting
-% immediately (in a flexible manner), at specified periodicity and indefinitely,
-% being assigned to the requesting process (as actuator).
+% immediately (in a flexible manner), at specified user periodicity and
+% indefinitely, being assigned to the requesting process (as actuator).
 %
 % Returns {'task_registered', TaskId}, where TaskId is its assigned task
 % identifier is returned).
 %
--spec registerTask( wooper:state(), task_command(), periodicity() ) ->
+-spec registerTask( wooper:state(), task_command(), user_periodicity() ) ->
 							request_return( task_registration_outcome() ).
 registerTask( State, UserTaskCommand, UserPeriodicity ) ->
 
@@ -454,15 +458,16 @@ registerTask( State, UserTaskCommand, UserPeriodicity ) ->
 
 
 % @doc Registers specified task: specified command will be executed starting
-% immediately (in a flexible manner), at specified periodicity, for specified
-% number of times, being assigned to the requesting process (as actuator).
+% immediately (in a flexible manner), at specified user periodicity, for
+% specified number of times, being assigned to the requesting process (as
+% actuator).
 %
 % Returns either 'task_done' if the task was done on the fly (hence is already
 % triggered, and no task identifier applies since it is fully completed), or
 % {'task_registered', TaskId} if it is registered for a later trigger (then its
 % assigned task identifier is returned).
 %
--spec registerTask( wooper:state(), task_command(), periodicity(),
+-spec registerTask( wooper:state(), task_command(), user_periodicity(),
 			schedule_count() ) -> request_return( task_registration_outcome() ).
 registerTask( State, UserTaskCommand, UserPeriodicity, UserCount ) ->
 
@@ -475,8 +480,8 @@ registerTask( State, UserTaskCommand, UserPeriodicity, UserCount ) ->
 
 
 % @doc Registers specified task: specified command will be executed starting
-% from specified time, at specified periodicity, for specified number of times,
-% being assigned to requesting and specified actuator process.
+% from specified time, at specified user periodicity, for specified number of
+% times, being assigned to requesting and specified actuator process.
 %
 % Returns either 'task_done' if the task was done on the fly (hence is already
 % triggered, and no task identifier applies since it is fully completed), or
@@ -489,8 +494,8 @@ registerTask( State, UserTaskCommand, UserPeriodicity, UserCount ) ->
 % change (ex: DST) not being taken into account at this level (as the respect of
 % periodicities is preferred over the one of literal timestamps).
 %
--spec registerTask( wooper:state(), task_command(), start_time(), periodicity(),
-					schedule_count(), actuator_pid() ) ->
+-spec registerTask( wooper:state(), task_command(), start_time(),
+					user_periodicity(), schedule_count(), actuator_pid() ) ->
 						request_return( task_registration_outcome() ).
 registerTask( State, UserTaskCommand, UserStartTime, UserPeriodicity, UserCount,
 			  UserActPid ) ->
@@ -503,7 +508,7 @@ registerTask( State, UserTaskCommand, UserStartTime, UserPeriodicity, UserCount,
 
 
 % (helper)
--spec register_task( task_command(), start_time(), periodicity(),
+-spec register_task( task_command(), start_time(), user_periodicity(),
 					 schedule_count(), actuator_pid(), wooper:state() ) ->
 							{ task_registration_outcome(), wooper:state() }.
 register_task( UserTaskCommand, UserStartTime, UserPeriodicity, UserCount,
@@ -1401,7 +1406,7 @@ vet_periodicity( UserPeriodicity, _Count, State ) ->
 
 
 
-% @doc Returns a vetted periodicity.
+% @doc Returns a vetted, internal periodicity.
 %
 % (helper, defined for reuse)
 %
@@ -1429,6 +1434,7 @@ vet_user_periodicity( UserPeriodicity, State ) ->
 		false ->
 			case is_integer( UserPeriodicity ) andalso UserPeriodicity > 0 of
 
+				% Then are seconds:
 				true ->
 					1000 * UserPeriodicity;
 

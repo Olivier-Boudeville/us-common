@@ -42,19 +42,19 @@
 %
 % We suppose such a supervisor bridge cannot be used as a root supervisor.
 %
-% See also within the Erlang codebase itself, as an example, the user_sup
-% supervisor bridge, created by kernel:init/1.
+% See also:
+% - https://wooper.esperide.org/#otp-guidelines for further information
+% - within the Erlang codebase itself, as an example, the user_sup
+% supervisor bridge, created by kernel:init/1
 %
 -behaviour(supervisor_bridge).
 
-
-% User API:
+% User API of the bridge:
 -export([ start_link/0 ]).
 
 
 % Callbacks of the supervisor_bridge behaviour:
 -export([ init/1, terminate/2 ]).
-
 
 -define( bridge_name, ?MODULE ).
 
@@ -70,17 +70,17 @@
 -spec start_link() -> term().
 start_link() ->
 
-	% Apparently not displaying, yet executed:
+	% Apparently not displayed in a release context, yet executed:
 	trace_bridge:debug( "Starting the US-Common supervisor bridge for "
 						"the US configuration server." ),
 
 	supervisor_bridge:start_link( { local, ?bridge_name },
-								  _Module=?MODULE, _Args=[] ).
+		_Module=?MODULE, _InitArgs=[] ).
 
 
 
 % @doc Callback to initialise this supervisor bridge, typically in answer to
-% start_link/1 being executed.
+% start_link/0 being executed.
 %
 -spec init( list() ) -> { 'ok', pid(), State :: term() }
 							| 'ignore' | { 'error', Error :: term() }.
@@ -92,13 +92,13 @@ init( _Args=[] ) ->
 	% Registration name and all details set through the US configuration file:
 	CfgServerPid = class_USConfigServer:new_link(),
 
-	{ ok, CfgServerPid, _State=CfgServerPid }.
+	{ ok, CfgServerPid, _InitialBridgeState=CfgServerPid }.
 
 
 
 % @doc Callback to terminate this supervisor bridge.
 -spec terminate( Reason :: 'shutdown' | term(), State :: term() ) -> void().
-terminate( Reason, _State=CfgServerPid ) when is_pid( CfgServerPid ) ->
+terminate( Reason, _BridgeState=CfgServerPid ) when is_pid( CfgServerPid ) ->
 
 	trace_bridge:info_fmt( "Terminating the US-Common supervisor bridge for "
 		"the US configuration server (reason: ~w, configuration server: ~w).",

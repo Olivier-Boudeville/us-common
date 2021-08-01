@@ -105,9 +105,8 @@
 	  "tells whether this server is to run in development or production mode" },
 
 	{ log_directory, bin_directory_path(),
-	  "the directory where all US-specific, low-level logging (as opposed to "
-	  "Erlang-level log files such as erlang.log.* or to higher-level traces) "
-	  "will be done" },
+	  "the directory where all VM log files and US-specific higher-level "
+	  "traces will be stored" },
 
 	{ web_config_filename, maybe( bin_file_path() ),
 	  "the path to the configuration file (if any) regarding US-web (i.e. "
@@ -236,6 +235,13 @@ construct( State ) ->
 	TraceState = class_USServer:construct( State,
 							?trace_categorize("Configuration main server") ),
 
+	% Allows functions provided by lower-level libraries called directly from
+	% this instance process to plug to the same (trace aggregator) bridge, with
+	% the same settings:
+	%
+	class_TraceEmitter:register_bridge( TraceState ),
+
+
 	?send_info_fmt( TraceState, "Creating the overall US configuration server, "
 					"on node '~ts'.", [ node() ] ),
 
@@ -328,8 +334,8 @@ getWebRuntimeSettings( State ) ->
 	end,
 
 	wooper:return_state_result( RegState, { ?getAttr(config_base_directory),
-			?getAttr(execution_context), ?getAttr(web_config_filename),
-			?getAttr(us_server_pid) } ).
+		?getAttr(execution_context), ?getAttr(web_config_filename),
+		?getAttr(us_server_pid) } ).
 
 
 
@@ -512,8 +518,8 @@ get_us_web_configuration_filename( ConfigTable ) ->
 
 		{ value, InvalidWebFilename } ->
 
-			ErrorTuploid = { invalid_us_web_config_filename, InvalidWebFilename,
-							 CfgKey },
+			ErrorTuploid =
+				{ invalid_us_web_config_filename, InvalidWebFilename, CfgKey },
 
 			ErrorMsg = text_utils:format( "Obtained invalid user-configured "
 				"configuration filename for webservers and virtual hosting: "
@@ -617,12 +623,25 @@ perform_setup( BinCfgDir, State ) ->
 
 	?info_fmt( "Constructed: ~ts.", [ to_string( ReadyState ) ] ),
 
+	% Done rather late on purpose, so that the existence of that file can be
+	% seen as a sign that the initialisation went well (used by
+	% start-us-web-{native-build,release}.sh).
+	%
+	NewBinTraceFilePath =file_utils:bin_join( LogDir, "us_main.traces" ),
+
+	% Already a trace emitter:
+	?debug_fmt( "Requesting the renaming of trace file to '~ts'.",
+				[ NewBinTraceFilePath ] ),
+
+	?getAttr(trace_aggregator_pid ) ! { renameTraceFile, NewBinTraceFilePath },
+
 	ReadyState.
 
 
 
 % @doc Returns the Universal Server configuration table (that is the one of US,
-% not specifically of US web), and directly applies some of the read settings.
+% not specifically of any US-Web), and directly applies some of the read
+% settings.
 %
 -spec load_configuration( bin_directory_path(), wooper:state() ) ->
 								wooper:state().
@@ -1041,49 +1060,16 @@ manage_app_base_directory( ConfigTable, State ) ->
 					?us_app_env_variable ) of
 
 				false ->
+					guess_app_base_directory( State );
 
-					CurrentDir = file_utils:get_current_directory(),
-
-					% Guessing then; typically current directory was with rebar:
-					% [...]/universal_server/_build/default/rel/universal_server
-					% and we want the first universal_server, so:
-					%
-					RebarGuessedDir = file_utils:join(
-						[ CurrentDir, "..", "..", "..", ".." ] ),
-
-					% Now, with our native build we shall be in
-					% us_{common,main,web}/test for example, so:
-					%
-					% (their own app base directory shall not selected here,
-					% even though they all respect the same structure), we want
-					% the US-Common one)
-					%
-					NativeGuessedDir = file_utils:join(
-						[ CurrentDir , "..", "..", "us_common" ] ),
-
-					% Other builds (ex: continuous integration ones) may clone
-					% with the original name (with no "us_common" renaming), so:
-					%
-					OtherGuessedDir = file_utils:join(
-						[ CurrentDir , "..", "..", "us-common" ] ),
-
-					CandidateDirs = [ RebarGuessedDir, NativeGuessedDir,
-									  OtherGuessedDir ],
-
-					GuessedDir = file_utils:get_first_existing_directory_in(
-									CandidateDirs ),
-
-					GuessedNormDir = file_utils:normalise_path( GuessedDir ),
-
-					?info_fmt( "No user-configured US application base "
-						"directory set (neither in configuration file nor "
-						"through the '~ts' environment variable), "
-						"hence guessing it as '~ts'.",
-						[ ?us_app_env_variable, GuessedNormDir ] ),
-					GuessedNormDir;
+				% Typically the side-effect of a script running '/bin/sudo [...]
+				% US_APP_BASE_DIR="${US_APP_BASE_DIR}" [...]':
+				%
+				_EnvDir="" ->
+					guess_app_base_directory( State );
 
 				EnvDir ->
-					?info_fmt( "No user-configured US application base "
+					?info_fmt( "xxNo user-configured US application base "
 						"directory set in configuration file, using the value "
 						"of the '~ts' environment variable: '~ts'.",
 						[ ?us_app_env_variable, EnvDir ] ),
@@ -1124,6 +1110,60 @@ manage_app_base_directory( ConfigTable, State ) ->
 
 
 
+% (helper)
+-spec guess_app_base_directory( wooper:state() ) -> directory_path().
+guess_app_base_directory( State ) ->
+
+	CurrentDir = file_utils:get_current_directory(),
+
+	% Guessing then; typically current directory was with rebar:
+	% [...]/universal_server/_build/default/rel/universal_server and we want the
+	% first universal_server, so:
+	%
+	% (currently disabled as almost always matching, not being discriminative
+	% enough, and in practice we prefer native builds now)
+	%
+	%RebarGuessedDir =
+	%   file_utils:join( [ CurrentDir, "..", "..", "..", ".." ] ),
+
+	% Now, with our native build we shall be in us_{common,main,web}/{src,test}
+	% for example, so:
+	%
+	% (their own app base directory shall not selected here, even though they
+	% all respect the same structure), we want the US-Common one)
+	%
+	%NativeGuessedDir = file_utils:join(
+	%						[ CurrentDir , "..", "..", "us_common" ] ),
+
+	% Now we mostly consider that US-* applications will be run from their 'src'
+	% directory (typically thanks to their priv/bin/start-us-*-native-build.sh
+	% script) through a src/us_*_app.erl main module.
+	% Thus in the general case the base directory in just below 'src':
+	%
+	NativeGuessedDir = file_utils:join( [ CurrentDir , ".." ] ),
+
+	% Other builds (ex: continuous integration ones) may clone with the original
+	% name (with no "us_common" renaming), so:
+	%
+	OtherGuessedDir =
+		file_utils:join( [ CurrentDir , "..", "..", "us-common" ] ),
+
+	%CandidateDirs = [ RebarGuessedDir, NativeGuessedDir, OtherGuessedDir ],
+	CandidateDirs = [ NativeGuessedDir, OtherGuessedDir ],
+
+	GuessedDir = file_utils:get_first_existing_directory_in( CandidateDirs ),
+
+	GuessedNormDir = file_utils:normalise_path( GuessedDir ),
+
+	?info_fmt( "No user-configured US application base directory set "
+		"(neither in configuration file nor through the '~ts' "
+		"environment variable), hence guessing it (from '~ts') as '~ts'.",
+		[ ?us_app_env_variable, CurrentDir, GuessedNormDir ] ),
+
+	GuessedNormDir.
+
+
+
 % @doc Manages any user-configured log directory to rely on, creating it if
 % necessary.
 %
@@ -1134,9 +1174,14 @@ manage_log_directory( ConfigTable, State ) ->
 	BaseDir = case table:lookup_entry( ?us_log_dir_key, ConfigTable ) of
 
 		key_not_found ->
-			?default_log_base_dir;
+			DefaultLogDir = ?default_log_base_dir,
+			?debug_fmt( "Selecting default log directory '~ts'.",
+						[ DefaultLogDir ] ),
+			DefaultLogDir;
 
 		{ value, D } when is_list( D ) ->
+			?debug_fmt( "Selecting user-specified log directory '~ts'.",
+						[ D ] ),
 			file_utils:ensure_path_is_absolute( D,
 												?getAttr(app_base_directory) );
 
@@ -1178,8 +1223,8 @@ manage_log_directory( ConfigTable, State ) ->
 -spec manage_web_config( us_config_table(), wooper:state() ) -> wooper:state().
 manage_web_config( ConfigTable, State ) ->
 
-	MaybeBinWebFilename = case get_us_web_configuration_filename(
-								 ConfigTable ) of
+	MaybeBinWebFilename =
+			case get_us_web_configuration_filename( ConfigTable ) of
 
 		{ ok, undefined } ->
 			?info( "No user-configured configuration filename for webservers "

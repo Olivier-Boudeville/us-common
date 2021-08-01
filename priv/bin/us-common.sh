@@ -17,7 +17,15 @@ if [ -z "${us_common_root}" ]; then
 	# Assuming then running a script in us_common/priv/bin:
 	us_common_root=$(realpath $(dirname $0)/../..)
 
+	#echo "us_common_root determined as '${us_common_root}'."
+
+else
+
+	:
+	#echo "us_common_root read as '${us_common_root}'."
+
 fi
+
 
 
 # Sets notably: us_config_dir, us_config_file, epmd_opt, vm_cookie,
@@ -216,8 +224,23 @@ read_us_config_file()
 		else
 
 			# Guessing as last-resort:
-			echo "  Warning: no base directory specified for the US application (no 'us_app_base_dir' entry in the main US configuration file '${us_config_file}' nor US_APP_BASE_DIR environment variable set), hence guessed as '${us_common_root}'." #1>&2
-			us_app_base_dir="${us_common_root}"
+
+			if [ -n "${us_actual_root}" ]; then
+				# Here the actual caller (a US-* specialisation, relying on
+				# US-Common) redefined the actual root to use, so we rely on it:
+				#
+				#echo "(relying on specified US actual root '${us_actual_root}')"
+				us_app_base_dir="${us_actual_root}"
+
+			else
+
+				# Last chance:
+				#echo "(no us_actual_root set)"
+				us_app_base_dir="${us_common_root}"
+
+			fi
+
+			echo "  Warning: no base directory specified for the US application (no 'us_app_base_dir' entry in the main US configuration file '${us_config_file}' nor US_APP_BASE_DIR environment variable set), hence guessed as '${us_app_base_dir}'." #1>&2
 
 		fi
 

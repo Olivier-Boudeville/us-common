@@ -127,6 +127,39 @@ These are mainly common services centralised here so that the various US applica
 - `USTaskRing <https://github.com/Olivier-Boudeville/us-common/blob/master/src/class_USTaskRing.erl>`_: a facility useful to **schedule a set of periodic tasks synchronously** (no overlapping between them) **and uniformly** (as evenly as possible over time); typically useful to pace regularly a set of actions of indefinite number that are ruled by a common periodicity and/or to share a resource unable to cope with concurrent accesses (ex: a non-reentrant third-party log analysis tool that maintains its own opaque state on filesystem, yet have to operate on a set of virtual hosts)
 
 
+-------------
+Configuration
+-------------
+
+
+Server Configuration
+====================
+
+.. _`US configuration directory`:
+
+The configuration of the Universal Server infrastructure lies primarily in a dedicated ``us.config`` file, which is searched from various base directories, according to the following order:
+
+1. in any base directory designated by the standard ``XDG_CONFIG_HOME`` environment variable, otherwise in default ``~/.config``
+2. in any of the base directories listed (separator being ``:``) in the standard ``XDG_CONFIG_DIRS`` environment variable, otherwise in default ``/etc/xdg``
+
+
+Each of these base directories is searched in turn for a ``universal-server`` subdirectory that would contain a ``us.config`` file, and the first found one is chosen as the **US Configuration directory**. Any other US-related configuration file is then expected to be found in the same directory.
+
+In practice, often the ``~/.config/universal-server/us.config`` location is preferred.
+
+All US configuration files are in the `ETF <http://myriad.esperide.org/#etf>`_ format (for *Erlang Term Format*).
+
+One may refer to `this example us.config <https://github.com/Olivier-Boudeville/us-common/blob/master/priv/for-testing/us.config>`_ to learn their structure and derive one's own ``us.config``.
+
+
+Client Configuration
+====================
+
+Each US service (ex: ``US-Main``, ``US-Web``, etc.) can be monitored (locally or remotely) thanks to a corresponding ``priv/bin/monitor-us-*.sh`` script, which must be given the necessary information (hostname, cookie, TCP port range, etc.) in order to contact the target US instance.
+
+This information is typically stored in a ``us-*-remote-access.config`` ETF file, located as well in the aforementioned `US configuration directory`_.
+
+
 
 .. _`free software`:
 
@@ -147,12 +180,14 @@ We hope indeed that enhancements will be back-contributed (ex: thanks to merge r
 Current Stable Version & Download
 ---------------------------------
 
-We prefer using GNU/Linux, sticking to the latest stable release of Erlang, and building it from sources, thanks to GNU ``make``.
+
+In general, we prefer using GNU/Linux, sticking to the latest stable release of Erlang, and building it from sources, thanks to GNU ``make``.
 
 As mentioned, the single, direct prerequisite of `US-Common <https://github.com/Olivier-Boudeville/US-Common>`_ is `Ceylan-Traces <https://github.com/Olivier-Boudeville/Ceylan-Traces>`_, which implies in turn `Ceylan-WOOPER <https://github.com/Olivier-Boudeville/Ceylan-WOOPER>`_, then `Ceylan-Myriad <https://github.com/Olivier-Boudeville/Ceylan-Myriad>`_ and `Erlang <http://erlang.org>`_.
 
 Refer to the corresponding `Myriad prerequisite section <http://myriad.esperide.org#prerequisites>`_  for more precise guidelines, knowing that US-Common does not need modules with conditional support such as ``crypto`` or ``wx``.
 
+Most uses of US-Common will require ``authbind`` (ex: on Arch Linux, obtained from the AUR, typically with thanks to the AUR installer that `Ceylan-Hull recommends and installs <https://github.com/Olivier-Boudeville/Ceylan-Hull/blob/master/update-aur-installer.sh>`_ ).
 
 
 Using Cutting-Edge GIT

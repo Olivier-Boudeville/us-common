@@ -45,10 +45,12 @@ endif
 
 # Topics covered by flags:
 #  - us_common_debug_registration: regarding naming registering
-
+#  - us_common_debug_scheduling: regarding task scheduling
+#
 # Defining debug flags (at least the most verbose are by default commented-out):
 ifeq ($(ENABLE_DEBUG),true)
-	US_COMMON_DEBUG_FLAGS += -Dus_common_debug_registration
+	#US_COMMON_DEBUG_FLAGS += -Dus_common_debug_registration
+	#US_COMMON_DEBUG_FLAGS += -Dus_common_debug_scheduling
 endif
 
 # Defining check flags:

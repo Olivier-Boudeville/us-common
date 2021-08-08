@@ -387,7 +387,7 @@ get_us_config_directory() ->
 
 		Path ->
 			{ Path, text_utils:format( "path '~ts' was obtained from "
-					   "environment variable '~ts'", [ Path, FirstEnvVar ] ) }
+						"environment variable '~ts'", [ Path, FirstEnvVar ] ) }
 
 	end,
 
@@ -640,8 +640,8 @@ perform_setup( BinCfgDir, State ) ->
 
 
 % @doc Returns the Universal Server configuration table (that is the one of US,
-% not specifically of any US-Web), and directly applies some of the read
-% settings.
+% not specifically of any specialised US-*), and directly applies some of the
+% read settings.
 %
 -spec load_configuration( bin_directory_path(), wooper:state() ) ->
 								wooper:state().

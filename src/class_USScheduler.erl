@@ -736,9 +736,10 @@ timerTrigger( State, ScheduleOffset ) ->
 
 	DiffMs = NowMs - ScheduleOffset,
 
-	?debug_fmt( "Timer trigger at schedule offset ~w, for an expected one "
-		"of ~w: delayed of ~ts.",
-		[ NowMs, ScheduleOffset, time_utils:duration_to_string( DiffMs ) ] ),
+	cond_utils:if_defined( us_common_debug_scheduling,
+		?debug_fmt( "Timer trigger at schedule offset ~w, for an expected one "
+			"of ~w: delayed of ~ts.", [ NowMs, ScheduleOffset,
+				time_utils:duration_to_string( DiffMs ) ] ) ),
 
 	% As long as a drift is below this threshold, we do not worry:
 	OffsetThreshold = 250,
@@ -765,10 +766,11 @@ timerTrigger( State, ScheduleOffset ) ->
 		NowMs, ?getAttr(schedule_plan), TimerTable, ?getAttr(task_table),
 		State ),
 
-	?debug_fmt( "After having being triggered for #~B, went "
-		"from ~ts to ~ts", [ ScheduleOffset,
-		timer_table_to_string( TimerTable, State ),
-		timer_table_to_string( NewTimerTable, State ) ] ),
+	cond_utils:if_defined( us_common_debug_scheduling,
+		?debug_fmt( "After having being triggered for #~B, went "
+			"from ~ts to ~ts", [ ScheduleOffset,
+				timer_table_to_string( TimerTable, State ),
+				timer_table_to_string( NewTimerTable, State ) ] ) ),
 
 	TrigState = setAttributes( State, [ { schedule_plan, NewPlan },
 										{ timer_table, NewTimerTable },

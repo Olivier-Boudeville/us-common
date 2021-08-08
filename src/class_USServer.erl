@@ -221,8 +221,8 @@ ping( State, PingId, MonitorPid ) ->
 %
 -spec onWOOPERExitReceived( wooper:state(), pid(),
 		basic_utils:exit_reason() ) -> const_oneway_return().
-onWOOPERExitReceived( State, StopPid, _ExitType=normal ) ->
-	?info_fmt( "Ignoring normal exit from process ~w.", [ StopPid ] ),
+onWOOPERExitReceived( State, StoppedPid, _ExitType=normal ) ->
+	?info_fmt( "Ignoring normal exit from process ~w.", [ StoppedPid ] ),
 	wooper:const_return();
 
 onWOOPERExitReceived( State, CrashPid, ExitType ) ->

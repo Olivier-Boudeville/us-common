@@ -336,6 +336,8 @@ construct( State ) ->
 construct( State, SchedulerName ) ->
 
 	% First the direct mother classes, then this class-specific actions:
+	% (traps EXITs)
+	%
 	SrvState = class_USServer:construct( State,
 										 ?trace_categorize(SchedulerName) ),
 
@@ -956,6 +958,9 @@ launch_task( Cmd, ActuatorPid, State ) ->
 		basic_utils:ignore_unused( State ) ),
 
 	ActuatorPid ! Cmd.
+
+
+% onWOOPERExitReceived/3 inherited.
 
 
 

@@ -34,6 +34,13 @@
 -define( superclasses, [ class_USServer ] ).
 
 
+-type config_server_pid() :: server_pid().
+
+-export_type([ config_server_pid/0 ]).
+
+
+% The PID of a US-Config server.
+
 % Shorthands:
 
 -type execution_context() :: basic_utils:execution_context().
@@ -107,6 +114,9 @@
 	{ log_directory, bin_directory_path(),
 	  "the directory where all VM log files and US-specific higher-level "
 	  "traces will be stored" },
+
+	{ contact_files, [ bin_file_path() ], "a list of the known contact files "
+	  "(as absolute paths), whence contact information may be read" },
 
 	{ web_config_filename, maybe( bin_file_path() ),
 	  "the path to the configuration file (if any) regarding US-web (i.e. "
@@ -187,6 +197,8 @@
 
 -define( us_main_config_filename_key, us_main_config_filename ).
 
+-define( us_main_contact_files_key, us_contact_files ).
+
 -define( us_web_config_filename_key, us_web_config_filename ).
 
 
@@ -196,7 +208,8 @@
 	?us_username_key, ?us_groupname_key,
 	?us_server_registration_name_key, ?us_config_server_registration_name_key,
 	?us_app_base_dir_key, ?us_log_dir_key,
-	?us_main_config_filename_key, ?us_web_config_filename_key] ).
+	?us_main_config_filename_key, ?us_main_contact_files_key,
+	?us_web_config_filename_key] ).
 
 
 % The last-resort environment variable:
@@ -206,7 +219,7 @@
 
 
 % Exported helpers:
--export([ get_execution_target/0 ]).
+-export([ get_us_config_server/1, get_execution_target/0 ]).
 
 
 % Allows to define WOOPER base variables and methods for that class:
@@ -303,6 +316,18 @@ destruct( State ) ->
 
 
 % Method section.
+
+
+% @doc Returns the known contact-related settings, typically for the US contact
+% directory.
+%
+-spec getContactSettings( wooper:state() ) ->
+			const_request_return( { bin_directory_path(), execution_context(),
+									[ bin_file_path() ] } ).
+getContactSettings( State ) ->
+	wooper:const_return_result( { ?getAttr(config_base_directory),
+		?getAttr(execution_context), ?getAttr(contact_files) } ).
+
 
 
 % @doc Notifies this server about the specified US-Web configuration server, and
@@ -683,7 +708,9 @@ load_configuration( BinCfgDir, State ) ->
 
 	LogState = manage_log_directory( ConfigTable, DirState ),
 
-	WebState = manage_web_config( ConfigTable, LogState ),
+	ContactState = manage_contacts( ConfigTable, LogState ),
+
+	WebState = manage_web_config( ConfigTable, ContactState ),
 
 	% Detect any extraneous, unexpected entry:
 	LicitKeys = ?known_config_keys,
@@ -1069,7 +1096,7 @@ manage_app_base_directory( ConfigTable, State ) ->
 					guess_app_base_directory( State );
 
 				EnvDir ->
-					?info_fmt( "xxNo user-configured US application base "
+					?info_fmt( "No user-configured US application base "
 						"directory set in configuration file, using the value "
 						"of the '~ts' environment variable: '~ts'.",
 						[ ?us_app_env_variable, EnvDir ] ),
@@ -1217,6 +1244,41 @@ manage_log_directory( ConfigTable, State ) ->
 
 
 
+% @doc Manages any user-configured contact files.
+-spec manage_contacts( us_config_table(), wooper:state() ) -> wooper:state().
+manage_contacts( ConfigTable, State ) ->
+
+	ContactFiles = case table:lookup_entry( ?us_main_contact_files_key,
+											ConfigTable ) of
+
+		key_not_found ->
+			?info( "No user-configured contact files." ),
+			[];
+
+		{ value, Files } when is_list( Files ) ->
+			% The contact directory is to make them correctly absolute if
+			% necessary:
+
+			BinAbsFiles = text_utils:ensure_binaries( Files ),
+
+			%?info_fmt( "User-configured contact files: ~ts",
+			%		   [ text_utils:binaries_to_string( BinAbsFiles ) ] ),
+
+			BinAbsFiles;
+
+		{ value, InvalidFiles }  ->
+			?error_fmt( "Read invalid user-configured US contact files: '~p'.",
+						[ InvalidFiles ] ),
+			throw( { invalid_us_contact_files, InvalidFiles,
+					 ?us_main_contact_files_key } )
+
+	end,
+
+	% Not specifically checked:
+	setAttribute( State, contact_files, ContactFiles ).
+
+
+
 % @doc Manages any user-configured configuration filename for webservers and
 % virtual hosting.
 %
@@ -1246,6 +1308,131 @@ manage_web_config( ConfigTable, State ) ->
 
 	setAttribute( State, web_config_filename, MaybeBinWebFilename ).
 
+
+
+% @doc Returns the PID of the US configuration server, creating it if ever
+% necessary.
+%
+% Centralised here on behalf of clients (ex: US Contact directory, US-Web,
+% etc.).
+%
+% This is an helper function, not a static method, as a trace emitter state
+% shall be specified as parameter, so that traces can be sent in all cases
+% needed.
+%
+-spec get_us_config_server( wooper:state() ) -> config_server_pid().
+get_us_config_server( State ) ->
+
+	% Same logic as the overall US configuration server itself, notably to
+	% obtain the same registration name to locate its instance:
+	%
+	BinCfgDir = case get_us_config_directory() of
+
+		{ undefined, CfgMsg } ->
+			?error_fmt( "Unable to determine the US configuration directory: "
+						"~ts", [ CfgMsg ] ),
+			throw( { us_configuration_directory_not_found, CfgMsg } );
+
+		{ FoundCfgDir, CfgMsg } ->
+			?info( CfgMsg ),
+			FoundCfgDir
+
+	end,
+
+	% Static settings regarding the overall US configuration server:
+	{ USCfgFilename, USCfgRegNameKey, USCfgDefRegName, USCfgRegScope } =
+		get_default_settings(),
+
+	USCfgFilePath = file_utils:join( BinCfgDir, USCfgFilename ),
+
+	% Should, by design, never happen:
+	case file_utils:is_existing_file_or_link( USCfgFilePath ) of
+
+		true ->
+			ok;
+
+		false ->
+			?error_fmt( "The overall US configuration file ('~ts') "
+						"could not be found.", [ USCfgFilePath ] ),
+			% Must have disappeared then:
+			throw( { us_config_file_not_found, USCfgFilePath } )
+
+	end,
+
+	?info_fmt( "Reading the Universal Server configuration from '~ts'.",
+			   [ USCfgFilePath ] ),
+
+	% Ensures as well that all top-level terms are only pairs:
+	ConfigTable = table:new_from_unique_entries(
+					file_utils:read_terms( USCfgFilePath ) ),
+
+	?info_fmt( "Read US configuration ~ts",
+			   [ table:to_string( ConfigTable ) ] ),
+
+	% We check whether a proper US configuration server already exists (and then
+	% we use it) or if it shall be created; for that we just extract its
+	% expected registration name:
+	%
+	% (important side-effects, such as updating the VM cookie)
+
+	USCfgRegName = case table:lookup_entry( USCfgRegNameKey, ConfigTable ) of
+
+		key_not_found ->
+			?info_fmt( "No user-configured registration name to locate the "
+				"overall US configuration server, using default name '~ts'.",
+				[ USCfgDefRegName ] ),
+			USCfgDefRegName;
+
+		{ value, UserRegName } when is_atom( UserRegName ) ->
+			?info_fmt( "To locate the overall US configuration server, will "
+				"rely on the user-configured registration name '~ts'.",
+				[ UserRegName ] ),
+			UserRegName;
+
+		{ value, InvalidRegName } ->
+			?error_fmt( "Read invalid user-configured registration name to "
+				"locate the overall US configuration server: '~p'.",
+				[ InvalidRegName ] ),
+			throw( { invalid_us_config_server_registration_name, InvalidRegName,
+					 USCfgRegNameKey } )
+
+	end,
+
+	% Now we are able to look it up; either the overall US configuration server
+	% already exists, or it shall be created:
+	%
+	case naming_utils:is_registered( USCfgRegName, USCfgRegScope ) of
+
+		not_registered ->
+
+			% Second try, if ever there were concurrent start-ups:
+			timer:sleep( 500 ),
+
+			case naming_utils:is_registered( USCfgRegName, USCfgRegScope ) of
+
+				not_registered ->
+					?info_fmt( "There is no ~ts registration of '~ts'; "
+						"creating thus a new overall US configuration server.",
+						[ USCfgRegScope, USCfgRegName ] ),
+					% Not linked to have an uniform semantics:
+					class_USConfigServer:new();
+
+				DelayedCfgPid ->
+					?info_fmt( "Found (after some delay) an already running "
+						"overall US configuration server, using it: "
+						"~ts registration look-up for '~ts' returned ~w.",
+						[ USCfgRegScope, USCfgRegName, DelayedCfgPid ] ),
+					DelayedCfgPid
+
+				end;
+
+		CfgPid ->
+			?info_fmt( "Found an already running overall US configuration "
+				"server, using it: ~ts registration look-up for '~ts' "
+				"returned ~w.", [ USCfgRegScope, USCfgRegName, CfgPid ] ),
+			CfgPid
+
+	end.
 
 
 

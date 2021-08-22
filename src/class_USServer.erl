@@ -97,7 +97,8 @@
 
 
 
-% @doc Constructs a new server instance.
+% @doc Constructs a new server instance that is not registered, and that traps
+% exits.
 %
 % Parameter is ServerName, the name of that server.
 %
@@ -107,10 +108,12 @@ construct( State, ServerName ) ->
 				 _RegistrationScope=undefined, _TrapExits=true, State ).
 
 
-% @doc Constructs a new server instance, with may trap exits.
+
+% @doc Constructs a new server instance, that is not registered, and that traps
+% exits if requested.
 %
-% Parameter is ServerName, the name of that server, and whether it should trap
-% EXITS, if wanting a better control by resisting to exit messages being
+% Parameter is ServerName, the name of that US server, and whether it should
+% trap EXITS, if wanting a better control by resisting to exit messages being
 % received (see the onWOOPERExitReceived/3 callback):
 %
 -spec construct( wooper:state(), server_name(), boolean() ) -> wooper:state().
@@ -120,11 +123,12 @@ construct( State, ServerName, TrapExits ) ->
 
 
 
-% @doc Constructs a new, registered, server instance.
+% @doc Constructs a new, registered, server instance, that is registered and
+% traps exits if requested.
 %
 % Parameters are:
 %
-% - ServerName, the name of that server
+% - ServerName, the name of that US server
 %
 % - RegistrationName, the name under which this server shall be registered
 %

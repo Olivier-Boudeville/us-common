@@ -47,6 +47,12 @@
 -type registration_scope() :: naming_utils:registration_scope().
 
 
+% Design notes:
+%
+% Servers may depend on others. A given server shall register its name as early
+% as possible, and shall look-up the servers it relies on as late as possible.
+
+
 
 % Implementation notes:
 %

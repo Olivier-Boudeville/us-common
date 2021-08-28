@@ -39,7 +39,7 @@ GITHUB_PAGES_BASE := $(shell basename "$(US_COMMON_WEB_MIRROR_BRANCH)")
 
 # Default do-nothing target:
 all:
-	@echo "  Run 'make full-doc' to generate the documentation of the 'US-Common' layer."
+	@echo "  Run 'make doc' to generate the documentation of the 'US-Common' layer."
 
 
 doc: html pdf create-api-doc

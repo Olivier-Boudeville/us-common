@@ -42,7 +42,7 @@ all:
 	@echo "  Run 'make full-doc' to generate the documentation of the 'US-Common' layer."
 
 
-doc: html pdf api-doc
+doc: html pdf create-api-doc
 
 
 html: local-html

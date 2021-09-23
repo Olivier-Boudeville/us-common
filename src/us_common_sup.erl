@@ -47,6 +47,13 @@
 -define( root_supervisor_name, ?MODULE ).
 
 
+% Shorthands:
+
+-type execution_target() :: basic_utils:execution_target().
+-type child_spec() :: supervisor:child_spec().
+
+
+
 % @doc Starts and links the US-Common root supervisor, creating in turn a proper
 % supervision bridge.
 %
@@ -67,14 +74,13 @@ start_link() ->
 % @doc Callback to initialise this US-Common root supervisor bridge, typically
 % in answer to start_link/0 above being executed.
 %
--spec init( list() ) -> { 'ok',
-		{ supervisor:sup_flags(), [ supervisor:child_spec() ] } } | 'ignore'.
+-spec init( list() ) -> { 'ok', { supervisor:sup_flags(), [ child_spec() ] } }.
 init( Args=[] ) ->
 
 	ExecTarget = class_USConfigServer:get_execution_target(),
 
 	trace_bridge:debug_fmt( "Initializing the US-Common root supervisor "
-		"(args: ~p, execution target: ~ts).", [ Args, ExecTarget ] ),
+		"(args: ~p; execution target: ~ts).", [ Args, ExecTarget ] ),
 
 	% We always create a US configuration server and a scheduler that are
 	% specific to the current US application so that they can all be started,
@@ -87,39 +93,40 @@ init( Args=[] ) ->
 					_RestartStrategy=one_for_one, ExecTarget ),
 
 	% First child, a bridge in charge of the US configuration server:
-	CfgBridgeChildSpec = get_config_bridge_spec(),
+	CfgBridgeChildSpec = get_config_bridge_spec( ExecTarget ),
 
 	% Second child, a bridge in charge of the US-Common base scheduler:
-	SchedBridgeChildSpec = get_scheduler_bridge_spec(),
+	SchedBridgeChildSpec = get_scheduler_bridge_spec( ExecTarget ),
 
 	ChildSpecs = [ CfgBridgeChildSpec, SchedBridgeChildSpec ],
 
 	%trace_bridge:debug_fmt( "Supervisor settings: ~p~nChild spec: ~p",
-	%						[ SupSettings, ChildSpecs ] ),
+	%                        [ SupSettings, ChildSpecs ] ),
 
 	{ ok, { SupSettings, ChildSpecs } }.
 
 
+
 % @doc Returns the bridge spec for the US-Common configuration server.
-get_config_bridge_spec() ->
+-spec get_config_bridge_spec( execution_target() ) -> child_spec().
+get_config_bridge_spec( ExecTarget ) ->
+
 	#{ id => us_common_config_bridge_id,
 
 	   start => { _Mod=us_common_config_bridge_sup, _Fun=start_link, _Args=[] },
 
-	   restart => cond_utils:if_defined( exec_target_is_production,
+	   % Always restarted in production:
+	   restart => otp_utils:get_restart_setting( ExecTarget ),
 
-			% In production, as reliable as possible:
-			_AlwaysRestarted=permanent,
+	   % This child process is of the 'supervisor' type, and, in
+	   % https://erlang.org/doc, the
+	   % design_principles/sup_princ.html#child-specification page explains that
+	   % 'infinity' is required here (rather than, say, a 2-second termination
+	   % was allowed before brutal killing):
+	   %
+	   shutdown => infinity,
 
-			% In development, failing as clearly as possible; here at least so
-			% that tests fail in case of problem (ex: if no configuration file
-			% is found):
-			%
-			_NeverRestarted=temporary ),
-
-	   % 2-second termination allowed before brutal killing:
-	   shutdown => 2000,
-
+	   % As it is a WOOPER instance (not for example a gen_server):
 	   type => supervisor,
 
 	   modules => [ us_common_config_bridge_sup ] }.
@@ -127,18 +134,19 @@ get_config_bridge_spec() ->
 
 
 % @doc Returns the bridge spec for the US-Common scheduler.
-get_scheduler_bridge_spec() ->
+-spec get_scheduler_bridge_spec( execution_target() ) -> child_spec().
+get_scheduler_bridge_spec( ExecTarget ) ->
+
+	% See get_config_bridge_spec/0 for comments:
+
 	#{ id => us_common_scheduler_bridge_id,
 
-	   start => { _Mod=us_common_scheduler_bridge_sup, _Fun=start_link,
-				  _Args=[] },
+	   start =>
+			{ _Mod=us_common_scheduler_bridge_sup, _Fun=start_link, _Args=[] },
 
-	   % See get_config_bridge_spec/0:
-	   restart => cond_utils:if_defined( exec_target_is_production,
-			_AlwaysRestarted=permanent, _NeverRestarted=temporary ),
+	   restart => otp_utils:get_restart_setting( ExecTarget ),
 
-	   % 2-second termination allowed before brutal killing:
-	   shutdown => 2000,
+	   shutdown => infinity,
 
 	   type => supervisor,
 

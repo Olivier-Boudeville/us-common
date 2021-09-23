@@ -145,6 +145,10 @@ ifndef VM_TEST_NAME
 endif
 
 
+# To enforce specific settings such as registration scopes:
+INTERNAL_OPTIONS += --config $(US_COMMON_TOP)/conf/us-common.config
+
+
 # For later reuse in the next layer of the software stack:
 US_COMMON_PLT_FILE := $(US_COMMON_TOP)/us_common.plt
 
@@ -185,7 +189,7 @@ else
 		ifneq ($(wildcard $(US_COMMON_TOP)/_build/default/lib/traces/.),)
 			TRACES_TOP = $(US_COMMON_TOP)/_build/default/lib/traces
 		else
-			FORCE_EVAL := $(error Unable to find the build root of Ceylan-Traces from '$(realpath .)'.)
+			FORCE_EVAL := $(error Unable to find the build root of Ceylan-Traces from '$(realpath .)')
 		endif
 	endif
 endif

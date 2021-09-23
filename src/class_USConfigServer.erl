@@ -115,15 +115,9 @@
 	  "the directory where all VM log files and US-specific higher-level "
 	  "traces will be stored" },
 
-	{ contact_files, [ bin_file_path() ], "a list of the known contact files "
-	  "(as absolute paths), whence contact information may be read" },
-
 	{ web_config_filename, maybe( bin_file_path() ),
 	  "the path to the configuration file (if any) regarding US-web (i.e. "
 	  "webserver, virtual hosting, etc.)" },
-
-	{ us_server_pid, maybe( server_pid() ),
-	  "the PID of the associated US server (if any)" },
 
 	{ us_username, system_utils:user_name(),
 	  "the user who runs the Universal server application (note that there "
@@ -133,12 +127,11 @@
 	{ us_groupname, system_utils:group_name(),
 	  "the group that shall be common to all US-related users" },
 
-
-	{ us_server_registration_name, registration_name(),
-	  "the name under which the US server may be registered" },
+	{ us_main_config_server_pid, maybe( class_UniversalServer:server_pid() ),
+	  "the PID of the US-Main configuration server (if any)" },
 
 	{ us_web_config_server_pid, maybe( class_UniversalServer:server_pid() ),
-	  "the PID of the US web configuration server (if any)" },
+	  "the PID of the US-Web configuration server (if any)" },
 
 	% Cannot easily be obtained otherwise:
 	{ registration_name, registration_name(),
@@ -161,12 +154,13 @@
 % The defaut registration name of the overall US configuration server:
 -define( default_us_config_reg_name, us_config_server ).
 
-% The defaut registration name of the overall US server:
--define( default_us_reg_name, us_server ).
 
-
-% The defaut registration scope of the overall US configuration server:
--define( default_registration_scope, global_only ).
+% The default registration scope of the US server (ex: its configuration one):
+%
+% (preferred local, to allow multiple US configuration servers to coexist in a
+% distributed way)
+%
+-define( default_registration_scope, local_only ).
 
 
 % The name of the main Universal Server configuration file:
@@ -183,8 +177,7 @@
 -define( us_username_key, us_username ).
 -define( us_groupname_key, us_groupname ).
 
--define( us_server_registration_name_key,
-		 us_server_registration_name ).
+-define( us_server_registration_name_key, us_server_registration_name ).
 
 -define( us_config_server_registration_name_key,
 		 us_config_server_registration_name ).
@@ -197,8 +190,6 @@
 
 -define( us_main_config_filename_key, us_main_config_filename ).
 
--define( us_main_contact_files_key, us_contact_files ).
-
 -define( us_web_config_filename_key, us_web_config_filename ).
 
 
@@ -206,10 +197,9 @@
 -define( known_config_keys, [ ?vm_cookie_key, ?epmd_port_key,
 	?tcp_port_range_key, ?execution_context_key,
 	?us_username_key, ?us_groupname_key,
-	?us_server_registration_name_key, ?us_config_server_registration_name_key,
+	?us_config_server_registration_name_key,
 	?us_app_base_dir_key, ?us_log_dir_key,
-	?us_main_config_filename_key, ?us_main_contact_files_key,
-	?us_web_config_filename_key] ).
+	?us_main_config_filename_key, ?us_web_config_filename_key] ).
 
 
 % The last-resort environment variable:
@@ -219,7 +209,8 @@
 
 
 % Exported helpers:
--export([ get_us_config_server/1, get_execution_target/0 ]).
+-export([ get_us_config_server/1, get_us_config_server/2,
+		  get_execution_target/0 ]).
 
 
 % Allows to define WOOPER base variables and methods for that class:
@@ -318,16 +309,6 @@ destruct( State ) ->
 % Method section.
 
 
-% @doc Returns the known contact-related settings, typically for the US contact
-% directory.
-%
--spec getContactSettings( wooper:state() ) ->
-			const_request_return( { bin_directory_path(), execution_context(),
-									[ bin_file_path() ] } ).
-getContactSettings( State ) ->
-	wooper:const_return_result( { ?getAttr(config_base_directory),
-		?getAttr(execution_context), ?getAttr(contact_files) } ).
-
 
 
 % @doc Notifies this server about the specified US-Web configuration server, and
@@ -359,8 +340,7 @@ getWebRuntimeSettings( State ) ->
 	end,
 
 	wooper:return_state_result( RegState, { ?getAttr(config_base_directory),
-		?getAttr(execution_context), ?getAttr(web_config_filename),
-		?getAttr(us_server_pid) } ).
+		?getAttr(execution_context), ?getAttr(web_config_filename) } ).
 
 
 
@@ -375,10 +355,92 @@ getWebRuntimeSettings( State ) ->
 		naming_utils:look_up_scope() } ).
 get_default_settings() ->
 
+	% Possibly read from any *.config file specified (ex: refer to the
+	% INTERNAL_OPTIONS make variable):
+
+	% Specifying the application is essential, as this function is to be called
+	% from any process of any other application:
+	%
+	Application = us_common,
+
+	USCfgSrvName = case application:get_env( Application,
+			us_config_server_registration_name ) of
+
+		undefined ->
+			CfgRegName = ?default_us_config_reg_name,
+			cond_utils:if_defined( us_common_debug_registration,
+				trace_bridge:debug_fmt( "US-Common configuration server "
+					"(default) name: '~ts'.", [ CfgRegName ] ) ),
+			CfgRegName;
+
+		{ ok, CfgRegName } when is_atom( CfgRegName ) ->
+			case naming_utils:vet_registration_name( CfgRegName ) of
+
+				true ->
+					cond_utils:if_defined( us_common_debug_registration,
+						trace_bridge:debug_fmt( "US-Common configuration "
+							"server name (as configured): '~ts'.",
+							[ CfgRegName ] ) ),
+					CfgRegName;
+
+				false ->
+					trace_utils:error_fmt( "Invalid registration name (type) "
+						"read for the US-Common configuration server: '~p'.",
+						[ CfgRegName ] ),
+					throw( { invalid_us_config_server_registration_name,
+							 CfgRegName } )
+
+			end;
+
+		{ ok, InvalidRegName } ->
+			trace_utils:error_fmt( "Invalid registration name read for the "
+				"US-Common configuration server: '~p'.", [ InvalidRegName ] ),
+			throw( { invalid_us_config_server_registration_name,
+					 InvalidRegName } )
+
+	end,
+
+	USCfgSrvScope = case application:get_env( Application,
+			us_config_server_registration_scope ) of
+
+		undefined ->
+			CfgRegScope = ?default_registration_scope,
+			cond_utils:if_defined( us_common_debug_registration,
+				trace_bridge:debug_fmt( "US-Common configuration server "
+					"(default) scope: '~ts'.", [ CfgRegScope ] ) ),
+			CfgRegScope;
+
+		{ ok, CfgRegScope } when is_atom( CfgRegScope ) ->
+			case naming_utils:vet_registration_scope( CfgRegScope ) of
+
+				true ->
+					cond_utils:if_defined( us_common_debug_registration,
+						trace_bridge:debug_fmt( "US-Common configuration "
+							"server scope (as configured): '~ts'.",
+							[ CfgRegScope ] ) ),
+					CfgRegScope;
+
+				false ->
+					trace_utils:error_fmt( "Invalid registration scope (type) "
+						"read for the US-Common configuration server: '~p'.",
+						[ CfgRegScope ] ),
+					throw( { invalid_us_config_server_registration_scope,
+							 CfgRegScope } )
+
+			end;
+
+		{ ok, InvalidRegScope } ->
+			trace_utils:error_fmt( "Invalid registration scope read for the "
+				"US-Common configuration server: '~p'.", [ InvalidRegScope ] ),
+			throw( { invalid_us_config_server_registration_scope,
+					 InvalidRegScope } )
+
+	end,
+
+
 	wooper:return_static( { ?us_config_filename,
-		?us_config_server_registration_name_key, ?default_us_config_reg_name,
-		naming_utils:registration_to_look_up_scope(
-			?default_registration_scope ) } ).
+		?us_server_registration_name_key, USCfgSrvName,
+		naming_utils:registration_to_look_up_scope( USCfgSrvScope ) } ).
 
 
 
@@ -471,10 +533,21 @@ get_configuration_table( BinCfgDir ) ->
 			%    "configuration "from '~ts'.", [ CfgFilePath ] ),
 
 			% Ensures as well that all top-level terms are pairs indeed:
-			ConfigTable = table:new_from_unique_entries(
-							file_utils:read_terms( CfgFilePath ) ),
+			try table:new_from_unique_entries(
+							file_utils:read_terms( CfgFilePath ) ) of
 
-			{ ok, { ConfigTable, CfgFilePath } };
+				ConfigTable ->
+					{ ok, { ConfigTable, CfgFilePath } }
+
+				catch ExClass:ExPattern ->
+					ErrorMsg = text_utils:format( "The processing of the "
+						"US-Common configuration file '~ts' failed (~p):~n ~p.",
+						[ CfgFilePath, ExClass, ExPattern ] ),
+					{ error, { { us_config_reading_failed, CfgFilePath },
+							   ErrorMsg } }
+
+				end;
+
 
 		false ->
 			ErrorMsg = text_utils:format( "Unable to find the US configuration "
@@ -618,7 +691,7 @@ perform_setup( BinCfgDir, State ) ->
 
 	ReadyState = setAttributes( LoadState, [
 					{ config_base_directory, BinCfgDir },
-					{ us_server_pid, undefined },
+					{ us_main_config_server_pid, undefined },
 					{ us_web_config_server_pid, undefined } ] ),
 
 	% Enforce security in all cases ("chmod 700"); if it fails here, the
@@ -652,7 +725,7 @@ perform_setup( BinCfgDir, State ) ->
 	% seen as a sign that the initialisation went well (used by
 	% start-us-web-{native-build,release}.sh).
 	%
-	NewBinTraceFilePath =file_utils:bin_join( LogDir, "us_main.traces" ),
+	NewBinTraceFilePath = file_utils:bin_join( LogDir, "us_common.traces" ),
 
 	% Already a trace emitter:
 	?debug_fmt( "Requesting the renaming of trace file to '~ts'.",
@@ -708,9 +781,7 @@ load_configuration( BinCfgDir, State ) ->
 
 	LogState = manage_log_directory( ConfigTable, DirState ),
 
-	ContactState = manage_contacts( ConfigTable, LogState ),
-
-	WebState = manage_web_config( ConfigTable, ContactState ),
+	WebState = manage_web_config( ConfigTable, LogState ),
 
 	% Detect any extraneous, unexpected entry:
 	LicitKeys = ?known_config_keys,
@@ -1000,35 +1071,8 @@ manage_registration_names( ConfigTable, State ) ->
 
 	?info_fmt( "Registered as '~ts' (scope: ~ts).", [ CfgRegName, RegScope ] ),
 
-	% We then read the registration name of the US server knowing that its
-	% upcoming creation is likely (it will have to be told about the name it
-	% shall use):
-
-	USRegName = case table:lookup_entry( ?us_server_registration_name_key,
-										 ConfigTable ) of
-
-		key_not_found ->
-			DefaultRegName = ?default_us_reg_name,
-			?info_fmt( "No user-configured registration name for the US "
-				"server, using default name '~ts'.", [ DefaultRegName ] ),
-			DefaultRegName;
-
-		{ value, UserRegName } when is_atom( UserRegName ) ->
-			?info_fmt( "Using user-configured registration name '~ts' for "
-					   "the US server.", [ UserRegName ] ),
-			UserRegName;
-
-		{ value, InvalidRegName } ->
-			?error_fmt( "Read invalid user-configured registration name for "
-						"the US server: '~p'.", [ InvalidRegName ] ),
-			throw( { invalid_us_registration_name, InvalidRegName,
-					 ?us_server_registration_name_key } )
-
-	end,
-
 	setAttributes( State, [ { registration_name, CfgRegName },
-							{ registration_scope, RegScope },
-							{ us_server_registration_name, USRegName } ] ).
+							{ registration_scope, RegScope } ] ).
 
 
 
@@ -1244,41 +1288,6 @@ manage_log_directory( ConfigTable, State ) ->
 
 
 
-% @doc Manages any user-configured contact files.
--spec manage_contacts( us_config_table(), wooper:state() ) -> wooper:state().
-manage_contacts( ConfigTable, State ) ->
-
-	ContactFiles = case table:lookup_entry( ?us_main_contact_files_key,
-											ConfigTable ) of
-
-		key_not_found ->
-			?info( "No user-configured contact files." ),
-			[];
-
-		{ value, Files } when is_list( Files ) ->
-			% The contact directory is to make them correctly absolute if
-			% necessary:
-
-			BinAbsFiles = text_utils:ensure_binaries( Files ),
-
-			%?info_fmt( "User-configured contact files: ~ts",
-			%		   [ text_utils:binaries_to_string( BinAbsFiles ) ] ),
-
-			BinAbsFiles;
-
-		{ value, InvalidFiles }  ->
-			?error_fmt( "Read invalid user-configured US contact files: '~p'.",
-						[ InvalidFiles ] ),
-			throw( { invalid_us_contact_files, InvalidFiles,
-					 ?us_main_contact_files_key } )
-
-	end,
-
-	% Not specifically checked:
-	setAttribute( State, contact_files, ContactFiles ).
-
-
-
 % @doc Manages any user-configured configuration filename for webservers and
 % virtual hosting.
 %
@@ -1313,8 +1322,7 @@ manage_web_config( ConfigTable, State ) ->
 % @doc Returns the PID of the US configuration server, creating it if ever
 % necessary.
 %
-% Centralised here on behalf of clients (ex: US Contact directory, US-Web,
-% etc.).
+% Centralised here on behalf of clients (ex: US-Main, US-Web, etc.).
 %
 % This is an helper function, not a static method, as a trace emitter state
 % shall be specified as parameter, so that traces can be sent in all cases
@@ -1322,6 +1330,21 @@ manage_web_config( ConfigTable, State ) ->
 %
 -spec get_us_config_server( wooper:state() ) -> config_server_pid().
 get_us_config_server( State ) ->
+	get_us_config_server( _CreateIfNeeded=true, State ).
+
+
+
+% @doc Returns the PID of the US configuration server, creating it if ever
+% necessary and if enabled.
+%
+% Centralised here on behalf of clients (ex: US-Main, US-Web, etc.).
+%
+% This is an helper function, not a static method, as a trace emitter state
+% shall be specified as parameter, so that traces can be sent in all cases
+% needed.
+%
+-spec get_us_config_server( boolean(), wooper:state() ) -> config_server_pid().
+get_us_config_server( CreateIfNeeded, State ) ->
 
 	% Same logic as the overall US configuration server itself, notably to
 	% obtain the same registration name to locate its instance:
@@ -1411,11 +1434,26 @@ get_us_config_server( State ) ->
 			case naming_utils:is_registered( USCfgRegName, USCfgRegScope ) of
 
 				not_registered ->
-					?info_fmt( "There is no ~ts registration of '~ts'; "
-						"creating thus a new overall US configuration server.",
-						[ USCfgRegScope, USCfgRegName ] ),
-					% Not linked to have an uniform semantics:
-					class_USConfigServer:new();
+					case CreateIfNeeded of
+
+						true ->
+							?info_fmt( "There is no ~ts registration of '~ts'; "
+								"creating thus a new overall US configuration "
+								"server.", [ USCfgRegScope, USCfgRegName ] ),
+
+							% Not linked to have an uniform semantics:
+							class_USConfigServer:new();
+
+						false ->
+							?error_fmt( "Unable to find an expected US "
+								"configuration server (registration name: "
+								"'~ts', scope: ~ts), and on-needed creation "
+								"disabled.",
+								[ USCfgRegName, USCfgRegScope ] ),
+							throw( { us_configuration_server_not_found,
+									 USCfgRegName, USCfgRegScope } )
+
+					end;
 
 				DelayedCfgPid ->
 					?info_fmt( "Found (after some delay) an already running "
@@ -1441,25 +1479,26 @@ get_us_config_server( State ) ->
 to_string( State ) ->
 
 	RegString = text_utils:format( "registered as '~ts' (scope: ~ts)",
-		 [ ?getAttr(registration_name), ?default_registration_scope ] ),
+		[ ?getAttr(registration_name), ?default_registration_scope ] ),
 
-	SrvString = case ?getAttr(us_server_pid) of
+	MainSrvString = case ?getAttr(us_main_config_server_pid) of
 
 		undefined ->
-			"no US server";
+			"no US-Main configuration server";
 
-		SrvPid ->
-			text_utils:format( "US server ~w", [ SrvPid ] )
+		MainSrvPid ->
+			text_utils:format( "US-Main configuration server ~w",
+							   [ MainSrvPid ] )
 
 	end,
 
-	WebString = case ?getAttr(us_web_config_server_pid) of
+	WebSrvString = case ?getAttr(us_web_config_server_pid) of
 
 		undefined ->
-			"no web configuration server";
+			"no US-Web configuration server";
 
-		WebPid ->
-			text_utils:format( "web configuration server ~w", [ WebPid ] )
+		WebSrvPid ->
+			text_utils:format( "US-Web configuration server ~w", [ WebSrvPid ] )
 
 	end,
 
@@ -1469,4 +1508,4 @@ to_string( State ) ->
 		"having found as US-web configuration file '~ts', knowing ~ts and ~ts",
 		[ RegString, ?getAttr(execution_context), ?getAttr(epmd_port),
 		  ?getAttr(config_base_directory), ?getAttr(log_directory),
-		  ?getAttr(web_config_filename), SrvString, WebString ] ).
+		  ?getAttr(web_config_filename), MainSrvString, WebSrvString ] ).

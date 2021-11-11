@@ -197,6 +197,7 @@
 -define( known_config_keys, [ ?vm_cookie_key, ?epmd_port_key,
 	?tcp_port_range_key, ?execution_context_key,
 	?us_username_key, ?us_groupname_key,
+	?us_server_registration_name_key,
 	?us_config_server_registration_name_key,
 	?us_app_base_dir_key, ?us_log_dir_key,
 	?us_main_config_filename_key, ?us_web_config_filename_key] ).

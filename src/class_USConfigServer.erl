@@ -365,7 +365,7 @@ get_default_settings() ->
 	Application = us_common,
 
 	USCfgSrvName = case application:get_env( Application,
-			us_config_server_registration_name ) of
+						us_config_server_registration_name ) of
 
 		undefined ->
 			CfgRegName = ?default_us_config_reg_name,
@@ -438,9 +438,8 @@ get_default_settings() ->
 
 	end,
 
-
 	wooper:return_static( { ?us_config_filename,
-		?us_server_registration_name_key, USCfgSrvName,
+		?us_config_server_registration_name_key, USCfgSrvName,
 		naming_utils:registration_to_look_up_scope( USCfgSrvScope ) } ).
 
 
@@ -1388,7 +1387,7 @@ get_us_config_server( CreateIfNeeded, State ) ->
 
 	% Ensures as well that all top-level terms are only pairs:
 	ConfigTable = table:new_from_unique_entries(
-					file_utils:read_terms( USCfgFilePath ) ),
+						   file_utils:read_terms( USCfgFilePath ) ),
 
 	?info_fmt( "Read US configuration ~ts",
 			   [ table:to_string( ConfigTable ) ] ),

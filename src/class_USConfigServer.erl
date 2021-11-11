@@ -68,7 +68,7 @@
 %
 % This overall, singleton server registers itself globally, so that other
 % services can interact with it even if running in separate virtual machines
-% (ex: US-web).
+% (ex: US-Web).
 %
 % The base directories for configuration information are, by decreasing order of
 % priority:
@@ -116,13 +116,13 @@
 	  "traces will be stored" },
 
 	{ web_config_filename, maybe( bin_file_path() ),
-	  "the path to the configuration file (if any) regarding US-web (i.e. "
+	  "the path to the configuration file (if any) regarding US-Web (i.e. "
 	  "webserver, virtual hosting, etc.)" },
 
 	{ us_username, system_utils:user_name(),
 	  "the user who runs the Universal server application (note that there "
 	  "may be discrepancies between the one of US and the one of other "
-	  "servers such as US-web)" },
+	  "servers such as US-Web)" },
 
 	{ us_groupname, system_utils:group_name(),
 	  "the group that shall be common to all US-related users" },
@@ -985,14 +985,14 @@ manage_os_user_group( ConfigTable, State ) ->
 				OtherUsername ->
 
 					% Currently not a blocking error as this US configuration
-					% server might be run in the context of US-web, hence with
+					% server might be run in the context of US-Web, hence with
 					% its username, which might differ.
 
 					?warning_fmt( "The user-configured US operating-system "
 						"username '~ts' for this server does not match the "
 						"current runtime user, '~ts' (acceptable if created "
 						"on behalf on a US-related service - typically a "
-						"standalone US-web server, i.e. one with no prior "
+						"standalone US-Web server, i.e. one with no prior "
 						"US-server companion running).",
 						[ Username, OtherUsername ] ),
 					OtherUsername
@@ -1387,7 +1387,7 @@ get_us_config_server( CreateIfNeeded, State ) ->
 
 	% Ensures as well that all top-level terms are only pairs:
 	ConfigTable = table:new_from_unique_entries(
-						   file_utils:read_terms( USCfgFilePath ) ),
+							file_utils:read_terms( USCfgFilePath ) ),
 
 	?info_fmt( "Read US configuration ~ts",
 			   [ table:to_string( ConfigTable ) ] ),
@@ -1505,7 +1505,7 @@ to_string( State ) ->
 	text_utils:format( "US overall configuration server, ~ts, running in "
 		"the ~ts execution context, presumably on a VM using EPMD port #~B, "
 		"using configuration directory '~ts' and log directory '~ts', "
-		"having found as US-web configuration file '~ts', knowing ~ts and ~ts",
+		"having found as US-Web configuration file '~ts', knowing ~ts and ~ts",
 		[ RegString, ?getAttr(execution_context), ?getAttr(epmd_port),
 		  ?getAttr(config_base_directory), ?getAttr(log_directory),
 		  ?getAttr(web_config_filename), MainSrvString, WebSrvString ] ).

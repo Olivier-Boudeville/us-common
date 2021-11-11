@@ -254,8 +254,8 @@ triggerNextTask( State ) ->
 
 			ThisActuatorPid ! TaskCall,
 
-			?debug_fmt( "Triggered actuator ~w with ~p.",
-						[ ThisActuatorPid, TaskCall ] ),
+			%?debug_fmt( "Triggered actuator ~w with ~p.",
+			%            [ ThisActuatorPid, TaskCall ] ),
 
 			TrigState = setAttributes( State, [
 					{ actuator_ring, NewRing },
@@ -283,8 +283,8 @@ notifyTaskDone( State, ActuatorPid ) ->
 	% Check:
 	ActuatorPid = ?getAttr(waited_actuator_pid),
 
-	?debug_fmt( "Actuator ~w reported as having operated.",
-				[ ActuatorPid ] ),
+	%?debug_fmt( "Actuator ~w reported as having operated.",
+	%            [ ActuatorPid ] ),
 
 	DoneState = setAttribute( State, waited_actuator_pid, undefined ),
 

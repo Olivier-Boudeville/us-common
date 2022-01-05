@@ -1,4 +1,4 @@
-% Copyright (C) 2020-2021 Olivier Boudeville
+% Copyright (C) 2020-2022 Olivier Boudeville
 %
 % This file is part of US-Common, part of the Universal Server framework.
 %

@@ -3,7 +3,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.16: http://docutils.sourceforge.net/" />
 <title>Welcome to the US-Common documentation</title>
 <meta content="US-Common" name="keywords" />
 <link rel="stylesheet" href="pygments-default.css" type="text/css" />
@@ -23,7 +23,7 @@
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field"><th class="field-name">Organisation:</th><td class="field-body"><p class="first">Copyright (C) 2019-2021 Olivier Boudeville</p>
+<tr class="field"><th class="field-name">Organisation:</th><td class="field-body"><p class="first">Copyright (C) 2019-2022 Olivier Boudeville</p>
 </td>
 </tr>
 <tr class="field"><th class="field-name">Contact:</th><td class="field-body"><p class="first">about (dash) us-common (at) esperide (dot) com</p>
@@ -32,10 +32,10 @@
 <tr class="field"><th class="field-name">Creation date:</th><td class="field-body"><p class="first">Saturday, May 2, 2020</p>
 </td>
 </tr>
-<tr class="field"><th class="field-name">Lastly updated:</th><td class="field-body"><p class="first">Sunday, August 1, 2021</p>
+<tr class="field"><th class="field-name">Lastly updated:</th><td class="field-body"><p class="first">Wednesday, January 5, 2022</p>
 </td>
 </tr>
-<tr class="field"><th class="field-name">Version:</th><td class="field-body"><p class="first">0.0.3</p>
+<tr class="field"><th class="field-name">Version:</th><td class="field-body"><p class="first">0.0.6</p>
 </td>
 </tr>
 <tr class="field"><th class="field-name">Status:</th><td class="field-body"><p class="first">Stable</p>
@@ -67,15 +67,20 @@
 <li><a class="reference internal" href="#overview" id="id16">Overview</a></li>
 <li><a class="reference internal" href="#layer-stack" id="id17">Layer Stack</a></li>
 <li><a class="reference internal" href="#facilities-provided-by-this-layer" id="id18">Facilities Provided by this Layer</a></li>
-<li><a class="reference internal" href="#licence" id="id19">Licence</a></li>
-<li><a class="reference internal" href="#current-stable-version-download" id="id20">Current Stable Version &amp; Download</a><ul>
-<li><a class="reference internal" href="#using-cutting-edge-git" id="id21">Using Cutting-Edge GIT</a></li>
-<li><a class="reference internal" href="#using-otp-related-build-runtime-conventions" id="id22">Using OTP-Related Build/Runtime Conventions</a></li>
+<li><a class="reference internal" href="#configuration" id="id19">Configuration</a><ul>
+<li><a class="reference internal" href="#server-configuration" id="id20">Server Configuration</a></li>
+<li><a class="reference internal" href="#client-configuration" id="id21">Client Configuration</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#support" id="id23">Support</a></li>
-<li><a class="reference internal" href="#please-react" id="id24">Please React!</a></li>
-<li><a class="reference internal" href="#ending-word" id="id25">Ending Word</a></li>
+<li><a class="reference internal" href="#licence" id="id22">Licence</a></li>
+<li><a class="reference internal" href="#current-stable-version-download" id="id23">Current Stable Version &amp; Download</a><ul>
+<li><a class="reference internal" href="#using-cutting-edge-git" id="id24">Using Cutting-Edge GIT</a></li>
+<li><a class="reference internal" href="#using-otp-related-build-runtime-conventions" id="id25">Using OTP-Related Build/Runtime Conventions</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#support" id="id26">Support</a></li>
+<li><a class="reference internal" href="#please-react" id="id27">Please React!</a></li>
+<li><a class="reference internal" href="#ending-word" id="id28">Ending Word</a></li>
 </ul>
 </div>
 <p></p>
@@ -116,19 +121,40 @@
 <li><a class="reference external" href="https://github.com/Olivier-Boudeville/us-common/blob/master/src/class_USTaskRing.erl">USTaskRing</a>: a facility useful to <strong>schedule a set of periodic tasks synchronously</strong> (no overlapping between them) <strong>and uniformly</strong> (as evenly as possible over time); typically useful to pace regularly a set of actions of indefinite number that are ruled by a common periodicity and/or to share a resource unable to cope with concurrent accesses (ex: a non-reentrant third-party log analysis tool that maintains its own opaque state on filesystem, yet have to operate on a set of virtual hosts)</li>
 </ul>
 </div>
+<div class="section" id="configuration">
+<h1><a class="toc-backref" href="#id19">Configuration</a></h1>
+<div class="section" id="server-configuration">
+<h2><a class="toc-backref" href="#id20">Server Configuration</a></h2>
+<p id="us-configuration-directory">The configuration of the Universal Server infrastructure lies primarily in a dedicated <tt class="docutils literal">us.config</tt> file, which is searched from various base directories, according to the following order:</p>
+<ol class="arabic simple">
+<li>in any base directory designated by the standard <tt class="docutils literal">XDG_CONFIG_HOME</tt> environment variable, otherwise in default <tt class="docutils literal"><span class="pre">~/.config</span></tt></li>
+<li>in any of the base directories listed (separator being <tt class="docutils literal">:</tt>) in the standard <tt class="docutils literal">XDG_CONFIG_DIRS</tt> environment variable, otherwise in default <tt class="docutils literal">/etc/xdg</tt></li>
+</ol>
+<p>Each of these base directories is searched in turn for a <tt class="docutils literal"><span class="pre">universal-server</span></tt> subdirectory that would contain a <tt class="docutils literal">us.config</tt> file, and the first found one is chosen as the <strong>US Configuration directory</strong>. Any other US-related configuration file is then expected to be found in the same directory.</p>
+<p>In practice, often the <tt class="docutils literal"><span class="pre">~/.config/universal-server/us.config</span></tt> location is preferred.</p>
+<p>All US configuration files are in the <a class="reference external" href="http://myriad.esperide.org/#etf">ETF</a> format (for <em>Erlang Term Format</em>).</p>
+<p>One may refer to <a class="reference external" href="https://github.com/Olivier-Boudeville/us-common/blob/master/priv/for-testing/us.config">this example us.config</a> to learn their structure and derive one's own <tt class="docutils literal">us.config</tt>.</p>
+</div>
+<div class="section" id="client-configuration">
+<h2><a class="toc-backref" href="#id21">Client Configuration</a></h2>
+<p>Each US service (ex: <tt class="docutils literal"><span class="pre">US-Main</span></tt>, <tt class="docutils literal"><span class="pre">US-Web</span></tt>, etc.) can be monitored (locally or remotely) thanks to a corresponding <tt class="docutils literal"><span class="pre">priv/bin/monitor-us-*.sh</span></tt> script, which must be given the necessary information (hostname, cookie, TCP port range, etc.) in order to contact the target US instance.</p>
+<p>This information is typically stored in a <tt class="docutils literal"><span class="pre">us-*-remote-access.config</span></tt> ETF file, located as well in the aforementioned <a class="reference internal" href="#us-configuration-directory">US configuration directory</a>.</p>
+</div>
+</div>
 <div class="section" id="licence">
-<span id="free-software"></span><h1><a class="toc-backref" href="#id19">Licence</a></h1>
+<span id="free-software"></span><h1><a class="toc-backref" href="#id22">Licence</a></h1>
 <p><tt class="docutils literal"><span class="pre">US-Common</span></tt> is licensed by its author (Olivier Boudeville) under the <a class="reference external" href="https://www.gnu.org/licenses/agpl-3.0.en.html">GNU Affero General Public License</a> as published by the Free Software Foundation, either version 3 of this license, or (at your option) any later version.</p>
 <p>This allows the use of the US-Common code in a wide a variety of software projects, while still maintaining copyleft on this code, ensuring improvements are shared.</p>
 <p>We hope indeed that enhancements will be back-contributed (ex: thanks to merge requests), so that everyone will be able to benefit from them.</p>
 </div>
 <div class="section" id="current-stable-version-download">
-<h1><a class="toc-backref" href="#id20">Current Stable Version &amp; Download</a></h1>
-<p>We prefer using GNU/Linux, sticking to the latest stable release of Erlang, and building it from sources, thanks to GNU <tt class="docutils literal">make</tt>.</p>
+<h1><a class="toc-backref" href="#id23">Current Stable Version &amp; Download</a></h1>
+<p>In general, we prefer using GNU/Linux, sticking to the latest stable release of Erlang, and building it from sources, thanks to GNU <tt class="docutils literal">make</tt>.</p>
 <p>As mentioned, the single, direct prerequisite of <a class="reference external" href="https://github.com/Olivier-Boudeville/US-Common">US-Common</a> is <a class="reference external" href="https://github.com/Olivier-Boudeville/Ceylan-Traces">Ceylan-Traces</a>, which implies in turn <a class="reference external" href="https://github.com/Olivier-Boudeville/Ceylan-WOOPER">Ceylan-WOOPER</a>, then <a class="reference external" href="https://github.com/Olivier-Boudeville/Ceylan-Myriad">Ceylan-Myriad</a> and <a class="reference external" href="http://erlang.org">Erlang</a>.</p>
 <p>Refer to the corresponding <a class="reference external" href="http://myriad.esperide.org#prerequisites">Myriad prerequisite section</a>  for more precise guidelines, knowing that US-Common does not need modules with conditional support such as <tt class="docutils literal">crypto</tt> or <tt class="docutils literal">wx</tt>.</p>
+<p>Most uses of US-Common will require <tt class="docutils literal">authbind</tt> (ex: on Arch Linux, obtained from the AUR, typically with thanks to the AUR installer that <a class="reference external" href="https://github.com/Olivier-Boudeville/Ceylan-Hull/blob/master/update-aur-installer.sh">Ceylan-Hull recommends and installs</a> ).</p>
 <div class="section" id="using-cutting-edge-git">
-<h2><a class="toc-backref" href="#id21">Using Cutting-Edge GIT</a></h2>
+<h2><a class="toc-backref" href="#id24">Using Cutting-Edge GIT</a></h2>
 <p>This is the installation method that we use and recommend; the US-Common <tt class="docutils literal">master</tt> branch is meant to stick to the latest stable version: we try to ensure that this main line always stays functional (sorry for the pun). Evolutions are to take place in feature branches and to be merged only when ready.</p>
 <p>Once Erlang is available, it should be just a matter of executing:</p>
 <pre class="code bash literal-block">
@@ -156,21 +182,21 @@ $ make class_USScheduler_run
 <p><span class="raw-html"><a name="otp"></a></span></p>
 </div>
 <div class="section" id="using-otp-related-build-runtime-conventions">
-<span id="otp-build"></span><h2><a class="toc-backref" href="#id22">Using OTP-Related Build/Runtime Conventions</a></h2>
+<span id="otp-build"></span><h2><a class="toc-backref" href="#id25">Using OTP-Related Build/Runtime Conventions</a></h2>
 <p>As discussed in these sections of <a class="reference external" href="http://myriad.esperide.org/myriad.html#otp">Myriad</a>, <a class="reference external" href="http://wooper.esperide.org/index.html#otp">WOOPER</a> and <a class="reference external" href="http://traces.esperide.org/index.html#otp">Traces</a>, we added the (optional) possibility of generating a US-Common <em>OTP application</em> out of the build tree, ready to be integrated into an <em>(OTP) release</em>. For that we rely on <a class="reference external" href="https://www.rebar3.org/">rebar3</a>, <a class="reference external" href="https://github.com/erlware/relx">relx</a> and <a class="reference external" href="https://hex.pm/">hex</a>.</p>
 <p>Unlike Myriad (which is an OTP <em>library</em> application), US-Common is (like WOOPER and Traces) an OTP <em>active</em> application, meaning the reliance on an application that can be started/stopped (<tt class="docutils literal">us_common_app</tt>), a root supervisor (<tt class="docutils literal">us_common_sup</tt>) and, here, two proper supervisor bridges (<tt class="docutils literal">us_common_scheduler_bridge_sup</tt> and <tt class="docutils literal">us_common_config_bridge_sup</tt>).</p>
 </div>
 </div>
 <div class="section" id="support">
-<h1><a class="toc-backref" href="#id23">Support</a></h1>
+<h1><a class="toc-backref" href="#id26">Support</a></h1>
 <p>Bugs, questions, remarks, patches, requests for enhancements, etc. are to be reported to the <a class="reference external" href="https://github.com/Olivier-Boudeville/us-common">project interface</a> (typically <a class="reference external" href="https://github.com/Olivier-Boudeville/us-common/issues">issues</a>) or directly at the email address mentioned at the beginning of this document.</p>
 </div>
 <div class="section" id="please-react">
-<h1><a class="toc-backref" href="#id24">Please React!</a></h1>
+<h1><a class="toc-backref" href="#id27">Please React!</a></h1>
 <p>If you have information more detailed or more recent than those presented in this document, if you noticed errors, neglects or points insufficiently discussed, drop us a line! (for that, follow the <a class="reference internal" href="#support">Support</a> guidelines).</p>
 </div>
 <div class="section" id="ending-word">
-<h1><a class="toc-backref" href="#id25">Ending Word</a></h1>
+<h1><a class="toc-backref" href="#id28">Ending Word</a></h1>
 <p>Have fun with US-Common!</p>
 <p><span class="raw-html"><center><img src="us-common-title.png" width="25%"></img></center></span>
 </p>

@@ -156,43 +156,39 @@
 
 -record( task_entry, {
 
-		% Unique identifier of this task:
-		id :: task_id(),
+	% Unique identifier of this task:
+	id :: task_id(),
 
-		% The command to trigger on the actuator:
-		command :: task_command(),
+	% The command to trigger on the actuator:
+	command :: task_command(),
 
-		% The offset (relative to the start time of this scheduler) at which
-		% the next scheduling of this task shall happen:
-		%
-		next_schedule :: schedule_offset(),
+	% The offset (relative to the start time of this scheduler) at which the
+	% next scheduling of this task shall happen:
+	%
+	next_schedule :: schedule_offset(),
 
-		% The periodicity at which this task shall be scheduled:
-		periodicity :: periodicity(),
+	% The periodicity at which this task shall be scheduled:
+	periodicity :: periodicity(),
 
-		% The number of times this task shall still be scheduled:
-		count :: schedule_count(),
+	% The number of times this task shall still be scheduled:
+	count :: schedule_count(),
 
-		% The number of times this task has already been scheduled:
-		schedule_count = 0 :: schedule_count(),
+	% The number of times this task has already been scheduled:
+	schedule_count = 0 :: schedule_count(),
 
-		% The internal time offset (if any) at which this task was first
-		% scheduled:
-		%
-		started_on = undefined :: maybe( schedule_offset() ),
+	% The internal time offset (if any) at which this task was first scheduled:
+	started_on = undefined :: maybe( schedule_offset() ),
 
-		% The internal time offset (if any) at which this task was last
-		% scheduled:
-		%
-		last_schedule = undefined :: maybe( schedule_offset() ),
+	% The internal time offset (if any) at which this task was last scheduled:
+	last_schedule = undefined :: maybe( schedule_offset() ),
 
-		% The PID of the process having registered this task:
-		requester_pid :: requester_pid(),
+	% The PID of the process having registered this task:
+	requester_pid :: requester_pid(),
 
-		% The PID of the process that will be triggered whenever this task is
-		% scheduled:
-		%
-		actuator_pid :: actuator_pid() } ).
+	% The PID of the process that will be triggered whenever this task is
+	% scheduled:
+	%
+	actuator_pid :: actuator_pid() } ).
 
 
 -type task_entry() :: #task_entry{}.
@@ -313,7 +309,6 @@
 
 % The timer module is used, rather than a utility process using for example
 % receive/after, presumably for a better accuracy.
-
 
 
 
@@ -793,8 +788,8 @@ perform_schedule( ScheduleOffset, NowMs, _SchedulePlan=[ { Off, TaskIds } | T ],
 
 	?error_fmt( "While scheduling #~B (~ts), found late offset #~B (~ts), "
 		"triggering its delayed tasks first: ~w.",
-		[ ScheduleOffset, get_timestamp_for( ScheduleOffset, State ),
-		  Off, get_timestamp_for( Off, State ), TaskIds ] ),
+		[ ScheduleOffset, get_timestamp_string_for( ScheduleOffset, State ),
+		  Off, get_timestamp_string_for( Off, State ), TaskIds ] ),
 
 	% Using Off rather than ScheduleOffset here:
 	{ NewPlan, NewTimerTable, NewTaskTable } = trigger_tasks( TaskIds,
@@ -811,8 +806,8 @@ perform_schedule( ScheduleOffset, NowMs,
 				  TimerTable, TaskTable, State ) ->
 
 	%?debug_fmt( "Normal scheduling of #~B (~ts), triggering its tasks: ~w.",
-	%		[ ScheduleOffset, get_timestamp_string_for( ScheduleOffset, State ),
-	%		  TaskIds ] ),
+	%   [ ScheduleOffset, get_timestamp_string_for( ScheduleOffset, State ),
+	%     TaskIds ] ),
 
 	% Dropping current offset:
 	{ NewPlan, NewTimerTable, NewTaskTable } = trigger_tasks( TaskIds,
@@ -1035,9 +1030,9 @@ insert_task_at( TaskId, ScheduleOffset, DurationFromNow, Plan, TimerTable ) ->
 						   _AccPlan=[], TimerTable ),
 
 	%trace_bridge:debug_fmt( "After having inserted task ~B at offset #~B "
-	%	"(duration from now: ~ts), new plan is:~n ~p",
-	%	[ TaskId, ScheduleOffset,
-	%	  time_utils:duration_to_string( DurationFromNow ), NewPlan ] ),
+	%   "(duration from now: ~ts), new plan is:~n ~p",
+	%   [ TaskId, ScheduleOffset,
+	%     time_utils:duration_to_string( DurationFromNow ), NewPlan ] ),
 
 	NewP.
 
@@ -1247,7 +1242,7 @@ get_timestamp_for( Offset, State ) ->
 		round( ( Offset + ?getAttr(server_gregorian_start) ) / 1000 ),
 
 	time_utils:universal_to_local_time(
-	  calendar:gregorian_seconds_to_datetime( GregorianSecs ) ).
+		calendar:gregorian_seconds_to_datetime( GregorianSecs ) ).
 
 
 

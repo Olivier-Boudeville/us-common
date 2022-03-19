@@ -181,16 +181,16 @@ endif
 ifneq ($(CEYLAN_TRACES),)
 	TRACES_TOP = $(CEYLAN_TRACES)
 else
-	ifneq ($(wildcard $(SILVACANE_TOP)/_checkouts/traces/.),)
-		TRACES_TOP = $(SILVACANE_TOP)/_checkouts/traces
+	ifneq ($(wildcard $(US_COMMON_TOP)/_checkouts/traces/.),)
+		TRACES_TOP = $(US_COMMON_TOP)/_checkouts/traces
 	else
 		# Second, a sibling one is searched for:
-		ifneq ($(wildcard $(SILVACANE_TOP)/../traces/.),)
-			TRACES_TOP = $(SILVACANE_TOP)/../traces
+		ifneq ($(wildcard $(US_COMMON_TOP)/../traces/.),)
+			TRACES_TOP = $(US_COMMON_TOP)/../traces
 		else
 			# Otherwise most probably in a 'rebar3 compile' context:
-			ifneq ($(wildcard $(SILVACANE_TOP)/_build/default/lib/traces/.),)
-				TRACES_TOP = $(SILVACANE_TOP)/_build/default/lib/traces
+			ifneq ($(wildcard $(US_COMMON_TOP)/_build/default/lib/traces/.),)
+				TRACES_TOP = $(US_COMMON_TOP)/_build/default/lib/traces
 			else
 				FORCE_EVAL := $(error Unable to find the build root of Ceylan-Traces from '$(realpath .)')
 			endif

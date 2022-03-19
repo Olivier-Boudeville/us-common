@@ -17,7 +17,9 @@
 %
 % Author: Olivier Boudeville (olivier.boudeville@esperide.com)
 % Creation date: Saturday, March 28, 2020.
-%
+
+
+% @doc Test of the <b>scheduling service</b>.
 -module(class_USScheduler_test).
 
 
@@ -28,7 +30,6 @@
 -export([ check_command_acks/1 ]).
 
 
-% Test target:
 -include_lib("traces/include/traces_for_tests.hrl").
 
 
@@ -118,7 +119,8 @@ run() ->
 	FirstActuatorPid = spawn_link( ?MODULE, operate_loop, [] ),
 
 	test_facilities:display( "Scheduler ~w created, interacting with test "
-	  "actuator ~w by registering new tasks.", [ SchedPid, FirstActuatorPid ] ),
+		"actuator ~w by registering new tasks.",
+		[ SchedPid, FirstActuatorPid ] ),
 
 
 	test_facilities:display( "Testing single schedulings." ),
@@ -160,7 +162,7 @@ run() ->
 		time_utils:offset_timestamp( NowTimestamp, _Seconds=2 ),
 
 	SchedPid ! { registerOneshotTask, [ get_command( fifth ),
-					   OneshotFutureTimestamp, FirstActuatorPid ], self() },
+						OneshotFutureTimestamp, FirstActuatorPid ], self() },
 
 	{ task_registered, _IdFifthTask=5 } = test_receive(),
 

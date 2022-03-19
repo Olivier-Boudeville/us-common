@@ -22,11 +22,11 @@
 
 % Depends on the following applications (Erlang implied):
 {deps, [
-	{myriad, {git, "git://github.com/Olivier-Boudeville/Ceylan-Myriad",
+	{myriad, {git, "https://github.com/Olivier-Boudeville/Ceylan-Myriad.git",
 			 {branch, "master"}}},
-	{wooper, {git, "git://github.com/Olivier-Boudeville/Ceylan-WOOPER",
+	{wooper, {git, "https://github.com/Olivier-Boudeville/Ceylan-WOOPER.git",
 			 {branch, "master"}}},
-	{traces, {git, "git://github.com/Olivier-Boudeville/Ceylan-Traces",
+	{traces, {git, "https://github.com/Olivier-Boudeville/Ceylan-Traces.git",
 			 {branch, "master"}}}
 ]}.
 

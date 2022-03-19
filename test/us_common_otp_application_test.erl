@@ -20,9 +20,9 @@
 % Creation date: Thursday, May 7, 2020.
 
 
-% Testing of US-Common as an OTP active application, directly from within its
-% code base (hence without needing to create a separate, mock-up test OTP
-% release for that).
+% @doc Testing of <b>US-Common as an OTP active application</b>, directly from
+% within its code base (hence without needing to create a separate, mock-up test
+% OTP release for that).
 %
 -module(us_common_otp_application_test).
 
@@ -163,9 +163,9 @@ test_us_common_application( OrderedAppNames ) ->
 
 	% The same (simpler - less choices) for the US-Common scheduler:
 	SchedPid = naming_utils:wait_for_registration_of(
-					?us_common_scheduler_registration_name,
-					naming_utils:registration_to_look_up_scope(
-						?us_common_scheduler_registration_scope ) ),
+		?us_common_scheduler_registration_name,
+		naming_utils:registration_to_look_up_scope(
+			?us_common_scheduler_registration_scope ) ),
 
 	erlang:link( SchedPid ),
 
@@ -188,6 +188,29 @@ test_us_common_application( OrderedAppNames ) ->
 	% Including US-Common:
 	?test_info( "Stopping all user applications." ),
 	otp_utils:stop_user_applications( OrderedAppNames ),
+
+
+	% Not able to use Traces anymore:
+	trace_utils:debug_fmt( "Waiting for the termination of the US-Common "
+						   "configuration server (~w).", [ USCfgSrvPid ] ),
+
+	receive
+
+		{'EXIT', USCfgSrvPid, normal } ->
+			ok
+
+	end,
+
+
+	trace_utils:debug_fmt( "Waiting for the termination of the US-Common "
+						   "scheduler (~w).", [ SchedPid ] ),
+
+	receive
+
+		{'EXIT', SchedPid, normal } ->
+			ok
+
+	end,
 
 	% None expected to be left:
 	basic_utils:check_no_pending_message(),

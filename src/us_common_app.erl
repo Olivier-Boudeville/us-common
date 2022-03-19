@@ -49,7 +49,7 @@ start( Type, StartArgs ) ->
 	case us_common_sup:start_link() of
 
 		R={ ok, UsCommonRootSupervisorPid }
-		  when is_pid( UsCommonRootSupervisorPid ) ->
+						when is_pid( UsCommonRootSupervisorPid ) ->
 			R;
 
 		% Includes 'ignore':

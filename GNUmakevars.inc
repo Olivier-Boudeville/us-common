@@ -93,7 +93,7 @@ endif
 
 
 # The uniquely-defined version of this layer, for all uses, including rebar:
-US_COMMON_VERSION := 0.0.6
+US_COMMON_VERSION := 0.0.7
 
 
 # PROJECT_VERSION should be defined on a per-project basis:
@@ -177,19 +177,23 @@ endif
 # Note also we rely on the names of build roots (ex: myriad) as opposed to
 # project/repository names (ex: Ceylan-Myriad):
 #
-# First priority is an existing checkout directory:
-ifneq ($(wildcard $(US_COMMON_TOP)/_checkouts/traces/.),)
-	TRACES_TOP = $(US_COMMON_TOP)/_checkouts/traces
+# First priority is the expected environment variable:
+ifneq ($(CEYLAN_TRACES),)
+	TRACES_TOP = $(CEYLAN_TRACES)
 else
-	# Second, a sibling one is searched for:
-	ifneq ($(wildcard $(US_COMMON_TOP)/../traces/.),)
-		TRACES_TOP = $(US_COMMON_TOP)/../traces
-   else
-		# Otherwise most probably in a 'rebar3 compile' context:
-		ifneq ($(wildcard $(US_COMMON_TOP)/_build/default/lib/traces/.),)
-			TRACES_TOP = $(US_COMMON_TOP)/_build/default/lib/traces
+	ifneq ($(wildcard $(SILVACANE_TOP)/_checkouts/traces/.),)
+		TRACES_TOP = $(SILVACANE_TOP)/_checkouts/traces
+	else
+		# Second, a sibling one is searched for:
+		ifneq ($(wildcard $(SILVACANE_TOP)/../traces/.),)
+			TRACES_TOP = $(SILVACANE_TOP)/../traces
 		else
-			FORCE_EVAL := $(error Unable to find the build root of Ceylan-Traces from '$(realpath .)')
+			# Otherwise most probably in a 'rebar3 compile' context:
+			ifneq ($(wildcard $(SILVACANE_TOP)/_build/default/lib/traces/.),)
+				TRACES_TOP = $(SILVACANE_TOP)/_build/default/lib/traces
+			else
+				FORCE_EVAL := $(error Unable to find the build root of Ceylan-Traces from '$(realpath .)')
+			endif
 		endif
 	endif
 endif

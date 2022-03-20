@@ -35,32 +35,10 @@
 
 
 -type config_server_pid() :: server_pid().
+% The PID of a US-Config server.
 
 -export_type([ config_server_pid/0 ]).
 
-
-% The PID of a US-Config server.
-
-% Shorthands:
-
--type execution_context() :: basic_utils:execution_context().
-
--type ustring() :: text_utils:ustring().
-
--type file_name() :: file_utils:file_name().
--type file_path() :: file_utils:file_path().
--type bin_file_path() :: file_utils:bin_file_path().
--type directory_path() :: file_utils:directory_path().
--type bin_directory_path() :: file_utils:bin_directory_path().
-
--type registration_name() :: naming_utils:registration_name().
--type registration_scope() :: naming_utils:registration_scope().
-
--type server_pid() :: class_UniversalServer:server_pid().
-
-
--type us_config_table() :: table( atom(), term() ).
-% A table holding US configuration information.
 
 
 
@@ -115,7 +93,11 @@
 	  "the directory where all VM log files and US-specific higher-level "
 	  "traces will be stored" },
 
-	{ web_config_filename, maybe( bin_file_path() ),
+	{ us_main_config_filename, maybe( bin_file_path() ),
+	  "the path to the configuration file (if any) regarding US-Main (i.e. "
+	  "for sensors and other elements)" },
+
+	{ us_web_config_filename, maybe( bin_file_path() ),
 	  "the path to the configuration file (if any) regarding US-Web (i.e. "
 	  "webserver, virtual hosting, etc.)" },
 
@@ -127,10 +109,10 @@
 	{ us_groupname, system_utils:group_name(),
 	  "the group that shall be common to all US-related users" },
 
-	{ us_main_config_server_pid, maybe( class_UniversalServer:server_pid() ),
+	{ us_main_config_server_pid, maybe( server_pid() ),
 	  "the PID of the US-Main configuration server (if any)" },
 
-	{ us_web_config_server_pid, maybe( class_UniversalServer:server_pid() ),
+	{ us_web_config_server_pid, maybe( server_pid() ),
 	  "the PID of the US-Web configuration server (if any)" },
 
 	% Cannot easily be obtained otherwise:
@@ -225,6 +207,29 @@
 
 
 
+% Shorthands:
+
+-type execution_context() :: basic_utils:execution_context().
+
+-type ustring() :: text_utils:ustring().
+
+-type file_name() :: file_utils:file_name().
+-type file_path() :: file_utils:file_path().
+-type bin_file_path() :: file_utils:bin_file_path().
+-type directory_path() :: file_utils:directory_path().
+-type bin_directory_path() :: file_utils:bin_directory_path().
+
+-type registration_name() :: naming_utils:registration_name().
+-type registration_scope() :: naming_utils:registration_scope().
+
+-type server_pid() :: class_UniversalServer:server_pid().
+
+
+-type us_config_table() :: table( atom(), term() ).
+% A table holding US configuration information.
+
+
+
 % @doc Constructs the US configuration server, using the default logic to find
 % its configuration file.
 %
@@ -310,22 +315,54 @@ destruct( State ) ->
 % Method section.
 
 
+% @doc Notifies this server about the specified US-Main configuration server,
+% and requests related information from it.
+%
+-spec getUSMainRuntimeSettings( wooper:state() ) -> request_return(
+		{ bin_directory_path(), execution_context(), maybe( bin_file_path() ),
+		  maybe( server_pid() ) } ).
+getUSMainRuntimeSettings( State ) ->
+
+	USMainConfigServerPid = ?getSender(),
+
+	RegState = case ?getAttr(us_main_config_server_pid) of
+
+		undefined ->
+			?info_fmt( "Registering US-Main configuration server ~w.",
+					   [ USMainConfigServerPid ] ),
+			setAttribute( State, us_main_config_server_pid,
+						  USMainConfigServerPid );
+
+		USMainConfigServerPid ->
+			State;
+
+		OtherPid ->
+			?error_fmt( "Notified of US-Main configuration server ~w; "
+				"ignored, as already knowing a different one, ~w.",
+				[ USMainConfigServerPid, OtherPid ] ),
+			State
+
+	end,
+
+	wooper:return_state_result( RegState, { ?getAttr(config_base_directory),
+		?getAttr(execution_context), ?getAttr(us_main_config_filename) } ).
+
 
 
 % @doc Notifies this server about the specified US-Web configuration server, and
-% requests web-information from it.
+% requests web-related information from it.
 %
--spec getWebRuntimeSettings( wooper:state() ) -> request_return(
+-spec getUSWebRuntimeSettings( wooper:state() ) -> request_return(
 		{ bin_directory_path(), execution_context(), maybe( bin_file_path() ),
 		  maybe( server_pid() ) } ).
-getWebRuntimeSettings( State ) ->
+getUSWebRuntimeSettings( State ) ->
 
 	USWebConfigServerPid = ?getSender(),
 
 	RegState = case ?getAttr(us_web_config_server_pid) of
 
 		undefined ->
-			?info_fmt( "Registering web configuration server ~w.",
+			?info_fmt( "Registering US-Web configuration server ~w.",
 					   [ USWebConfigServerPid ] ),
 			setAttribute( State, us_web_config_server_pid,
 						  USWebConfigServerPid );
@@ -334,14 +371,15 @@ getWebRuntimeSettings( State ) ->
 			State;
 
 		OtherPid ->
-			?error_fmt( "Notified of web configuration server ~w; ignored, as "
-				"already knowing ~w.", [ USWebConfigServerPid, OtherPid ] ),
+			?error_fmt( "Notified of US-Web configuration server ~w; "
+				"ignored, as already knowing a different one, ~w.",
+				[ USWebConfigServerPid, OtherPid ] ),
 			State
 
 	end,
 
 	wooper:return_state_result( RegState, { ?getAttr(config_base_directory),
-		?getAttr(execution_context), ?getAttr(web_config_filename) } ).
+		?getAttr(execution_context), ?getAttr(us_web_config_filename) } ).
 
 
 
@@ -576,17 +614,17 @@ get_us_main_configuration_filename( ConfigTable ) ->
 		key_not_found ->
 			{ ok, undefined };
 
-		{ value, MainFilename } when is_list( MainFilename ) ->
-			{ ok, MainFilename };
+		{ value, USMainFilename } when is_list( USMainFilename ) ->
+			{ ok, USMainFilename };
 
-		{ value, InvalidMainFilename } ->
+		{ value, InvalidUSMainFilename } ->
 
 			ErrorTuploid = { invalid_us_main_config_filename,
-							 InvalidMainFilename, CfgKey },
+							 InvalidUSMainFilename, CfgKey },
 
 			ErrorMsg = text_utils:format( "Obtained invalid user-configured "
 				"configuration filename for mainservers and virtual hosting: "
-				" '~p', for key '~ts'.", [ InvalidMainFilename, CfgKey ] ),
+				" '~p', for key '~ts'.", [ InvalidUSMainFilename, CfgKey ] ),
 
 			{ error, { ErrorTuploid, ErrorMsg } }
 
@@ -611,17 +649,18 @@ get_us_web_configuration_filename( ConfigTable ) ->
 		key_not_found ->
 			{ ok, undefined };
 
-		{ value, WebFilename } when is_list( WebFilename ) ->
-			{ ok, WebFilename };
+		{ value, USWebFilename } when is_list( USWebFilename ) ->
+			{ ok, USWebFilename };
 
-		{ value, InvalidWebFilename } ->
+		{ value, InvalidUSWebFilename } ->
 
 			ErrorTuploid =
-				{ invalid_us_web_config_filename, InvalidWebFilename, CfgKey },
+				{ invalid_us_web_config_filename, InvalidUSWebFilename,
+				  CfgKey },
 
 			ErrorMsg = text_utils:format( "Obtained invalid user-configured "
 				"configuration filename for webservers and virtual hosting: "
-				" '~p', for key '~ts'.", [ InvalidWebFilename, CfgKey ] ),
+				" '~p', for key '~ts'.", [ InvalidUSWebFilename, CfgKey ] ),
 
 			{ error, { ErrorTuploid, ErrorMsg } }
 
@@ -661,12 +700,12 @@ find_file_in( _AllBasePaths=[ Path | T ], CfgSuffix, BaseMsg, Msgs ) ->
 				"as '~ts', as containing '~ts'", [ CfgDir, CfgFilePath ] )
 				++ case Msgs of
 
-					   [] ->
-						   "";
+					[] ->
+						"";
 
-					   _ ->
-						   ", after having searched through: "
-							   ++ text_utils:strings_to_enumerated_string(
+					_ ->
+						", after having searched through: "
+							++ text_utils:strings_to_enumerated_string(
 									lists:reverse( Msgs ) )
 
 				   end,
@@ -690,9 +729,9 @@ perform_setup( BinCfgDir, State ) ->
 	LoadState = load_configuration( BinCfgDir, State ),
 
 	ReadyState = setAttributes( LoadState, [
-					{ config_base_directory, BinCfgDir },
-					{ us_main_config_server_pid, undefined },
-					{ us_web_config_server_pid, undefined } ] ),
+		{ config_base_directory, BinCfgDir },
+		{ us_main_config_server_pid, undefined },
+		{ us_web_config_server_pid, undefined } ] ),
 
 	% Enforce security in all cases ("chmod 700"); if it fails here, the
 	% combined path/user configuration must be incorrect; however this server
@@ -710,8 +749,8 @@ perform_setup( BinCfgDir, State ) ->
 
 		CurrentUserId ->
 			file_utils:change_permissions( LogDir,
-			  [ owner_read, owner_write, owner_execute,
-				group_read, group_write, group_execute ] );
+				[ owner_read, owner_write, owner_execute,
+				  group_read, group_write, group_execute ] );
 
 		% Not owned, do nothing:
 		_OtherId ->
@@ -781,7 +820,9 @@ load_configuration( BinCfgDir, State ) ->
 
 	LogState = manage_log_directory( ConfigTable, DirState ),
 
-	WebState = manage_web_config( ConfigTable, LogState ),
+	MainState = manage_us_main_config( ConfigTable, LogState ),
+
+	WebState = manage_us_web_config( ConfigTable, MainState ),
 
 	% Detect any extraneous, unexpected entry:
 	LicitKeys = ?known_config_keys,
@@ -841,7 +882,8 @@ manage_epmd_port( ConfigTable, State ) ->
 		key_not_found ->
 			DefaultEpmdPort = net_utils:get_default_epmd_port(),
 			?info_fmt( "No user-configured EPMD TCP port, supposing already "
-			  "using the Erlang-level default one, ~B.", [ DefaultEpmdPort ] ),
+				"using the Erlang-level default one, ~B.",
+				[ DefaultEpmdPort ] ),
 			DefaultEpmdPort;
 
 		{ value, UserEPMDPort } when is_integer( UserEPMDPort ) ->
@@ -969,7 +1011,8 @@ manage_os_user_group( ConfigTable, State ) ->
 		key_not_found ->
 			ActualUsername = system_utils:get_user_name(),
 			?info_fmt( "No user-configured US operating-system username set "
-			  "for this server; runtime-detected: '~ts'.", [ ActualUsername ] ),
+				"for this server; runtime-detected: '~ts'.",
+				[ ActualUsername ] ),
 			ActualUsername;
 
 		{ value, Username } when is_list( Username ) ->
@@ -997,7 +1040,7 @@ manage_os_user_group( ConfigTable, State ) ->
 						[ Username, OtherUsername ] ),
 					OtherUsername
 					%throw( { inconsistent_os_us_user, OtherUsername,
-					%		 Username, ?us_username_key } )
+					%         Username, ?us_username_key } )
 
 			end
 
@@ -1058,7 +1101,7 @@ manage_registration_names( ConfigTable, State ) ->
 
 				?error_fmt( "Read invalid user-configured registration name "
 					"for this US configuration server (key: '~ts'): '~p'.",
-					 [ CfgRefNameKey, InvalidCfgServRegName ] ),
+					[ CfgRefNameKey, InvalidCfgServRegName ] ),
 
 				throw( { invalid_us_config_registration_name,
 						 InvalidCfgServRegName, CfgRefNameKey } )
@@ -1087,7 +1130,7 @@ get_registration_info( ConfigTable ) ->
 	Scope = ?default_registration_scope,
 
 	Res = case table:lookup_entry(
-		   ?us_config_server_registration_name_key, ConfigTable ) of
+			?us_config_server_registration_name_key, ConfigTable ) of
 
 		key_not_found ->
 			DefaultCfgServRegName = ?default_us_config_reg_name,
@@ -1203,8 +1246,8 @@ guess_app_base_directory( State ) ->
 	% (their own app base directory shall not selected here, even though they
 	% all respect the same structure), we want the US-Common one)
 	%
-	%NativeGuessedDir = file_utils:join(
-	%						[ CurrentDir , "..", "..", "us_common" ] ),
+	%NativeGuessedDir =
+	%   file_utils:join( [ CurrentDir , "..", "..", "us_common" ] ),
 
 	% Now we mostly consider that US-* applications will be run from their 'src'
 	% directory (typically thanks to their priv/bin/start-us-*-native-build.sh
@@ -1288,34 +1331,68 @@ manage_log_directory( ConfigTable, State ) ->
 
 
 
-% @doc Manages any user-configured configuration filename for webservers and
-% virtual hosting.
+% @doc Manages any user-defined configuration filename for US-Main services (ex:
+% sensors).
 %
--spec manage_web_config( us_config_table(), wooper:state() ) -> wooper:state().
-manage_web_config( ConfigTable, State ) ->
+-spec manage_us_main_config( us_config_table(), wooper:state() ) ->
+											wooper:state().
+manage_us_main_config( ConfigTable, State ) ->
 
-	MaybeBinWebFilename =
-			case get_us_web_configuration_filename( ConfigTable ) of
+	MaybeBinUSMainFilename =
+			case get_us_main_configuration_filename( ConfigTable ) of
 
 		{ ok, undefined } ->
-			?info( "No user-configured configuration filename for webservers "
-				   "and virtual hosting." ),
+			?info( "No user-defined US-Main configuration filename "
+				   "for sensors and all." ),
 			undefined;
 
-		% Read but not checked intentionally (to be done by the web
+		% Read but not checked intentionally (to be done by the main
 		% configuration server):
 		%
-		{ ok, WebFilename } ->
-			?info_fmt( "Obtained user-configured configuration filename for "
-				"webservers and virtual hosting: '~ts'.", [ WebFilename ] ),
-			text_utils:string_to_binary( WebFilename );
+		{ ok, USMainFilename } ->
+			?info_fmt( "Obtained user-defined US-Main configuration filename "
+				"for sensors and other services: '~ts'.", [ USMainFilename ] ),
+			text_utils:string_to_binary( USMainFilename );
 
 		{ error, DiagnosedReason } ->
 			basic_utils:throw_diagnosed( DiagnosedReason )
 
 	end,
 
-	setAttribute( State, web_config_filename, MaybeBinWebFilename ).
+	setAttribute( State, us_main_config_filename, MaybeBinUSMainFilename ).
+
+
+
+% @doc Manages any user-defined configuration filename for US-Web services
+% (webservers, virtual hosting, etc.).
+%
+-spec manage_us_web_config( us_config_table(), wooper:state() ) ->
+											wooper:state().
+manage_us_web_config( ConfigTable, State ) ->
+
+	MaybeBinUSWebFilename =
+			case get_us_web_configuration_filename( ConfigTable ) of
+
+		{ ok, undefined } ->
+			?info( "No user-defined US-Web configuration filename "
+				   "for webservers and virtual hosting." ),
+			undefined;
+
+		% Read but not checked intentionally (to be done by the web
+		% configuration server):
+		%
+		{ ok, USWebFilename } ->
+			?info_fmt( "Obtained user-defined US-Web configuration filename "
+				"for webservers and virtual hosting: '~ts'.",
+				[ USWebFilename ] ),
+			text_utils:string_to_binary( USWebFilename );
+
+		{ error, DiagnosedReason } ->
+			basic_utils:throw_diagnosed( DiagnosedReason )
+
+	end,
+
+	setAttribute( State, us_web_config_filename, MaybeBinUSWebFilename ).
 
 
 
@@ -1505,7 +1582,9 @@ to_string( State ) ->
 	text_utils:format( "US overall configuration server, ~ts, running in "
 		"the ~ts execution context, presumably on a VM using EPMD port #~B, "
 		"using configuration directory '~ts' and log directory '~ts', "
-		"having found as US-Web configuration file '~ts', knowing ~ts and ~ts",
+		"having found as US-Main configuration file '~ts' "
+		"and as US-Web one '~ts', knowing ~ts and ~ts",
 		[ RegString, ?getAttr(execution_context), ?getAttr(epmd_port),
 		  ?getAttr(config_base_directory), ?getAttr(log_directory),
-		  ?getAttr(web_config_filename), MainSrvString, WebSrvString ] ).
+		  ?getAttr(us_main_config_filename), ?getAttr(us_web_config_filename),
+		  MainSrvString, WebSrvString ] ).

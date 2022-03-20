@@ -104,8 +104,14 @@ init( _Args=[] ) ->
 terminate( Reason, _State=SchedServerPid ) when is_pid( SchedServerPid ) ->
 
 	trace_bridge:info_fmt( "Terminating the US-Common supervisor bridge for "
-		"the US scheduler (reason: ~w, scheduler: ~w).",
+		"the US-Common scheduler (reason: ~w, scheduler: ~w).",
 		[ Reason, SchedServerPid ] ),
 
-	% No synchronicity especially needed:
-	SchedServerPid ! delete.
+	% Synchronicity needed, otherwise a potential race condition exists, leading
+	% this process to be killed by its OTP supervisor instead of being normally
+	% stopped:
+	%
+	wooper:delete_synchronously_instance( SchedServerPid ),
+
+	trace_bridge:debug_fmt( "US-Common scheduler ~w terminated.",
+						   [ SchedServerPid ] ).

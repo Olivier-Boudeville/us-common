@@ -101,8 +101,14 @@ init( _Args=[] ) ->
 terminate( Reason, _BridgeState=CfgServerPid ) when is_pid( CfgServerPid ) ->
 
 	trace_bridge:info_fmt( "Terminating the US-Common supervisor bridge for "
-		"the US configuration server (reason: ~w, configuration server: ~w).",
-		[ Reason, CfgServerPid ] ),
+		"the US-Common configuration server (reason: ~w, "
+		"configuration server: ~w).", [ Reason, CfgServerPid ] ),
 
-	% No synchronicity especially needed:
-	CfgServerPid ! delete.
+	% Synchronicity needed, otherwise a potential race condition exists, leading
+	% this process to be killed by its OTP supervisor instead of being normally
+	% stopped:
+	%
+	wooper:delete_synchronously_instance( CfgServerPid ),
+
+	trace_bridge:debug_fmt( "US-Common configuration server ~w terminated.",
+						   [ CfgServerPid ] ).

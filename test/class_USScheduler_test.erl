@@ -19,7 +19,7 @@
 % Creation date: Saturday, March 28, 2020.
 
 
-% @doc Test of the <b>scheduling service</b>.
+% @doc Test of the US-Common <b>scheduling service</b>.
 -module(class_USScheduler_test).
 
 
@@ -40,9 +40,12 @@ operate_loop() ->
 	receive
 
 		{ operate, [ Pid, Name ] } ->
+
 			trace_utils:debug_fmt( "--> Actuator ~w just operated on behalf "
 								   "of ~ts.", [ self(), Name ] ),
+
 			Pid ! { operated, Name, self() },
+
 			operate_loop();
 
 		stop ->
@@ -89,8 +92,10 @@ wait_for_command_acks( Count ) ->
 
 		{ operated, Name, _AnyPid } ->
 			NewCount = Count - 1,
+
 			trace_utils:debug_fmt( "Received a command ack regarding ~ts; "
 				"still waiting for ~B of them.", [ Name, NewCount ] ),
+
 			wait_for_command_acks( NewCount )
 
 	end.
@@ -116,7 +121,7 @@ run() ->
 
 	SchedPid = class_USScheduler:new_link(),
 
-	FirstActuatorPid = spawn_link( ?MODULE, operate_loop, [] ),
+	FirstActuatorPid = spawn_link( ?MODULE, operate_loop, _Args=[] ),
 
 	test_facilities:display( "Scheduler ~w created, interacting with test "
 		"actuator ~w by registering new tasks.",

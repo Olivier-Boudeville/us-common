@@ -238,8 +238,8 @@ onWOOPERExitReceived( State, StoppedPid, _ExitType=normal ) ->
 onWOOPERExitReceived( State, CrashPid, ExitType ) ->
 
 	% Typically: "Received exit message '{{nocatch,
-	%						{wooper_oneway_failed,<0.44.0>,class_XXX,
-	%							FunName,Arity,Args,AtomCause}}, [...]}"
+	%   {wooper_oneway_failed,<0.44.0>,class_XXX,
+	%    FunName,Arity,Args,AtomCause}}, [...]}"
 
 	% Redundant information yet useful for console outputs:
 	?warning_fmt( "US Server ~w received and ignored following exit message "
@@ -295,7 +295,8 @@ unregister_name( State ) ->
 
 		undefined ->
 			cond_utils:if_defined( us_common_debug_registration, ?info(
-			  "No registration name available, no unregistering performed." ) ),
+				"No registration name available, "
+				"no unregistering performed." ) ),
 			State;
 
 		RegName ->

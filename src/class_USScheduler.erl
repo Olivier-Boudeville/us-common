@@ -519,7 +519,8 @@ register_task( UserTaskCommand, UserStartTime, UserPeriodicity, UserCount,
 	ReqPid = ?getSender(),
 	ActPid = vet_actuator_pid( UserActPid ),
 
-	?info_fmt( "Registering task whose command is '~p', whose declared start "
+	%?info_fmt
+	?warning_fmt( "Registering task whose command is '~p', whose declared start "
 		"time is ~w (hence to happen in ~ts), to be triggered ~ts with ~ts "
 		"on actuator ~w (whereas requester is ~w).",
 		[ TaskCommand, UserStartTime,
@@ -660,7 +661,8 @@ unregister_task( TaskId, State ) when is_integer( TaskId ) andalso TaskId > 0 ->
 		% Could not have been allocated:
 		true ->
 			?error_fmt( "Requested to unregister task ~B, which never existed "
-			  "(as the next task identifier is ~B).", [ TaskId, NextTaskId ] ),
+				"(as the next task identifier is ~B).",
+				[ TaskId, NextTaskId ] ),
 			{ { task_unregistration_failed, never_existed }, State };
 
 		false ->
@@ -687,8 +689,9 @@ unregister_task( TaskId, State ) when is_integer( TaskId ) andalso TaskId > 0 ->
 						not_found ->
 
 							?error_fmt( "Internal error: task id #~B not found "
-							  "in schedule plan, which ~ts", [ TaskId,
-							  schedule_plan_to_string( SchedulePlan,State ) ] ),
+								"in schedule plan, which ~ts",
+								[ TaskId, schedule_plan_to_string( SchedulePlan,
+																   State ) ] ),
 
 							NewState = setAttribute( State, task_table,
 													 ShrunkTaskTable ),
@@ -877,9 +880,10 @@ trigger_tasks( _TaskIds=[ TaskId | T ], ScheduleOffset, NowMs, SchedulePlan,
 
 	% next_schedule shall at least roughly match.
 
-	cond_utils:if_defined( us_common_debug_scheduling,
-		?debug_fmt( "Triggering task ~B: ~ts.",
-					[ TaskId, task_entry_to_string( TaskEntry, State ) ] ) ),
+	%cond_utils:if_defined( us_common_debug_scheduling,
+		%?debug_fmt
+		?warning_fmt( "Triggering task ~B: ~ts.",
+					[ TaskId, task_entry_to_string( TaskEntry, State ) ] ),% ),
 
 	launch_task( TaskEntry#task_entry.command,
 				 TaskEntry#task_entry.actuator_pid, State ),
@@ -952,6 +956,9 @@ launch_task( Cmd, ActuatorPid, State ) ->
 					[ Cmd, ActuatorPid ] ),
 		basic_utils:ignore_unused( State ) ),
 
+	?warning_fmt( "Sending command '~p' to actuator ~w.",
+				  [ Cmd, ActuatorPid ] ),
+
 	ActuatorPid ! Cmd.
 
 
@@ -971,9 +978,9 @@ get_main_scheduler() ->
 
 	% Supposing here that no ongoing launch is happening (no race condition):
 	%case naming_utils:wait_for_registration_of( _RegName=?registration_name,
-	%											LookupScope ) of
+	%                                            LookupScope ) of
 	case naming_utils:is_registered(
-		   _RegName=?us_common_scheduler_registration_name, LookupScope ) of
+			_RegName=?us_common_scheduler_registration_name, LookupScope ) of
 
 		not_registered ->
 			wooper:return_static( undefined );
@@ -997,7 +1004,8 @@ get_main_scheduler() ->
 register_task_schedule( TaskId, TaskEntry, ScheduleOffset, DurationFromNow,
 						State ) ->
 
-	?debug_fmt( "Registering task #~B for schedule offset ~B (duration from "
+	%?debug_fmt
+	?warning_fmt( "Registering task #~B for schedule offset ~B (duration from "
 		"now: ~ts): ~ts.", [ TaskId, ScheduleOffset,
 			time_utils:duration_to_string( DurationFromNow ),
 			task_entry_to_string( TaskEntry, State ) ] ),
@@ -1279,7 +1287,7 @@ vet_task_command( UserTaskCommand=Oneway, _State ) when is_atom( Oneway ) ->
 % and they cover all cases:
 %
 vet_task_command( UserTaskCommand={ Oneway, _Args }, _State )
-  when is_atom( Oneway ) ->
+							when is_atom( Oneway ) ->
 	UserTaskCommand;
 
 vet_task_command( UserTaskCommand, State ) ->
@@ -1567,18 +1575,18 @@ task_entry_to_string( #task_entry{ id=_TaskId,
 					% First and last are the same here:
 					MaybeStartOffset = MaybeLastOffset,
 					text_utils:format(
-					  "already executed a single time, at #~B (~ts)",
-					  [ StartOffset,
-						get_timestamp_string_for( StartOffset, State ) ] );
+						"already executed a single time, at #~B (~ts)",
+						[ StartOffset,
+						  get_timestamp_string_for( StartOffset, State ) ] );
 
 				% Expected higher than 1:
 				C when C > 1 ->
 					text_utils:format( "already executed ~B times, the "
-					  "first at #~B (~ts) and the last at #~B (~ts)",
-					  [ C, StartOffset,
-						get_timestamp_string_for( StartOffset, State ),
-						MaybeLastOffset,
-						get_timestamp_string_for( MaybeLastOffset, State ) ] )
+						"first at #~B (~ts) and the last at #~B (~ts)",
+						[ C, StartOffset,
+						  get_timestamp_string_for( StartOffset, State ),
+						  MaybeLastOffset,
+						  get_timestamp_string_for( MaybeLastOffset, State ) ] )
 
 			end
 
@@ -1590,12 +1598,11 @@ task_entry_to_string( #task_entry{ id=_TaskId,
 
 	CountStr = schedule_count_to_string( Count ),
 
-	text_utils:format(
-	  "task to trigger command '~p' on actuator ~w, ~ts, "
-	  "to be scheduled next at offset #~B (~ts) according to ~ts, and for ~ts; "
-	  "it was declared by ~w",
-	  [ Cmd, ActuatorPid, ExecStr, NextSchedOffset, NextSchedTime, PeriodStr,
-		CountStr, RequesterPid ] ).
+	text_utils:format( "task to trigger command '~p' on actuator ~w, ~ts, "
+		"to be scheduled next at offset #~B (~ts) according to ~ts, "
+		"and for ~ts; it was declared by ~w",
+		[ Cmd, ActuatorPid, ExecStr, NextSchedOffset, NextSchedTime, PeriodStr,
+		  CountStr, RequesterPid ] ).
 
 
 

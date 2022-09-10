@@ -82,7 +82,7 @@ endif
 
 # PROJECT_SHORT_NAME should be defined on a per-project basis.
 ifndef PROJECT_SHORT_NAME
- PROJECT_SHORT_NAME := us_common
+	PROJECT_SHORT_NAME := us_common
 endif
 
 
@@ -93,7 +93,7 @@ endif
 
 
 # The uniquely-defined version of this layer, for all uses, including rebar:
-US_COMMON_VERSION := 0.0.8
+US_COMMON_VERSION := 0.0.9
 
 
 # PROJECT_VERSION should be defined on a per-project basis:

@@ -26,7 +26,7 @@ Technical Manual of the ``US-Common`` Layer
 
 
 :raw-html:`<center><img src="us-common-title.png" width="40%"></img>`
-:raw-latex:`\centering \includegraphics[scale=1.1]{us-common-title.png}`
+:raw-latex:`\begin{center} \includegraphics[scale=1.1]{us-common-title.png} \end{center}`
 
 
 

@@ -364,8 +364,8 @@ init_common( State ) ->
 										 { timer_table, EmptyTable },
 										 { next_task_id, 1 } ] ),
 
-	trace_bridge:info_fmt( "Scheduler ready, at ~ts.",
-						   [ get_current_timestamp_string( ReadyState ) ] ),
+	trace_bridge:notice_fmt( "Scheduler ready, at ~ts.",
+							 [ get_current_timestamp_string( ReadyState ) ] ),
 
 	ReadyState.
 
@@ -880,10 +880,9 @@ trigger_tasks( _TaskIds=[ TaskId | T ], ScheduleOffset, NowMs, SchedulePlan,
 
 	% next_schedule shall at least roughly match.
 
-	%cond_utils:if_defined( us_common_debug_scheduling,
-		%?debug_fmt
-		?warning_fmt( "Triggering task ~B: ~ts.",
-					[ TaskId, task_entry_to_string( TaskEntry, State ) ] ),% ),
+	cond_utils:if_defined( us_common_debug_scheduling,
+		?debug_fmt( "Triggering task ~B: ~ts.",
+					[ TaskId, task_entry_to_string( TaskEntry, State ) ] ) ),
 
 	launch_task( TaskEntry#task_entry.command,
 				 TaskEntry#task_entry.actuator_pid, State ),

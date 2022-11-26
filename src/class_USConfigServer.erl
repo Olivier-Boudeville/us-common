@@ -758,7 +758,7 @@ perform_setup( BinCfgDir, State ) ->
 
 	end,
 
-	?info_fmt( "Constructed: ~ts.", [ to_string( ReadyState ) ] ),
+	?notice_fmt( "Constructed: ~ts.", [ to_string( ReadyState ) ] ),
 
 	% Done rather late on purpose, so that the existence of that file can be
 	% seen as a sign that the initialisation went well (used by

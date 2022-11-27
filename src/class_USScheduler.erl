@@ -49,16 +49,6 @@
 
 
 
-% Shorthands:
-
--type ustring() :: text_utils:ustring().
-
--type ms_duration() :: time_utils:ms_duration().
-
-
-% No shorthand, as too ambiguous to be used here:
-%-type milliseconds() :: unit_utils:milliseconds().
-
 % To avoid mistakes between amounts of milliseconds:
 
 %-type ms_since_year_0() :: unit_utils:milliseconds().
@@ -74,31 +64,31 @@
 
 -type start_time() ::
 
-		% As soon as possible:
-		'asap'
+	% As soon as possible:
+	'asap'
 
-		% When relevant/applicable (flexible start):
-	  | 'flexible'
+	% When relevant/applicable (flexible start):
+  | 'flexible'
 
-		% Preferably after this specified duration from receiving:
-	  | dhms_duration()
-	  | unit_utils:seconds() % (not milliseconds)
+	% Preferably after this specified duration from receiving:
+  | dhms_duration()
+  | seconds() % (not milliseconds)
 
-		% Preferably at this specified (future) time:
-	  | timestamp().
+	% Preferably at this specified (future) time:
+  | timestamp().
 % Specifies the start time of a task scheduling.
 
 
 
 -type user_periodicity() ::
 
-		% Just to be executed once (one shot):
-		'once'
+	% Just to be executed once (one shot):
+	'once'
 
-		% Actual period:
-	  | dhms_duration()
+	% Actual period:
+  | dhms_duration()
 
-	  | unit_utils:seconds().
+  | seconds().
 % Time between two schedulings of a task, as expressed by the user.
 % Note that user periodicities are significantly coarser than internal ones.
 
@@ -110,7 +100,7 @@
 % than internal ones.
 
 
--type schedule_count() :: 'unlimited' | basic_utils:count().
+-type schedule_count() :: 'unlimited' | count().
 % The number of times a task shall be scheduled.
 
 
@@ -130,7 +120,7 @@
 			| { 'task_unregistration_failed', basic_utils:error_reason() }.
 
 
--type task_id() :: basic_utils:count().
+-type task_id() :: count().
 % Identifier of a task, as assigned by a scheduler.
 
 
@@ -309,6 +299,21 @@
 
 % The timer module is used, rather than a utility process using for example
 % receive/after, presumably for a better accuracy.
+
+
+
+% Shorthands:
+
+-type count() :: basic_utils:count().
+
+-type ustring() :: text_utils:ustring().
+
+-type ms_duration() :: time_utils:ms_duration().
+-type seconds() :: unit_utils:seconds().
+
+% No shorthand, as too ambiguous to be used here:
+%-type milliseconds() :: unit_utils:milliseconds().
+
 
 
 
@@ -519,8 +524,7 @@ register_task( UserTaskCommand, UserStartTime, UserPeriodicity, UserCount,
 	ReqPid = ?getSender(),
 	ActPid = vet_actuator_pid( UserActPid ),
 
-	%?info_fmt
-	?warning_fmt( "Registering task whose command is '~p', whose declared start "
+	?info_fmt( "Registering task whose command is '~p', whose declared start "
 		"time is ~w (hence to happen in ~ts), to be triggered ~ts with ~ts "
 		"on actuator ~w (whereas requester is ~w).",
 		[ TaskCommand, UserStartTime,
@@ -639,8 +643,8 @@ unregisterTasks( State, TaskIds ) when is_list( TaskIds ) ->
 
 	{ RevOutcomes, NewState } = lists:foldl(
 		fun( TaskId, _Acc={ AccOutcomes, AccState } ) ->
-				{ Outcome, NewAccState } = unregister_task( TaskId, AccState ),
-				{ [ Outcome | AccOutcomes ], NewAccState }
+			{ Outcome, NewAccState } = unregister_task( TaskId, AccState ),
+			{ [ Outcome | AccOutcomes ], NewAccState }
 		end,
 		_Acc0={ [], State },
 		_List=TaskIds ),
@@ -734,30 +738,21 @@ timerTrigger( State, ScheduleOffset ) ->
 
 	NowMs = get_current_schedule_offset( State ),
 
-	DiffMs = NowMs - ScheduleOffset,
-
 	cond_utils:if_defined( us_common_debug_scheduling,
-		?debug_fmt( "Timer trigger at schedule offset ~w, for an expected one "
-			"of ~w: delayed of ~ts.", [ NowMs, ScheduleOffset,
-				time_utils:duration_to_string( DiffMs ) ] ) ),
+		begin
+			% As long as a drift is below this threshold, we do not worry:
+			OffsetThreshold = 250,
 
-	% As long as a drift is below this threshold, we do not worry:
-	OffsetThreshold = 250,
-
-	case erlang:abs( DiffMs ) > OffsetThreshold of
-
-		true ->
-			?debug_fmt( "Triggered for offset #~B (~ts), while being at #~B "
-				"(~ts), hence with a signed drift of ~ts (late if positive).",
-				[ ScheduleOffset,
-				  get_timestamp_string_for( ScheduleOffset, State ), NowMs,
-				  get_timestamp_string_for( NowMs, State ),
-				  time_utils:duration_to_string( NowMs - ScheduleOffset ) ] );
-
-		false ->
-			ok
-
-	end,
+			erlang:abs( DiffMs ) > OffsetThreshold andalso
+				?debug_fmt( "Triggered for offset #~B (~ts), while being at "
+					"#~B (~ts), hence with a signed drift of ~ts "
+					"(late if positive).",
+					[ ScheduleOffset,
+					  get_timestamp_string_for( ScheduleOffset, State ), NowMs,
+					  get_timestamp_string_for( NowMs, State ),
+					  time_utils:duration_to_string(
+						NowMs - ScheduleOffset ) ] )
+		end ),
 
 	TimerTable = ?getAttr(timer_table),
 
@@ -1060,7 +1055,7 @@ insert_task_at( TaskId, ScheduleOffset, DurationFromNow, _SchedulePlan=[],
 % Too early in plan, continue:
 insert_task_at( TaskId, ScheduleOffset, DurationFromNow,
 				_SchedulePlan=[ H={ Off, _Ids } | T ], AccPlan, TimeTable )
-  when Off < ScheduleOffset ->
+										when Off < ScheduleOffset ->
 	insert_task_at( TaskId, ScheduleOffset, DurationFromNow, T,
 					[ H | AccPlan ], TimeTable );
 

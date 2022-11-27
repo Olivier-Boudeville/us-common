@@ -7,7 +7,9 @@
 declared-types-in-*.txt
 .eunit
 erl_crash.dump
-doc/index.html
+
+doc/us-common-technical-manual-english.html
+doc/us-common-technical-manual-english.rst
 doc/mathjax
 
 # For Emacs temporary files:

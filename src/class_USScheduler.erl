@@ -950,9 +950,6 @@ launch_task( Cmd, ActuatorPid, State ) ->
 					[ Cmd, ActuatorPid ] ),
 		basic_utils:ignore_unused( State ) ),
 
-	?warning_fmt( "Sending command '~p' to actuator ~w.",
-				  [ Cmd, ActuatorPid ] ),
-
 	ActuatorPid ! Cmd.
 
 

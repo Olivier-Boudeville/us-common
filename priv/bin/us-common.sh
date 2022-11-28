@@ -77,7 +77,7 @@ read_us_config_file()
 
 		echo "No US configuration directory specified on the command-line, searching it through standard paths."
 
-		# Otherwise (not set in the command-line; the general case) try to use
+		# Otherwise (not set on the command-line; the general case), try to use
 		# the default US configuration directory for all US-related services; we
 		# try to apply in this script exactly the same rules as
 		# class_USConfigServer, in order to always select the same actual
@@ -86,6 +86,7 @@ read_us_config_file()
 
 		if [ -z "${XDG_CONFIG_HOME}" ]; then
 
+			# May resolve to /root, if run through sudo:
 			base_path="$HOME/.config"
 
 		else

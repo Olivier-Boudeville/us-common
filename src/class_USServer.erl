@@ -19,6 +19,7 @@
 % Author: Olivier Boudeville [olivier (dot) boudeville (at) esperide (dot) com]
 % Creation date: Saturday, June 28, 2014.
 
+
 % @doc The <b>mother class</b> of all US servers.
 -module(class_USServer).
 
@@ -66,8 +67,8 @@
 
 	% Attempt also to keep this millisecond count not too large:
 	{ server_start, time_utils:ms_monotonic(),
-	 "a point of time reference for later duration measurements, in VM "
-	 "monotonic time (milliseconds)" },
+	  "a point of time reference for later duration measurements, in VM "
+	  "monotonic time (milliseconds)" },
 
 	% As Gregorian conventions are used for conversions (from a given measured
 	% duration, obtained through monotonic times), adding this value allows,
@@ -75,19 +76,19 @@
 	% timestamp:
 	%
 	{ server_gregorian_start, ms_since_year_0(),
-	 "the internal system time at which this server was started "
-	 "since year 0, to facilitate timestamp conversions to/from user time" },
+	  "the internal system time at which this server was started "
+	  "since year 0, to facilitate timestamp conversions to/from user time" },
 
 	% The reference to tell whether a server shall be registered (regardless of
 	% the scope):
 	%
 	{ registration_name, maybe( registration_name() ),
-	 "records the name of this server, as possibly registered in the "
+	  "records the name of this server, as possibly registered in the "
 	  "naming service" },
 
 	{ registration_scope, maybe( registration_scope() ),
-	 "records the scope of the registration of this server in the naming "
-	 "service" } ] ).
+	  "records the scope of the registration of this server in the naming "
+	  "service" } ] ).
 
 
 

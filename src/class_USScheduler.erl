@@ -53,13 +53,8 @@
 
 %-type ms_since_year_0() :: unit_utils:milliseconds().
 
-
 -type ms_since_start() :: unit_utils:milliseconds().
 % Since start of this scheduler (in monotonic time).
-
-
--type timestamp() :: time_utils:timestamp().
--type dhms_duration() :: time_utils:dhms_duration().
 
 
 -type start_time() ::
@@ -90,7 +85,9 @@
 
   | seconds().
 % Time between two schedulings of a task, as expressed by the user.
-% Note that user periodicities are significantly coarser than internal ones.
+%
+% Note that user periodicities are significantly coarser (second-based) than
+% internal ones (millisecond-based).
 
 
 -type periodicity() :: maybe( ms_duration() ).
@@ -144,6 +141,7 @@
 % designed to be rather small).
 
 
+% Describes a task to schedule:
 -record( task_entry, {
 
 	% Unique identifier of this task:
@@ -194,7 +192,8 @@
 
 
 -type schedule_plan() :: [ schedule_pair() ].
-% Schedule pairs, ordered from closest future to most remote one.
+% Schedule pairs, ordered from closest future (sooner) to most remote one
+% (later).
 
 
 % The class-specific attributes:
@@ -207,7 +206,7 @@
 	{ timer_table, timer_table(), "a table registering live timers" },
 
 	% Allows also to count all tasks that have been submitted:
-	{ next_task_id, task_id(), "identifier of the next registered task" } ] ).
+	{ next_task_id, task_id(), "identifier of the next task to register" } ] ).
 
 
 
@@ -238,9 +237,9 @@
 %
 % On task commands.
 %
-% We preferred to limit the ability of a scheduler only to sending messages to
+% We preferred to limit the ability of a scheduler only to sending *messages* to
 % whichever process needed (ex: no MFA direct calls), for a better separation of
-% concerns.
+% concerns / state management.
 %
 %
 % On time.
@@ -249,7 +248,7 @@
 % by the system time. See http://erlang.org/doc/apps/erts/time_correction.html
 % for more information.
 %
-% Timestamps (ex: to designate Sunday, March 22, 2020 at noon) are converted
+% Timestamps (e.g. to designate Sunday, March 22, 2020 at noon) are converted
 % into internal time offsets whenever a scheduler registers a task.
 %
 % As a result, correct periodicities will be enforced (ex: really a 1-hour
@@ -258,10 +257,10 @@
 % with a time offset (ex: at 1 PM instead of noon). Working with a monotonic,
 % UTC (Universal Coordinated Time)-like time is thus intentional.
 %
-% Due to some external event (ex: system overload or suspension), task deadlines
-% may be missed, in which case they will be rescheduled in a row at a faster
-% pace on a best-effort basis (rather than being skipped as a whole). As a
-% result, the number of schedulings should match the expected one, yet the
+% Due to some external event (e.g. system overload or suspension), task
+% deadlines may be missed, in which case they will be rescheduled in a row at a
+% faster pace on a best-effort basis (rather than being skipped as a whole). As
+% a result, the number of schedulings should match the expected one, yet the
 % average periodicities may not always be preserved (trade-off: not loosing
 % schedulings, yet preparing one scheduling from the previous one, hence trying
 % to preserve specified periodicity).
@@ -273,15 +272,15 @@
 % All internal durations are relative to the start time of this scheduler
 % (rather than for example to year 0 of the Gregorian calendar, or to the EPOCH,
 % i.e. 1/1/1970 at 00:00:00), as we prefer smaller durations (offsets) than
-% "absolute" ones; we used the 'server_start' attribute and monotonic time for
-% that.
+% "absolute" ones; we used the 'server_start' class_USServer-inherited attribute
+% and monotonic time for that.
 %
-% For any time unit TU (ex: TU=millisecond here):
+% For any time unit TU (e.g. TU=millisecond here):
 % erlang:monotonic_time(TU) + erlang:time_offset(TU) = erlang:system_time(TU).
 %
-% This scheduler uses internally monotonic time, and, at its boundaries (ex: at
-% task submission), whenever having to deal with absolute timestamps, these are
-% immediately converted to internal conventions (ex: a task deadline is to be
+% This scheduler uses internally monotonic time; at its boundaries (e.g. at task
+% submission), whenever having to deal with absolute timestamps, these are
+% immediately converted to internal conventions (e.g. a task deadline is to be
 % expressed by the user in system time, and will be converted directly into a
 % monotonic timestamp when received; scheduling reports proceed the other way
 % round).
@@ -290,13 +289,13 @@
 % computer itself is suspended), the monotonic time will be suspended as well,
 % unless the --enable-prefer-elapsed-monotonic-time-during-suspend command-line
 % argument was specified when building Erlang/OTP (possibly then inducing a
-% performance penalty).
+% performance penalty). We do not expect servers to be suspended.
 %
 % All kinds of internal system times (notably the VM one) are in UTC, so
 % depending on time zones and DST, hour-based offsets apply. At the interfaces
 % between the scheduler and the user, universal time is converted into local
 % time, and the other way round.
-
+%
 % The timer module is used, rather than a utility process using for example
 % receive/after, presumably for a better accuracy.
 
@@ -308,12 +307,17 @@
 
 -type ustring() :: text_utils:ustring().
 
--type ms_duration() :: time_utils:ms_duration().
 -type seconds() :: unit_utils:seconds().
 
 % No shorthand, as too ambiguous to be used here:
 %-type milliseconds() :: unit_utils:milliseconds().
 
+-type timestamp() :: time_utils:timestamp().
+-type dhms_duration() :: time_utils:dhms_duration().
+-type ms_duration() :: time_utils:ms_duration().
+
+-type registration_name() :: naming_utils:registration_name().
+-type registration_scope() :: naming_utils:registration_scope().
 
 
 
@@ -346,8 +350,8 @@ construct( State, SchedulerName ) ->
 
 
 % @doc Constructs a (named, registered with specified scope) US scheduler.
--spec construct( wooper:state(), ustring(), naming_utils:registration_name(),
-				 naming_utils:registration_name() ) -> wooper:state().
+-spec construct( wooper:state(), ustring(), registration_name(),
+				 registration_scope() ) -> wooper:state().
 construct( State, SchedulerName, RegistrationName, RegistrationScope ) ->
 
 	% First the direct mother classes, then this class-specific actions:
@@ -382,7 +386,7 @@ destruct( State ) ->
 
 	?info_fmt( "Deleting ~ts", [ to_string( State ) ] ),
 
-	% Cancelling all still live timers, while resisting to any error:
+	% Cancelling all still-live timers, while resisting to any error:
 	[ timer:cancel( TimerRef )
 		|| TimerRef <- table:values( ?getAttr(timer_table) ) ],
 
@@ -393,11 +397,11 @@ destruct( State ) ->
 % Method section.
 
 
-% @doc Triggers immediately specified one-shot task: specified command will be
-% triggered at once, a single time, being assigned to actuator process.
+% @doc Triggers immediately the specified one-shot task: the specified command
+% will be triggered at once, a single time, being assigned to actuator process.
 %
 % Returns either 'task_done' if the task was done on the fly (hence is already
-% triggered, and no task identifier applies), or {'task_registered', TaskId} if
+% triggered; then no task identifier applies), or {'task_registered', TaskId} if
 % it is registered for a later trigger (then its assigned task identifier is
 % returned).
 %
@@ -414,18 +418,18 @@ triggerOneshotTask( State, UserTaskCommand, UserActPid ) ->
 
 
 
-% @doc Registers specified one-shot task: specified command will be executed
-% once, at specified time, as assigned to requesting and specified actuator
-% process.
+% @doc Registers the specified one-shot task: the specified command will be
+% executed once, at the specified time, as assigned to requesting and specified
+% actuator process.
 %
 % Returns either 'task_done' if the task was done on the fly (hence is already
-% triggered, and no task identifier applies), or {'task_registered', TaskId} if
+% triggered; then no task identifier applies), or {'task_registered', TaskId} if
 % it is registered for a later trigger (then its assigned task identifier is
 % returned).
 %
-% Note: if the deadline is specified in absolute terms (ex: as {{2020,3,22},
+% Note: if the deadline is specified in absolute terms (e.g. as {{2020,3,22},
 % {16,1,48}}), the conversion to internal time will be done immediately (at task
-% submission time), resulting in any system time change (ex: DST) not being
+% submission time), resulting in any system time change (e.g. DST) not being
 % taken into account (as the respect of periodicities is preferred over the one
 % of literal timestamps).
 %
@@ -440,12 +444,12 @@ registerOneshotTask( State, UserTaskCommand, UserStartTime, UserActPid ) ->
 
 
 
-% @doc Registers specified task: specified command will be executed starting
-% immediately (in a flexible manner), at specified user periodicity and
-% indefinitely, being assigned to the requesting process (as actuator).
+% @doc Registers the specified task: the specified command will be executed
+% starting immediately (in a flexible manner), at the specified user periodicity
+% and indefinitely, being assigned to the requesting process (as actuator).
 %
 % Returns {'task_registered', TaskId}, where TaskId is its assigned task
-% identifier is returned).
+% identifier.
 %
 -spec registerTask( wooper:state(), task_command(), user_periodicity() ) ->
 							request_return( task_registration_outcome() ).
@@ -459,15 +463,15 @@ registerTask( State, UserTaskCommand, UserPeriodicity ) ->
 
 
 
-% @doc Registers specified task: specified command will be executed starting
-% immediately (in a flexible manner), at specified user periodicity, for
-% specified number of times, being assigned to the requesting process (as
-% actuator).
+% @doc Registers the specified task: the specified command will be executed
+% starting immediately (in a flexible manner), at the specified user
+% periodicity, for the specified number of times, being assigned to the
+% requesting process (as actuator).
 %
 % Returns either 'task_done' if the task was done on the fly (hence is already
-% triggered, and no task identifier applies since it is fully completed), or
-% {'task_registered', TaskId} if it is registered for a later trigger (then its
-% assigned task identifier is returned).
+% triggered, in a case where no task identifier applies since it is fully
+% completed), or {'task_registered', TaskId} if it is registered for a later
+% trigger (then its assigned task identifier is returned).
 %
 -spec registerTask( wooper:state(), task_command(), user_periodicity(),
 			schedule_count() ) -> request_return( task_registration_outcome() ).
@@ -481,20 +485,21 @@ registerTask( State, UserTaskCommand, UserPeriodicity, UserCount ) ->
 
 
 
-% @doc Registers specified task: specified command will be executed starting
-% from specified time, at specified user periodicity, for specified number of
-% times, being assigned to requesting and specified actuator process.
+% @doc Registers the specified task: the specified command will be executed
+% starting from the specified time, at the specified user periodicity, for the
+% specified number of times, being assigned to requesting and specified actuator
+% process.
 %
 % Returns either 'task_done' if the task was done on the fly (hence is already
-% triggered, and no task identifier applies since it is fully completed), or
-% {'task_registered', TaskId} if it is registered for a later trigger (then its
-% assigned task identifier is returned).
+% triggered, in a case where no task identifier applies since it is fully
+% completed), or {'task_registered', TaskId} if it is registered for a later
+% trigger (then its assigned task identifier is returned).
 %
-% Note: if the deadline is specified in absolute terms (ex: as
-% {{2020,3,22}, {16,1,48}}), the conversion to internal time will be done
-% immediately (at task submission time), resulting in any future system time
-% change (ex: DST) not being taken into account at this level (as the respect of
-% periodicities is preferred over the one of literal timestamps).
+% Note: if the deadline is specified in absolute terms (e.g. as {{2020,3,22},
+% {16,1,48}}), the conversion to internal time will be done immediately (at task
+% submission time), resulting in any future system time change (e.g. DST) not
+% being taken into account at this level (as the respect of periodicities is
+% preferred over the one of literal timestamps).
 %
 -spec registerTask( wooper:state(), task_command(), start_time(),
 					user_periodicity(), schedule_count(), actuator_pid() ) ->
@@ -543,10 +548,10 @@ register_task( UserTaskCommand, UserStartTime, UserPeriodicity, UserCount,
 			case MaybePeriodicity of
 
 				undefined ->
-					% Just to execute once (implied and checked: Count=1).
+					% Just to be executed once (implied and checked: Count=1).
 					%
 					% Not even recording it then, it was just fire and forget:
-					% not task entry, just updating the task count.
+					% no task entry, just updating the task count.
 					%
 					{ task_done, incrementAttribute( State, next_task_id ) };
 
@@ -563,7 +568,7 @@ register_task( UserTaskCommand, UserStartTime, UserPeriodicity, UserCount,
 						NewCount ->
 							% The count is thus now still 1 or more, or
 							% unlimited; in all cases a next scheduling will
-							% happen and must be recorded:
+							% happen, and must be recorded:
 
 							TaskId = ?getAttr(next_task_id),
 							NowMs = get_current_schedule_offset( State ),
@@ -617,7 +622,7 @@ register_task( UserTaskCommand, UserStartTime, UserPeriodicity, UserCount,
 
 
 
-% @doc Unregisters specified task, based on its identifier.
+% @doc Unregisters the specified task, based on its identifier.
 %
 % Returns either 'task_unregistered' if the operation succeeded, or
 % 'task_already_done' if the task was already fully done, or
@@ -627,11 +632,14 @@ register_task( UserTaskCommand, UserStartTime, UserPeriodicity, UserCount,
 						request_return( task_unregistration_outcome() ).
 unregisterTask( State, TaskId ) when is_integer( TaskId ) andalso TaskId > 0 ->
 	{ Outcome, NewState } = unregister_task( TaskId, State ),
-	wooper:return_state_result( NewState, Outcome ).
+	wooper:return_state_result( NewState, Outcome );
+
+unregisterTask( _State, Other ) ->
+	throw( { invalid_unregister_task_id, Other } ).
 
 
 
-% @doc Unregisters specified tasks, based on their identifier.
+% @doc Unregisters the specified tasks, based on their identifier.
 %
 % Returns, in order, for each task either 'task_unregistered' if the operation
 % succeeded, 'task_already_done' if the task was already fully done, or
@@ -649,7 +657,10 @@ unregisterTasks( State, TaskIds ) when is_list( TaskIds ) ->
 		_Acc0={ [], State },
 		_List=TaskIds ),
 
-	wooper:return_state_result( NewState, lists:reverse( RevOutcomes ) ).
+	wooper:return_state_result( NewState, lists:reverse( RevOutcomes ) );
+
+unregisterTasks( _State, Other ) ->
+	throw( { invalid_unregister_task_ids, Other } ).
 
 
 
@@ -722,48 +733,50 @@ unregister_task( TaskId, State ) when is_integer( TaskId ) andalso TaskId > 0 ->
 unregister_task( TaskId, State ) ->
 	?error_fmt( "Task unregistering failed, invalid task identifier: '~p'.",
 				[ TaskId ] ),
-	{ { task_unregistration_failed, invalid_task_id }, State }.
+	{ { task_unregistration_failed, { invalid_task_id, TaskId } }, State }.
 
 
 
-% @doc Triggers specified scheduling.
+% @doc Triggers the specified scheduling.
 %
-% Expected to be called through a timer having set beforehand.
+% Expected to be called through a timer having been set beforehand.
 %
 % Note: a reference() or any other non-guessable element could be used to avoid
 % any process to be able to interfere by triggering schedulings.
 %
 -spec timerTrigger( wooper:state(), schedule_offset() ) -> oneway_return().
-timerTrigger( State, ScheduleOffset ) ->
+timerTrigger( State, ScheduleOffsetMs ) ->
 
 	NowMs = get_current_schedule_offset( State ),
 
 	cond_utils:if_defined( us_common_debug_scheduling,
 		begin
-			% As long as a drift is below this threshold, we do not worry:
-			OffsetThreshold = 250,
+			% As long as a drift is below this millisecond threshold, we do not
+			% worry:
+			%
+			OffsetThresholdMs = 250,
 
-			erlang:abs( DiffMs ) > OffsetThreshold andalso
+			erlang:abs( DiffMs ) > OffsetThresholdMs andalso
 				?debug_fmt( "Triggered for offset #~B (~ts), while being at "
 					"#~B (~ts), hence with a signed drift of ~ts "
 					"(late if positive).",
-					[ ScheduleOffset,
-					  get_timestamp_string_for( ScheduleOffset, State ), NowMs,
-					  get_timestamp_string_for( NowMs, State ),
+					[ ScheduleOffsetMs,
+					  get_timestamp_string_for( ScheduleOffsetMs, State ),
+					  NowMs, get_timestamp_string_for( NowMs, State ),
 					  time_utils:duration_to_string(
-						NowMs - ScheduleOffset ) ] )
+						NowMs - ScheduleOffsetMs ) ] )
 		end ),
 
 	TimerTable = ?getAttr(timer_table),
 
 	% Resorb any pending schedule:
-	{ NewPlan, NewTimerTable, NewTaskTable } = perform_schedule( ScheduleOffset,
-		NowMs, ?getAttr(schedule_plan), TimerTable, ?getAttr(task_table),
-		State ),
+	{ NewPlan, NewTimerTable, NewTaskTable } = perform_schedule(
+		ScheduleOffsetMs, NowMs, ?getAttr(schedule_plan), TimerTable,
+		?getAttr(task_table), State ),
 
 	cond_utils:if_defined( us_common_debug_scheduling,
 		?debug_fmt( "After having being triggered for #~B, went "
-			"from ~ts to ~ts", [ ScheduleOffset,
+			"from ~ts to ~ts", [ ScheduleOffsetMs,
 				timer_table_to_string( TimerTable, State ),
 				timer_table_to_string( NewTimerTable, State ) ] ) ),
 
@@ -781,35 +794,36 @@ timerTrigger( State, ScheduleOffset ) ->
 -spec perform_schedule( schedule_offset(), schedule_offset(), schedule_plan(),
 						timer_table(), task_table(), wooper:state() ) ->
 							{ schedule_plan(), timer_table(), task_table() }.
-perform_schedule( ScheduleOffset, NowMs, _SchedulePlan=[ { Off, TaskIds } | T ],
-				  TimerTable, TaskTable, State ) when Off < ScheduleOffset ->
+perform_schedule( ScheduleOffsetMs, NowMs,
+				  _SchedulePlan=[ { OffMs, TaskIds } | T ], TimerTable,
+				  TaskTable, State ) when OffMs < ScheduleOffsetMs ->
 
 	?error_fmt( "While scheduling #~B (~ts), found late offset #~B (~ts), "
 		"triggering its delayed tasks first: ~w.",
-		[ ScheduleOffset, get_timestamp_string_for( ScheduleOffset, State ),
-		  Off, get_timestamp_string_for( Off, State ), TaskIds ] ),
+		[ ScheduleOffsetMs, get_timestamp_string_for( ScheduleOffsetMs, State ),
+		  OffMs, get_timestamp_string_for( OffMs, State ), TaskIds ] ),
 
-	% Using Off rather than ScheduleOffset here:
+	% Using OffMs rather than ScheduleOffsetMs here:
 	{ NewPlan, NewTimerTable, NewTaskTable } = trigger_tasks( TaskIds,
-		Off, NowMs, _NewerPlan=T, TimerTable, TaskTable, State ),
+		OffMs, NowMs, _NewerPlan=T, TimerTable, TaskTable, State ),
 
 	% Drops this offset entry:
-	perform_schedule( ScheduleOffset, NowMs, NewPlan, NewTimerTable,
+	perform_schedule( ScheduleOffsetMs, NowMs, NewPlan, NewTimerTable,
 					  NewTaskTable, State );
 
 
 % Matching offsets:
-perform_schedule( ScheduleOffset, NowMs,
-				  _SchedulePlan=[ { ScheduleOffset, TaskIds } | T ],
+perform_schedule( ScheduleOffsetMs, NowMs,
+				  _SchedulePlan=[ { ScheduleOffsetMs, TaskIds } | T ],
 				  TimerTable, TaskTable, State ) ->
 
 	%?debug_fmt( "Normal scheduling of #~B (~ts), triggering its tasks: ~w.",
-	%   [ ScheduleOffset, get_timestamp_string_for( ScheduleOffset, State ),
+	%   [ ScheduleOffsetMs, get_timestamp_string_for( ScheduleOffsetMs, State ),
 	%     TaskIds ] ),
 
 	% Dropping current offset:
 	{ NewPlan, NewTimerTable, NewTaskTable } = trigger_tasks( TaskIds,
-		ScheduleOffset, NowMs, _NewerPlan=T, TimerTable, TaskTable, State ),
+		ScheduleOffsetMs, NowMs, _NewerPlan=T, TimerTable, TaskTable, State ),
 
 	% Stop recursing here, keeping the next schedules to come:
 	{ NewPlan, NewTimerTable, NewTaskTable };
@@ -823,49 +837,47 @@ perform_schedule( ScheduleOffset, NowMs,
 % fatal error.
 %
 % So, in all other cases (either there exists future offsets or none at all), we
-% do not trigger offsets anymore this time, just disregarding the current one:
+% do not trigger offsets anymore this time, we just disregard the current one:
 %
-perform_schedule( ScheduleOffset, _NowMs, SchedulePlan, TimerTable, TaskTable,
+perform_schedule( ScheduleOffsetMs, _NowMs, SchedulePlan, TimerTable, TaskTable,
 				  State ) ->
 
 	?warning_fmt( "Triggered schedule offset #~B (~ts) not found (whereas "
 		"schedule plan ~ts), ignoring it, as supposing this is a late "
 		"scheduling already applied.",
-		[ ScheduleOffset, get_timestamp_string_for( ScheduleOffset, State ),
+		[ ScheduleOffsetMs, get_timestamp_string_for( ScheduleOffsetMs, State ),
 		  schedule_plan_to_string( SchedulePlan, State ) ] ),
 
 	% Hopefully this lacking timer can still be cancelled:
-	ShrunkTimerTable = remove_timer( ScheduleOffset, TimerTable ),
+	ShrunkTimerTable = remove_timer( ScheduleOffsetMs, TimerTable ),
 
 	{ SchedulePlan, ShrunkTimerTable, TaskTable }.
 
 
 
-% @doc Triggers specified tasks, and returns updated schedule plan, timer and
-% task tables.
+% @doc Triggers the specified tasks, and returns updated schedule plan, timer
+% and task tables.
 %
 % Note that:
-%
-% - the specified offset (ScheduleOffset) is the planned one; if being a late
+% - the specified offset (ScheduleOffsetMs) is the planned one; if being a late
 % trigger, it may be significantly in the past of the current offset
-%
 % - the specified schedule plan is supposed to have already the entry for the
-% specified schedule offset removed.
+% specified schedule offset removed
 %
 % (helper)
 %
 -spec trigger_tasks( [ task_id() ], schedule_offset(), schedule_offset(),
 			schedule_plan(), timer_table(), task_table(), wooper:state() ) ->
 							{ schedule_plan(), timer_table(), task_table() }.
-trigger_tasks( _TaskIds=[], ScheduleOffset, _NowMs, SchedulePlan, TimerTable,
+trigger_tasks( _TaskIds=[], ScheduleOffsetMs, _NowMs, SchedulePlan, TimerTable,
 			   TaskTable, _State ) ->
 
-	 ShrunkTimerTable = remove_timer( ScheduleOffset, TimerTable ),
+	 ShrunkTimerTable = remove_timer( ScheduleOffsetMs, TimerTable ),
 
 	{ SchedulePlan, ShrunkTimerTable, TaskTable };
 
 
-trigger_tasks( _TaskIds=[ TaskId | T ], ScheduleOffset, NowMs, SchedulePlan,
+trigger_tasks( _TaskIds=[ TaskId | T ], ScheduleOffsetMs, NowMs, SchedulePlan,
 			   TimerTable, TaskTable, State ) ->
 
 	{ TaskEntry, ShrunkTaskTable } = table:extract_entry( TaskId, TaskTable ),
@@ -886,21 +898,21 @@ trigger_tasks( _TaskIds=[ TaskId | T ], ScheduleOffset, NowMs, SchedulePlan,
 
 		0 ->
 			?debug_fmt( "Dropping task ~B for good.", [ TaskId ] ),
-			ShrunkTimerTable = remove_timer( ScheduleOffset, TimerTable ),
+			ShrunkTimerTable = remove_timer( ScheduleOffsetMs, TimerTable ),
 			{ SchedulePlan, ShrunkTimerTable, ShrunkTaskTable };
 
 		NewCount ->
 			% Will thus be still scheduled again afterwards.
 
 			% If first scheduling:
-			StartOffset = case TaskEntry#task_entry.started_on of
+			StartOffsetMs = case TaskEntry#task_entry.started_on of
 
 				undefined ->
 					% Now rather than scheduled:
 					NowMs;
 
-				AlreadyStartOffset ->
-					AlreadyStartOffset
+				AlreadyStartOffsetMs ->
+					AlreadyStartOffsetMs
 
 			end,
 
@@ -910,34 +922,34 @@ trigger_tasks( _TaskIds=[ TaskId | T ], ScheduleOffset, NowMs, SchedulePlan,
 			% Basing on planned (not actual, i.e. NowMs) offset to (attempt to)
 			% resorb any delay:
 			%
-			NextSchedule = ScheduleOffset + Periodicity,
+			NextScheduleMs = ScheduleOffsetMs + Periodicity,
 
 			NewTaskEntry = TaskEntry#task_entry{
-				next_schedule=NextSchedule,
+				next_schedule=NextScheduleMs,
 				count=NewCount,
 				schedule_count=TaskEntry#task_entry.schedule_count+1,
-				started_on=StartOffset,
+				started_on=StartOffsetMs,
 				last_schedule=NowMs },
 
 			NewTaskTable = table:add_entry( TaskId, NewTaskEntry,
 											ShrunkTaskTable ),
 
-			{ NewPlan, NewTimerTable } = insert_task_at( TaskId, NextSchedule,
-							Periodicity, SchedulePlan, TimerTable ),
+			{ NewPlan, NewTimerTable } = insert_task_at( TaskId, NextScheduleMs,
+				Periodicity, SchedulePlan, TimerTable ),
 
 			cond_utils:if_defined( us_common_debug_scheduling,
 				?debug_fmt( "New plan for #~B after trigger of task ~B: ~ts",
-					[ ScheduleOffset, TaskId,
+					[ ScheduleOffsetMs, TaskId,
 					  schedule_plan_to_string( NewPlan, State ) ] ) ),
 
-			trigger_tasks( T, ScheduleOffset, NowMs, NewPlan, NewTimerTable,
+			trigger_tasks( T, ScheduleOffsetMs, NowMs, NewPlan, NewTimerTable,
 						   NewTaskTable, State )
 
 	end.
 
 
 
-% @doc Effective launching of specified task.
+% @doc Effective launching of the specified task.
 -spec launch_task( task_command(), actuator_pid(), wooper:state() ) -> void().
 launch_task( Cmd, ActuatorPid, State ) ->
 
@@ -992,20 +1004,20 @@ get_main_scheduler() ->
 %
 -spec register_task_schedule( task_id(), task_entry(), schedule_offset(),
 							  ms_duration(), wooper:state() ) -> wooper:state().
-register_task_schedule( TaskId, TaskEntry, ScheduleOffset, DurationFromNow,
+register_task_schedule( TaskId, TaskEntry, ScheduleOffsetMs, DurationFromNowMs,
 						State ) ->
 
 	%?debug_fmt
 	?warning_fmt( "Registering task #~B for schedule offset ~B (duration from "
-		"now: ~ts): ~ts.", [ TaskId, ScheduleOffset,
-			time_utils:duration_to_string( DurationFromNow ),
+		"now: ~ts): ~ts.", [ TaskId, ScheduleOffsetMs,
+			time_utils:duration_to_string( DurationFromNowMs ),
 			task_entry_to_string( TaskEntry, State ) ] ),
 
 	NewTaskTable = table:add_new_entry( TaskId, TaskEntry,
 										?getAttr(task_table) ),
 
-	{ NewPlan, NewTimerTable } = insert_task_at( TaskId, ScheduleOffset,
-		DurationFromNow, ?getAttr(schedule_plan), _AccPlan=[],
+	{ NewPlan, NewTimerTable } = insert_task_at( TaskId, ScheduleOffsetMs,
+		DurationFromNowMs, ?getAttr(schedule_plan), _AccPlan=[],
 		?getAttr(timer_table) ),
 
 	cond_utils:if_defined( us_common_debug_scheduling,
@@ -1019,19 +1031,20 @@ register_task_schedule( TaskId, TaskEntry, ScheduleOffset, DurationFromNow,
 
 
 
-% @doc Inserts specified task at specified offset in plan.
+% @doc Inserts the specified task at the specified offset in plan.
 -spec insert_task_at( task_id(), schedule_offset(), ms_duration(),
 		schedule_plan(), timer_table() ) -> { schedule_plan(), timer_table() }.
-insert_task_at( TaskId, ScheduleOffset, DurationFromNow, Plan, TimerTable ) ->
+insert_task_at( TaskId, ScheduleOffsetMs, DurationFromNowMs, Plan,
+				TimerTable ) ->
 
 	%NewP = { NewPlan, _NewTimerTable } =
-	NewP = insert_task_at( TaskId, ScheduleOffset, DurationFromNow, Plan,
+	NewP = insert_task_at( TaskId, ScheduleOffsetMs, DurationFromNowMs, Plan,
 						   _AccPlan=[], TimerTable ),
 
 	%trace_bridge:debug_fmt( "After having inserted task ~B at offset #~B "
 	%   "(duration from now: ~ts), new plan is:~n ~p",
-	%   [ TaskId, ScheduleOffset,
-	%     time_utils:duration_to_string( DurationFromNow ), NewPlan ] ),
+	%   [ TaskId, ScheduleOffsetMs,
+	%     time_utils:duration_to_string( DurationFromNowMs ), NewPlan ] ),
 
 	NewP.
 
@@ -1039,45 +1052,46 @@ insert_task_at( TaskId, ScheduleOffset, DurationFromNow, Plan, TimerTable ) ->
 % (helper)
 %
 % Schedule plan exhausted, adding it at end:
-insert_task_at( TaskId, ScheduleOffset, DurationFromNow, _SchedulePlan=[],
+insert_task_at( TaskId, ScheduleOffsetMs, DurationFromNowMs, _SchedulePlan=[],
 				AccPlan, TimeTable ) ->
 
 	% Not set yet:
-	NewTimeTable = add_timer( ScheduleOffset, DurationFromNow, TimeTable ),
+	NewTimeTable = add_timer( ScheduleOffsetMs, DurationFromNowMs, TimeTable ),
 
-	{ lists:reverse( [ { ScheduleOffset, [ TaskId ] } | AccPlan ] ),
+	{ lists:reverse( [ { ScheduleOffsetMs, [ TaskId ] } | AccPlan ] ),
 	  NewTimeTable };
 
 
 % Too early in plan, continue:
-insert_task_at( TaskId, ScheduleOffset, DurationFromNow,
-				_SchedulePlan=[ H={ Off, _Ids } | T ], AccPlan, TimeTable )
-										when Off < ScheduleOffset ->
-	insert_task_at( TaskId, ScheduleOffset, DurationFromNow, T,
+insert_task_at( TaskId, ScheduleOffsetMs, DurationFromNowMs,
+				_SchedulePlan=[ H={ OffMs, _Ids } | T ], AccPlan, TimeTable )
+										when OffMs < ScheduleOffsetMs ->
+	insert_task_at( TaskId, ScheduleOffsetMs, DurationFromNowMs, T,
 					[ H | AccPlan ], TimeTable );
 
 % Matching offset found, registering and stopping:
-insert_task_at( TaskId, ScheduleOffset, _DurationFromNow,
-		_SchedulePlan=[ { ScheduleOffset, Ids } | T ], AccPlan, TimeTable ) ->
+insert_task_at( TaskId, ScheduleOffsetMs, _DurationFromNowMs,
+		_SchedulePlan=[ { ScheduleOffsetMs, Ids } | T ], AccPlan, TimeTable ) ->
 
 	% Timer already set for that offset, none to add:
-	{ lists:reverse( AccPlan ) ++ [ { ScheduleOffset, [ TaskId | Ids ] } | T ],
+	{ lists:reverse( AccPlan )
+			++ [ { ScheduleOffsetMs, [ TaskId | Ids ] } | T ],
 	  TimeTable };
 
 % Gone past target:
-insert_task_at( TaskId, ScheduleOffset, DurationFromNow,
-				SchedulePlan, % Implicit: SchedulePlan=[ { Off, Ids } | T ],
-				AccPlan, TimeTable ) -> % Implicit: when Off > ScheduleOffset
+insert_task_at( TaskId, ScheduleOffsetMs, DurationFromNowMs,
+		SchedulePlan, % Implicit: SchedulePlan=[ { OffMs, Ids } | T ],
+		AccPlan, TimeTable ) -> % Implicit: when OffMs > ScheduleOffsetMS
 
 	% Not set yet, registering and stop recursing:
-	NewTimeTable = add_timer( ScheduleOffset, DurationFromNow, TimeTable ),
+	NewTimeTable = add_timer( ScheduleOffsetMs, DurationFromNowMs, TimeTable ),
 
-	{ lists:reverse( [ { ScheduleOffset, [ TaskId ] } | AccPlan ] )
+	{ lists:reverse( [ { ScheduleOffsetMs, [ TaskId ] } | AccPlan ] )
 		++ SchedulePlan, NewTimeTable }.
 
 
 
-% @doc Removes specified task from schedule plan.
+% @doc Removes the specified task from schedule plan.
 -spec unschedule_task( task_id(), schedule_offset(), schedule_plan(),
 			timer_table() ) -> 'not_found' | { schedule_plan(), timer_table() }.
 unschedule_task( TaskId, PlannedNextSchedule, SchedulePlan, TimerTable ) ->
@@ -1110,8 +1124,8 @@ unschedule_task( TaskId, PlannedNextSchedule,
 
 					NewSchedPlan = lists:reverse( AccPlan ) ++ T,
 
-					ShrunkTimerTable = remove_timer( PlannedNextSchedule,
-													 TimerTable ),
+					ShrunkTimerTable =
+						remove_timer( PlannedNextSchedule, TimerTable ),
 
 					{ NewSchedPlan, ShrunkTimerTable };
 
@@ -1137,34 +1151,34 @@ unschedule_task( TaskId, PlannedNextSchedule, _SchedulePlan=[ P | T ], Acc,
 % @doc Adds a timer to trigger a future scheduler.
 -spec add_timer( schedule_offset(), ms_duration(), timer_table() ) ->
 						timer_table().
-add_timer( ScheduleOffset, DurationFromNow, TimerTable ) ->
+add_timer( ScheduleOffsetMs, DurationFromNowMs, TimerTable ) ->
 
 	% WOOPER oneway to be sent to this instance:
-	Message = { timerTrigger, [ ScheduleOffset ] },
+	Message = { timerTrigger, [ ScheduleOffsetMs ] },
 
 	% Duration not exact, but is at least as long as requested:
-	case timer:send_after( DurationFromNow, Message ) of
+	case timer:send_after( DurationFromNowMs, Message ) of
 
 		% TimerRef useful to cancel; not expected to be already existing:
 		{ ok, TimerRef } ->
-			table:add_new_entry( ScheduleOffset, TimerRef, TimerTable );
+			table:add_new_entry( ScheduleOffsetMs, TimerRef, TimerTable );
 
 		{ error, Reason } ->
-			throw( { timer_setting_failed, Reason, ScheduleOffset,
-					 DurationFromNow } )
+			throw( { timer_setting_failed, Reason, ScheduleOffsetMs,
+					 DurationFromNowMs } )
 
 	end.
 
 
 
-% @doc Removes a timer.
+% @doc Removes the timer at the specified schedule offset.
 -spec remove_timer( schedule_offset(), timer_table() ) -> timer_table().
-remove_timer( ScheduleOffset, TimerTable ) ->
+remove_timer( ScheduleOffsetMs, TimerTable ) ->
 
-	%trace_bridge:debug_fmt( "Removing timer for #~B.", [ ScheduleOffset ] ),
+	%trace_bridge:debug_fmt( "Removing timer for #~B.", [ ScheduleOffsetMs ] ),
 
 	{ TimerRef, ShrunkTimerTable } =
-		table:extract_entry( ScheduleOffset, TimerTable ),
+		table:extract_entry( ScheduleOffsetMs, TimerTable ),
 
 	case timer:cancel( TimerRef ) of
 
@@ -1174,7 +1188,7 @@ remove_timer( ScheduleOffset, TimerTable ) ->
 		{ error, Reason } ->
 			trace_bridge:error_fmt( "The cancellation of timer '~p' "
 				"failed for schedule offset #~B (reason: '~p').",
-				[ TimerRef, ScheduleOffset, Reason ] )
+				[ TimerRef, ScheduleOffsetMs, Reason ] )
 			%throw( { timer_cancellation_failed, Reason,
 			%         TimerRef, ScheduleOffset } )
 
@@ -1185,8 +1199,8 @@ remove_timer( ScheduleOffset, TimerTable ) ->
 
 
 
-% @doc Returns the time offset of specified (absolute) time, thus expressed in
-% internal time, hence relative to the start time of this scheduler.
+% @doc Returns the time offset of the specified (absolute) time, thus expressed
+% in internal time, hence relative to the start time of this scheduler.
 %
 % Corresponds to the (real, actual) number of milliseconds since the start of
 % this scheduler.
@@ -1230,15 +1244,15 @@ get_schedule_offset_for( UserTimestamp, State ) ->
 
 
 
-% @doc Returns the (approximate) user-level timestamp (ex:
-% {{2020,3,23},{16,44,0}}), in VM system time (UTC), corresponding to specified
-% internal time offset.
+% @doc Returns the (approximate) user-level timestamp (e.g.
+% {{2020,3,23},{16,44,0}}), in VM system time (UTC), corresponding to the
+% specified internal time offset.
 %
 -spec get_timestamp_for( schedule_offset(), wooper:state() ) -> timestamp().
-get_timestamp_for( Offset, State ) ->
+get_timestamp_for( OffsetMs, State ) ->
 
 	GregorianSecs =
-		round( ( Offset + ?getAttr(server_gregorian_start) ) / 1000 ),
+		round( ( OffsetMs + ?getAttr(server_gregorian_start) ) / 1000 ),
 
 	time_utils:universal_to_local_time(
 		calendar:gregorian_seconds_to_datetime( GregorianSecs ) ).
@@ -1246,12 +1260,12 @@ get_timestamp_for( Offset, State ) ->
 
 
 % @doc Returns a textual description of the user-level timestamp corresponding
-% to specified internal time offset.
+% to the specified internal time offset.
 %
 -spec get_timestamp_string_for( schedule_offset(), wooper:state() ) ->
 										ustring().
-get_timestamp_string_for( Offset, State ) ->
-	time_utils:timestamp_to_string( get_timestamp_for( Offset, State ) ).
+get_timestamp_string_for( OffsetMs, State ) ->
+	time_utils:timestamp_to_string( get_timestamp_for( OffsetMs, State ) ).
 
 
 
@@ -1262,7 +1276,7 @@ decrement_count( _Count=unlimited ) ->
 
 % (guard just for safety, should never be negative):
 decrement_count( Count ) when Count > 0 ->
-	Count - 1.
+	Count-1.
 
 
 

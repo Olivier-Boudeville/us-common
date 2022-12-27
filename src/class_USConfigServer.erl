@@ -263,7 +263,7 @@ construct( State ) ->
 			throw( us_configuration_directory_not_found );
 
 		{ BinFoundCfgDir, CfgMsg } ->
-			?send_info( TraceState, CfgMsg ),
+			?send_notice( TraceState, CfgMsg ),
 			BinFoundCfgDir
 
 	end,

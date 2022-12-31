@@ -235,14 +235,26 @@
 
 % Implementation notes:
 %
-% On task commands.
+%
+% On task commands:
 %
 % We preferred to limit the ability of a scheduler only to sending *messages* to
 % whichever process needed (ex: no MFA direct calls), for a better separation of
 % concerns / state management.
 %
 %
-% On time.
+% On synchronicity:
+%
+% By default all interactions with the scheduler are synchronous (a result is
+% sent to the caller).
+%
+% At least for some operations, asynchronous variations (the base, synchronous
+% operations whose names are suffixed with 'Async') have also been defined, if
+% the caller has no interest in result and does not want to perform any kind of
+% synchronisation.
+%
+%
+% On time:
 %
 % The monotonic time is relied on internally, to avoid any warp/leap performed
 % by the system time. See http://erlang.org/doc/apps/erts/time_correction.html
@@ -397,8 +409,9 @@ destruct( State ) ->
 % Method section.
 
 
-% @doc Triggers immediately the specified one-shot task: the specified command
-% will be triggered at once, a single time, being assigned to actuator process.
+% @doc Triggers immediately (synchronously) the specified one-shot task: the
+% specified command will be triggered at once, a single time, being assigned to
+% actuator process.
 %
 % Returns either 'task_done' if the task was done on the fly (hence is already
 % triggered; then no task identifier applies), or {'task_registered', TaskId} if
@@ -418,9 +431,35 @@ triggerOneshotTask( State, UserTaskCommand, UserActPid ) ->
 
 
 
-% @doc Registers the specified one-shot task: the specified command will be
-% executed once, at the specified time, as assigned to requesting and specified
-% actuator process.
+% @doc Registers (synchronously) the specified one-shot task: the specified
+% command will be executed once, at the specified time, being assigned to the
+% requesting process (as actuator).
+%
+% Returns either 'task_done' if the task was done on the fly (hence is already
+% triggered; then no task identifier applies), or {'task_registered', TaskId} if
+% it is registered for a later trigger (then its assigned task identifier is
+% returned).
+%
+% Note: if the deadline is specified in absolute terms (e.g. as {{2020,3,22},
+% {16,1,48}}), the conversion to internal time will be done immediately (at task
+% submission time), resulting in any system time change (e.g. DST) not being
+% taken into account (as the respect of periodicities is preferred over the one
+% of literal timestamps).
+%
+-spec registerOneshotTask( wooper:state(), task_command(), start_time() ) ->
+								request_return( task_registration_outcome() ).
+registerOneshotTask( State, UserTaskCommand, UserStartTime ) ->
+
+	{ NewState, Result } = registerTask( State, UserTaskCommand, UserStartTime,
+		_Periodicity=once, _Count=1, _ActPid=?getSender() ),
+
+	wooper:return_state_result( NewState, Result ).
+
+
+
+% @doc Registers (synchronously) the specified one-shot task: the specified
+% command will be executed once, at the specified time, as assigned to
+% requesting and specified actuator process.
 %
 % Returns either 'task_done' if the task was done on the fly (hence is already
 % triggered; then no task identifier applies), or {'task_registered', TaskId} if
@@ -438,15 +477,16 @@ triggerOneshotTask( State, UserTaskCommand, UserActPid ) ->
 registerOneshotTask( State, UserTaskCommand, UserStartTime, UserActPid ) ->
 
 	{ NewState, Result } = registerTask( State, UserTaskCommand, UserStartTime,
-							_Periodicity=once, _Count=1, UserActPid ),
+		_Periodicity=once, _Count=1, UserActPid ),
 
 	wooper:return_state_result( NewState, Result ).
 
 
 
-% @doc Registers the specified task: the specified command will be executed
-% starting immediately (in a flexible manner), at the specified user periodicity
-% and indefinitely, being assigned to the requesting process (as actuator).
+% @doc Registers (synchronously) the specified task: the specified command will
+% be executed starting immediately (in a flexible manner), at the specified user
+% periodicity and indefinitely, being assigned to the requesting process (as
+% actuator).
 %
 % Returns {'task_registered', TaskId}, where TaskId is its assigned task
 % identifier.
@@ -463,8 +503,8 @@ registerTask( State, UserTaskCommand, UserPeriodicity ) ->
 
 
 
-% @doc Registers the specified task: the specified command will be executed
-% starting immediately (in a flexible manner), at the specified user
+% @doc Registers (synchronously) the specified task: the specified command will
+% be executed starting immediately (in a flexible manner), at the specified user
 % periodicity, for the specified number of times, being assigned to the
 % requesting process (as actuator).
 %
@@ -485,10 +525,69 @@ registerTask( State, UserTaskCommand, UserPeriodicity, UserCount ) ->
 
 
 
-% @doc Registers the specified task: the specified command will be executed
-% starting from the specified time, at the specified user periodicity, for the
-% specified number of times, being assigned to requesting and specified actuator
-% process.
+% @doc Registers (synchronously) the specified task: the specified command will
+% be executed starting from the specified time, at the specified user
+% periodicity, for the specified number of times, being assigned to the
+% requesting process.
+%
+% Returns either 'task_done' if the task was done on the fly (hence is already
+% triggered, in a case where no task identifier applies since it is fully
+% completed), or {'task_registered', TaskId} if it is registered for a later
+% trigger (then its assigned task identifier is returned).
+%
+% Note: if the deadline is specified in absolute terms (e.g. as {{2020,3,22},
+% {16,1,48}}), the conversion to internal time will be done immediately (at task
+% submission time), resulting in any future system time change (e.g. DST) not
+% being taken into account at this level (as the respect of periodicities is
+% preferred over the one of literal timestamps).
+%
+-spec registerTask( wooper:state(), task_command(), start_time(),
+					user_periodicity(), schedule_count() ) ->
+						request_return( task_registration_outcome() ).
+registerTask( State, UserTaskCommand, UserStartTime, UserPeriodicity,
+			  UserCount ) ->
+
+	{ RegOutcome, RegState } = register_task( UserTaskCommand, UserStartTime,
+		UserPeriodicity, UserCount, _UserActPid=?getSender(), State ),
+
+	wooper:return_state_result( RegState, RegOutcome ).
+
+
+
+% @doc Registers asynchronously (hence with neither result - not even the task
+% identifier, nor synchronisation) the specified task: the specified command
+% will be executed starting from the specified time, at the specified user
+% periodicity, for the specified number of times, being assigned to the
+% requesting process.
+%
+% Note: if the deadline is specified in absolute terms (e.g. as {{2020,3,22},
+% {16,1,48}}), the conversion to internal time will be done immediately (at task
+% submission time), resulting in any future system time change (e.g. DST) not
+% being taken into account at this level (as the respect of periodicities is
+% preferred over the one of literal timestamps).
+%
+-spec registerTaskAsync( wooper:state(), task_command(), start_time(),
+					user_periodicity(), schedule_count() ) -> oneway_return().
+registerTaskAsync( State, UserTaskCommand, UserStartTime, UserPeriodicity,
+				   UserCount ) ->
+
+	{ RegOutcome, RegState } = register_task( UserTaskCommand, UserStartTime,
+		UserPeriodicity, UserCount, _UserActPid=?getSender(), State ),
+
+	cond_utils:if_defined( us_common_debug_scheduling,
+		?debug_fmt( "Asynchronous registering of task '~p' resulted in "
+			"the following ignored outcome: ~p.",
+			[ UserTaskCommand, RegOutcome ] ),
+		basic_utils:ignore_unused( RegOutcome ) ),
+
+	wooper:return_state( RegState ).
+
+
+
+% @doc Registers (synchronously) the specified task: the specified command will
+% be executed starting from the specified time, at the specified user
+% periodicity, for the specified number of times, being assigned to the
+% specified actuator process.
 %
 % Returns either 'task_done' if the task was done on the fly (hence is already
 % triggered, in a case where no task identifier applies since it is fully
@@ -504,13 +603,44 @@ registerTask( State, UserTaskCommand, UserPeriodicity, UserCount ) ->
 -spec registerTask( wooper:state(), task_command(), start_time(),
 					user_periodicity(), schedule_count(), actuator_pid() ) ->
 						request_return( task_registration_outcome() ).
-registerTask( State, UserTaskCommand, UserStartTime, UserPeriodicity, UserCount,
-			  UserActPid ) ->
+registerTask( State, UserTaskCommand, UserStartTime, UserPeriodicity,
+			  UserCount, UserActPid ) ->
 
 	{ RegOutcome, RegState } = register_task( UserTaskCommand, UserStartTime,
-							UserPeriodicity, UserCount, UserActPid, State ),
+		UserPeriodicity, UserCount, UserActPid, State ),
 
 	wooper:return_state_result( RegState, RegOutcome ).
+
+
+
+% @doc Registers asynchronously (hence with neither result - not even the task
+% identifier, nor synchronisation) the specified task: the specified command
+% will be executed starting from the specified time, at the specified user
+% periodicity, for the specified number of times, being assigned to the
+% specified actuator process.
+%
+% Note: if the deadline is specified in absolute terms (e.g. as {{2020,3,22},
+% {16,1,48}}), the conversion to internal time will be done immediately (at task
+% submission time), resulting in any future system time change (e.g. DST) not
+% being taken into account at this level (as the respect of periodicities is
+% preferred over the one of literal timestamps).
+%
+-spec registerTaskAsync( wooper:state(), task_command(), start_time(),
+					user_periodicity(), schedule_count(), actuator_pid() ) ->
+											oneway_return().
+registerTaskAsync( State, UserTaskCommand, UserStartTime, UserPeriodicity,
+				   UserCount, UserActPid ) ->
+
+	{ RegOutcome, RegState } = register_task( UserTaskCommand, UserStartTime,
+		UserPeriodicity, UserCount, UserActPid, State ),
+
+	cond_utils:if_defined( us_common_debug_scheduling,
+		?debug_fmt( "Asynchronous registering of task '~p' resulted in "
+			"the following ignored outcome: ~p.",
+			[ UserTaskCommand, RegOutcome ] ),
+		basic_utils:ignore_unused( RegOutcome ) ),
+
+	wooper:return_state( RegState ).
 
 
 
@@ -586,7 +716,7 @@ register_task( UserTaskCommand, UserStartTime, UserPeriodicity, UserCount,
 											  actuator_pid=ActPid },
 
 							RegState = register_task_schedule( TaskId, TI,
-											NextSchedule, MsPeriod, State ),
+								NextSchedule, MsPeriod, State ),
 
 							{ { task_registered, TaskId }, RegState }
 
@@ -734,6 +864,22 @@ unregister_task( TaskId, State ) ->
 	?error_fmt( "Task unregistering failed, invalid task identifier: '~p'.",
 				[ TaskId ] ),
 	{ { task_unregistration_failed, { invalid_task_id, TaskId } }, State }.
+
+
+
+% @doc Unregisters asynchronously the specified task, based on its identifier.
+%
+-spec unregisterTaskAsync( wooper:state(), task_id() ) -> oneway_return().
+unregisterTaskAsync( State, TaskId )
+						when is_integer( TaskId ) andalso TaskId > 0 ->
+
+	% Already logged:
+	{ _Outcome, NewState } = unregister_task( TaskId, State ),
+
+	wooper:return_state( NewState );
+
+unregisterTaskAsync( _State, Other ) ->
+	throw( { invalid_unregister_task_id, Other } ).
 
 
 

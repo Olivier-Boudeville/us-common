@@ -37,6 +37,10 @@
 <p><tt>classname() = <a href="wooper.html#type-classname">wooper:classname()</a></tt></p>
 
 
+<h3 class="typedecl"><a name="type-count">count()</a></h3>
+<p><tt>count() = <a href="basic_utils.html#type-count">basic_utils:count()</a></tt></p>
+
+
 <h3 class="typedecl"><a name="type-dhms_duration">dhms_duration()</a></h3>
 <p><tt>dhms_duration() = <a href="time_utils.html#type-dhms_duration">time_utils:dhms_duration()</a></tt></p>
 
@@ -110,8 +114,12 @@
 <p><tt>scheduler_pid() = <a href="class_UniversalServer.html#type-server_pid">class_UniversalServer:server_pid()</a></tt></p>
 
 
+<h3 class="typedecl"><a name="type-seconds">seconds()</a></h3>
+<p><tt>seconds() = <a href="unit_utils.html#type-seconds">unit_utils:seconds()</a></tt></p>
+
+
 <h3 class="typedecl"><a name="type-start_time">start_time()</a></h3>
-<p><tt>start_time() = asap | flexible | <a href="#type-dhms_duration">dhms_duration()</a> | <a href="unit_utils.html#type-seconds">unit_utils:seconds()</a> | <a href="#type-timestamp">timestamp()</a></tt></p>
+<p><tt>start_time() = asap | flexible | <a href="#type-dhms_duration">dhms_duration()</a> | <a href="#type-seconds">seconds()</a> | <a href="#type-timestamp">timestamp()</a></tt></p>
 
 
 <h3 class="typedecl"><a name="type-task_command">task_command()</a></h3>
@@ -125,7 +133,7 @@ conventionally a single non-list term or a list of any arguments.</p>
  sent verbatim to their actuators.</p>
 
 <h3 class="typedecl"><a name="type-task_id">task_id()</a></h3>
-<p><tt>task_id() = <a href="basic_utils.html#type-count">basic_utils:count()</a></tt></p>
+<p><tt>task_id() = <a href="#type-count">count()</a></tt></p>
 <p> Identifier of a task, as assigned by a scheduler.</p>
 
 <h3 class="typedecl"><a name="type-task_registration_outcome">task_registration_outcome()</a></h3>
@@ -149,7 +157,7 @@ conventionally a single non-list term or a list of any arguments.</p>
 
 
 <h3 class="typedecl"><a name="type-user_periodicity">user_periodicity()</a></h3>
-<p><tt>user_periodicity() = once | <a href="#type-dhms_duration">dhms_duration()</a> | <a href="unit_utils.html#type-seconds">unit_utils:seconds()</a></tt></p>
+<p><tt>user_periodicity() = once | <a href="#type-dhms_duration">dhms_duration()</a> | <a href="#type-seconds">seconds()</a></tt></p>
 
 
 <h2><a name="index">Function Index</a></h2>

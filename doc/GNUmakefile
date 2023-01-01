@@ -31,7 +31,7 @@ GITHUB_PAGES_BASE := $(shell basename "$(US_COMMON_WEB_MIRROR_BRANCH)")
 
 
 
-.PHONY: all doc html pdf create-links clone-mirror                     \
+.PHONY: all doc html pdf create-links clone-mirror force-update        \
 		export-doc export-doc-to-official export-doc-to-mirror         \
 		info info-web
 
@@ -63,23 +63,36 @@ clone-mirror:
 	@echo "Please remove all initial content in that selected 'gh-pages' branch."
 
 
-export-doc: clean-doc doc export-doc-to-official export-doc-to-mirror
+# Forces the update of the overall documentation structure (notably in order to
+# update its timestamp), knowing that, otherwise, modifying source RST files
+# that it references would not update it in turn):
+#
+# Removing the generated main .rst, not its .rst.template real source:
+force-update:
+	@/bin/rm -f $(OVERALL_DOCUMENT_SOURCE)
 
 
-# Drawback: scp will not preserve symlinks, it will duplicate files instead.
+export-doc: export-doc-to-official export-doc-to-mirror
+
+
+# Drawback: scp will not preserve symlinks, it will duplicate files instead
+# (which may be useful though, for example for MathJax).
 #
 # rsync would not, but requires a different source layout (copies a full tree,
 # not a set of files), so currently not used:
-# rsync -avze "ssh $(SP)" $(SOME_WEB_TREE) $(WEB_SRV):$(WEB_ROOT)/WOOPER/
+# rsync -avze "ssh $(SP)" $(SOME_WEB_TREE) $(WEB_SRV):$(WEB_ROOT)/us-common/
 #
-export-doc-to-official: clean-doc create-links doc
+export-doc-to-official: check-mathjax clean-doc create-links doc
 	@echo "   Exporting US-Common documentation to official website ($(WEB_SRV))"
-	@/bin/scp $(SP) -r $(WEB_CONTENT) $(WEB_SRV):$(WEB_ROOT)/US-Common/
+	@/bin/scp $(SP) -r $(WEB_CONTENT) $(EXTRA_CONTENT) $(WEB_SRV):$(WEB_ROOT)/US-Common/
 
 
-export-doc-to-mirror: clean-doc create-links doc
+# H option for 'cp', so that a local MathJax is copied (not symlinked to a local
+# directory) in target branch:
+#
+export-doc-to-mirror: check-mathjax clean-doc create-links doc
 	@echo "   Exporting US-Common documentation to mirror website in $(US_COMMON_WEB_MIRROR_BRANCH)"
-	@/bin/cp -rf $(WEB_CONTENT) $(US_COMMON_WEB_MIRROR_BRANCH) && cd $(US_COMMON_WEB_MIRROR_BRANCH) && git add . && git merge -s ours && git commit -m "US-Common doc updated." && git push && git pull --ff-only
+	@/bin/cp -rfH $(WEB_CONTENT) $(EXTRA_CONTENT) $(US_COMMON_WEB_MIRROR_BRANCH) && cd $(US_COMMON_WEB_MIRROR_BRANCH) && git add . && git merge -s ours && git commit -m "US-Common doc updated." && git push && git pull --ff-only
 
 
 
@@ -90,6 +103,7 @@ info-web:
 	@echo "HTML_TARGET = $(HTML_TARGET)"
 	@echo "SP = $(SP)"
 	@echo "WEB_CONTENT = $(WEB_CONTENT)"
+	@echo "EXTRA_CONTENT = $(EXTRA_CONTENT)"
 	@echo "WEB_SRV = $(WEB_SRV)"
 	@echo "WEB_ROOT = $(WEB_ROOT)"
 	@echo "US_COMMON_WEB_MIRROR_BRANCH = $(US_COMMON_WEB_MIRROR_BRANCH)"

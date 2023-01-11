@@ -79,10 +79,14 @@
 	% No vm_cookie :: net_utils:cookie() stored, as can be read directly from
 	% the VM.
 
-	{ epmd_port, net_utils:tcp_port(),
-	  "the EPMD TCP port presumably in use (as read from the configuration)" },
+	% Otherwise a default port could apply (either Erlang's one or Myriad's
+	% one):
+	%
+	{ epmd_port, maybe( tcp_port() ),
+	  "the EPMD TCP port presumably in use (as read from the configuration; "
+	  "if any)" },
 
-	{ tcp_port_range, maybe( net_utils:tcp_port_range() ),
+	{ tcp_port_range, maybe( tcp_port_range() ),
 	  "the range (if any) of TCP ports to use for out-of-band inter-VM "
 	  "communication (not using the Erlang carrier; ex: for send_file)" },
 
@@ -221,6 +225,9 @@
 
 -type registration_name() :: naming_utils:registration_name().
 -type registration_scope() :: naming_utils:registration_scope().
+
+%-type tcp_port() :: net_utils:tcp_port().
+%-type tcp_port_range() :: net_utils:tcp_port_range().
 
 -type server_pid() :: class_UniversalServer:server_pid().
 
@@ -877,7 +884,7 @@ manage_vm_cookie( ConfigTable, State ) ->
 manage_epmd_port( ConfigTable, State ) ->
 
 	% No simple, integrated way of checking the actual port currently in use:
-	Port = case table:lookup_entry( ?epmd_port_key, ConfigTable ) of
+	MaybePort = case table:lookup_entry( ?epmd_port_key, ConfigTable ) of
 
 		key_not_found ->
 
@@ -886,16 +893,13 @@ manage_epmd_port( ConfigTable, State ) ->
 			%   "using the Erlang-level default one, ~B.",
 			%   [ DefaultEpmdPort ] ),
 
-			% Possibly defined in a per-application basis (e.g. US-{Main,Web}
-			% level) to have application-specific EPMD daemon that can be
-			% updated/killed at will; for the moment (at this point) we use the
-			% Erlang default port (alternatively the Myriad one could be
-			% returned)
-			%
-			DefaultEpmdPort = net_utils:get_default_epmd_port(),
-			?info_fmt( "No user-configured EPMD TCP port, using Erlang "
-					   "default one, ~B.", [ DefaultEpmdPort ] ),
-			DefaultEpmdPort;
+			% Now the EPMD port may be defined in a per-application basis
+			% (e.g. US-{Main,Web} level) to rely on application-specific EPMD
+			% daemons that can be updated/killed at will.
+			% So:
+
+			?debug( "No EPMD TCP port set by the user." ),
+			undefined;
 
 		{ value, UserEPMDPort } when is_integer( UserEPMDPort ) ->
 			?info_fmt( "Supposing already running using the user-defined "
@@ -909,7 +913,7 @@ manage_epmd_port( ConfigTable, State ) ->
 
 	end,
 
-	setAttribute( State, epmd_port, Port ).
+	setAttribute( State, epmd_port, MaybePort ).
 
 
 
@@ -1590,12 +1594,24 @@ to_string( State ) ->
 
 	end,
 
+	EPMDStr = case ?getAttr(epmd_port) of
+
+		undefined ->
+			"whose port has not been specified by the user configuration";
+
+		EPMDPort ->
+			text_utils:format( "expected by the configuration "
+							   "to run on port #~B", [ EPMDPort ] )
+
+	end,
+
 	text_utils:format( "US overall configuration server, ~ts, running in "
-		"the ~ts execution context, presumably on a VM using EPMD port #~B, "
+		"the ~ts execution context, presumably on a VM "
+		"with an EPMD daemon ~ts, "
 		"using configuration directory '~ts' and log directory '~ts', "
 		"having found as US-Main configuration file '~ts' "
 		"and as US-Web one '~ts', knowing ~ts and ~ts",
-		[ RegString, ?getAttr(execution_context), ?getAttr(epmd_port),
+		[ RegString, ?getAttr(execution_context), EPMDStr,
 		  ?getAttr(config_base_directory), ?getAttr(log_directory),
 		  ?getAttr(us_main_config_filename), ?getAttr(us_web_config_filename),
 		  MainSrvString, WebSrvString ] ).

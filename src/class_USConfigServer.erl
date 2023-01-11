@@ -886,12 +886,14 @@ manage_epmd_port( ConfigTable, State ) ->
 			%   "using the Erlang-level default one, ~B.",
 			%   [ DefaultEpmdPort ] ),
 
-			% Defined in a per-application basis (here US-Main level) to have
-			% application-specific EPMD daemon that can be updated/killed at
-			% will:
+			% Possibly defined in a per-application basis (e.g. US-{Main,Web}
+			% level) to have application-specific EPMD daemon that can be
+			% updated/killed at will; for the moment (at this point) we use the
+			% Erlang default port (alternatively the Myriad one could be
+			% returned)
 			%
-			DefaultEpmdPort = 4507,
-			?info_fmt( "No user-configured EPMD TCP port, using US-Main "
+			DefaultEpmdPort = net_utils:get_default_epmd_port(),
+			?info_fmt( "No user-configured EPMD TCP port, using Erlang "
 					   "default one, ~B.", [ DefaultEpmdPort ] ),
 			DefaultEpmdPort;
 

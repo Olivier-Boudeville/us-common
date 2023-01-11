@@ -163,12 +163,22 @@ read_us_config_file()
 	if [ -z "${erl_epmd_port}" ]; then
 
 		#echo "No Erlang EPMD port specified, not interfering with context defaults."
+
+		# For shell-like uses:
 		epmd_opt=""
+
+		# For make uses:
+		epmd_make_opt=""
 
 	else
 
 		#echo "Using specified EPMD port, '${erl_epmd_port}'."
+
+		# For shell-like uses:
 		epmd_opt="ERL_EPMD_PORT=${erl_epmd_port}"
+
+		# For make uses:
+		epmd_make_opt="EPMD_PORT=${erl_epmd_port}"
 
 	fi
 

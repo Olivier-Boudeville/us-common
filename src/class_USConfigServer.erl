@@ -880,10 +880,19 @@ manage_epmd_port( ConfigTable, State ) ->
 	Port = case table:lookup_entry( ?epmd_port_key, ConfigTable ) of
 
 		key_not_found ->
-			DefaultEpmdPort = net_utils:get_default_epmd_port(),
-			?info_fmt( "No user-configured EPMD TCP port, supposing already "
-				"using the Erlang-level default one, ~B.",
-				[ DefaultEpmdPort ] ),
+
+			%DefaultEpmdPort = net_utils:get_default_epmd_port(),
+			%?info_fmt( "No user-configured EPMD TCP port, supposing already "
+			%   "using the Erlang-level default one, ~B.",
+			%   [ DefaultEpmdPort ] ),
+
+			% Defined in a per-application basis (here US-Main level) to have
+			% application-specific EPMD daemon that can be updated/killed at
+			% will:
+			%
+			DefaultEpmdPort = 4507,
+			?info_fmt( "No user-configured EPMD TCP port, using US-Main "
+					   "default one, ~B.", [ DefaultEpmdPort ] ),
 			DefaultEpmdPort;
 
 		{ value, UserEPMDPort } when is_integer( UserEPMDPort ) ->

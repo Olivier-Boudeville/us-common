@@ -39,6 +39,7 @@
 -export_type([ server_pid/0 ]).
 
 
+
 % Shorthands:
 
 -type ustring() :: text_utils:ustring().
@@ -46,6 +47,9 @@
 
 -type registration_name() :: naming_utils:registration_name().
 -type registration_scope() :: naming_utils:registration_scope().
+
+-type user_name() :: system_utils:user_name().
+
 
 
 % Design notes:
@@ -62,7 +66,7 @@
 % actual time at which this server was started.
 
 
-% Class-specific attributes of a service are:
+% Class-specific attributes of a server are:
 -define( class_attributes, [
 
 	% Attempt also to keep this millisecond count not too large:
@@ -88,7 +92,10 @@
 
 	{ registration_scope, maybe( registration_scope() ),
 	  "records the scope of the registration of this server in the naming "
-	  "service" } ] ).
+	  "service" },
+
+	{ username, maybe( user_name() ),
+	  "the user (if any) under which this server is expected to run" } ] ).
 
 
 
@@ -104,73 +111,97 @@
 
 
 
-% @doc Constructs a new server instance that is not registered, and that traps
-% exits.
+% @doc Creates a server instance that is not registered, and that traps exits.
 %
 % Parameter is ServerName, the name of that server.
 %
+% It is not expected to be run as any specific user.
+%
 -spec construct( wooper:state(), server_name() ) -> wooper:state().
 construct( State, ServerName ) ->
-	init_common( ServerName, _RegistrationName=undefined,
-				 _RegistrationScope=undefined, _TrapExits=true, State ).
+	construct( State, ServerName, _TrapExits=true ).
 
 
 
-% @doc Constructs a new server instance, that is not registered, and that traps
-% exits if requested.
+% @doc Creates a server instance that is not registered, and that traps exits if
+% requested.
 %
 % Parameter is ServerName, the name of that US server, and whether it should
 % trap EXITS, if wanting a better control by resisting to exit messages being
-% received (see the onWOOPERExitReceived/3 callback):
+% received (see the onWOOPERExitReceived/3 callback).
+%
+% It is not expected to be run as any specific user.
 %
 -spec construct( wooper:state(), server_name(), boolean() ) -> wooper:state().
 construct( State, ServerName, TrapExits ) ->
-	init_common( ServerName, _RegistrationName=undefined,
-				 _RegistrationScope=undefined, TrapExits, State ).
+	construct( State, ServerName, _MaybeRegistrationName=undefined,
+		_MaybeRegistrationScope=undefined, TrapExits ).
 
 
 
-% @doc Constructs a new, registered, server instance, that is registered and
-% traps exits if requested.
+% @doc Creates a server instance that is registered, and traps exits if
+% requested.
 %
 % Parameters are:
-%
 % - ServerName, the name of that US server
+% - MaybeRegistrationName, any name under which this server shall be registered
+% - MaybeRegistrationScope, any scope at which this server shall be registered
 %
+% It is not expected to be run as any specific user.
+%
+-spec construct( wooper:state(), server_name(), maybe( registration_name() ),
+				 maybe( registration_scope() ) ) -> wooper:state().
+construct( State, ServerName, MaybeRegistrationName, MaybeRegistrationScope ) ->
+	construct( State, ServerName, MaybeRegistrationName, MaybeRegistrationScope,
+			   _TrapExits=true ).
+
+
+
+% @doc Creates a server instance that is registered, and traps exits if
+% requested.
+%
+% Parameters are:
+% - ServerName, the name of that US server
+% - MaybeRegistrationName, any name under which this server shall be registered
+% - MaybeRegistrationScope, any scope at which this server shall be registered
+% - TrapExits tells whether EXIT messages shall be trapped
+%
+% It is not expected to be run as any specific user.
+%
+-spec construct( wooper:state(), server_name(), maybe( registration_name() ),
+				 maybe( registration_scope() ), boolean() ) -> wooper:state().
+construct( State, ServerName, MaybeRegistrationName, MaybeRegistrationScope,
+		   TrapExits ) ->
+	construct( State, ServerName, MaybeRegistrationName, MaybeRegistrationScope,
+			   TrapExits, _MaybeUserName=undefined ).
+
+
+
+% @doc Creates a server instance that is registered, traps exits if
+% requested, and is expected to be run as specified user (if any).
+%
+% Parameters are:
+% - ServerName, the name of that US server
 % - RegistrationName, the name under which this server shall be registered
-%
 % - RegistrationScope, the scope at which this server shall be registered
 %
--spec construct( wooper:state(), server_name(), registration_name(),
-				 registration_scope() ) -> wooper:state().
-construct( State, ServerName, RegistrationName, RegistrationScope ) ->
-	init_common( ServerName, RegistrationName, RegistrationScope,
-				 _TrapExits=true, State ).
+% It is not expected to be run as any specific user.
+%
+-spec construct( wooper:state(), server_name(), maybe( registration_name() ),
+		maybe( registration_scope() ), boolean(), maybe( user_name() ) ) ->
+													wooper:state().
+construct( State, ServerName, MaybeRegistrationName, MaybeRegistrationScope,
+		   TrapExits, MaybeUserName ) ->
 
-
-% (helper)
--spec init_common( server_name(), maybe( registration_name() ),
-		maybe( registration_scope() ), boolean(), wooper:state() ) ->
-							wooper:state().
-init_common( ServerName, MaybeRegistrationName, MaybeRegistrationScope,
-			 TrapExits, State ) ->
-
-	case TrapExits of
-
-		true ->
-			% Wanting a better control by resisting to exit messages being
-			% received (see the onWOOPERExitReceived/3 callback):
-			%
-			erlang:process_flag( trap_exit, true );
-
-		false ->
-			ok
-
-	end,
+	TrapExits =:= true andalso
+		% Wanting a better control by resisting to exit messages being received
+		% (see the onWOOPERExitReceived/3 callback):
+		%
+		erlang:process_flag( trap_exit, true ),
 
 	% First the direct mother classes:
 	TraceState = class_TraceEmitter:construct( State,
-										?trace_categorize(ServerName) ),
+		?trace_categorize(ServerName) ),
 
 	% Constant based on the number of milliseconds of the EPOCH, since year 0;
 	% used in order to compute the most complete offset (in UTC):
@@ -183,7 +214,9 @@ init_common( ServerName, MaybeRegistrationName, MaybeRegistrationScope,
 
 		% Hence since year 0 (so a large number), based on "user" time:
 		{ server_gregorian_start,
-		  MsOfEpoch + time_utils:get_system_time() } ] ),
+		  MsOfEpoch + time_utils:get_system_time() },
+
+		{ username, text_utils:maybe_string_to_binary( MaybeUserName ) } ] ),
 
 	%trace_utils:debug_fmt( "Registering server as '~ts' for scope ~ts.",
 	%                       [ MaybeRegistrationName, MaybeRegistrationScope ] ),
@@ -324,12 +357,12 @@ to_string( State ) ->
 						?getAttr(server_gregorian_start) ),
 
 	UptimeStr = time_utils:duration_to_string(
-			time_utils:get_monotonic_time() - ?getAttr(server_start) ),
+		time_utils:get_monotonic_time() - ?getAttr(server_start) ),
 
 	TimeStr = text_utils:format( "started on ~ts (uptime: ~ts)",
 		[ time_utils:timestamp_to_string( StartTimestamp ), UptimeStr ] ),
 
-	RegString = case ?getAttr(registration_name) of
+	RegStr = case ?getAttr(registration_name) of
 
 		undefined ->
 			"with no registration name defined";
@@ -340,5 +373,16 @@ to_string( State ) ->
 
 	end,
 
+	UserStr = case ?getAttr(username) of
+
+		undefined ->
+			"not expected to run as a specific user";
+
+		BinUsrName ->
+			text_utils:format( "expected to run as user '~ts'",
+							   [ BinUsrName ] )
+
+	end,
+
 	text_utils:format( "server named '~ts', ~ts, ~ts",
-					   [ ?getAttr(name), TimeStr, RegString ] ).
+					   [ ?getAttr(name), TimeStr, RegStr, UserStr ] ).

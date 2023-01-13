@@ -46,7 +46,7 @@
 %
 % This overall, singleton server registers itself globally, so that other
 % services can interact with it even if running in separate virtual machines
-% (ex: US-Web).
+% (e.g. US-Web).
 %
 % The base directories for configuration information are, by decreasing order of
 % priority:
@@ -65,7 +65,7 @@
 % base directory that contains the ?config_filename files, and all other related
 % configuration files.
 %
-% Ex: "~/.config/universal-server".
+% For example "~/.config/universal-server".
 
 % See also: the start/stop scripts and us-common.sh, which apply mostly the same
 % look-up logic.
@@ -88,7 +88,8 @@
 
 	{ tcp_port_range, maybe( tcp_port_range() ),
 	  "the range (if any) of TCP ports to use for out-of-band inter-VM "
-	  "communication (not using the Erlang carrier; ex: for send_file)" },
+	  "communication (not using the Erlang carrier; for example for "
+	  "send_file)" },
 
 	{ execution_context, execution_context(),
 	  "tells whether this server is to run in development or production mode" },
@@ -124,7 +125,7 @@
 	  "the name under which this configuration server is registered" },
 
 	{ app_base_directory, bin_directory_path(),
-	  "the base directory where this US application is located (ex: where "
+	  "the base directory where this US application is located (e.g. where "
 	  "the 'priv' directory can be found)" } ] ).
 
 
@@ -141,7 +142,7 @@
 -define( default_us_config_reg_name, us_config_server ).
 
 
-% The default registration scope of the US server (ex: its configuration one):
+% The default registration scope of the US server (e.g. its configuration one):
 %
 % (preferred local, to allow multiple US configuration servers to coexist in a
 % distributed way)
@@ -401,7 +402,7 @@ getUSWebRuntimeSettings( State ) ->
 		naming_utils:look_up_scope() } ).
 get_default_settings() ->
 
-	% Possibly read from any *.config file specified (ex: refer to the
+	% Possibly read from any *.config file specified (e.g. refer to the
 	% INTERNAL_OPTIONS make variable):
 
 	% Specifying the application is essential, as this function is to be called
@@ -493,7 +494,7 @@ get_default_settings() ->
 % message.
 %
 % This is a static method (no state involved), so that both this kind of servers
-% and others (ex: web configuration ones), and even tests, can use the same,
+% and others (e.g. web configuration ones), and even tests, can use the same,
 % factored, logic.
 %
 -spec get_us_config_directory() ->
@@ -519,7 +520,7 @@ get_us_config_directory() ->
 
 		Path ->
 			{ Path, text_utils:format( "path '~ts' was obtained from "
-						"environment variable '~ts'", [ Path, FirstEnvVar ] ) }
+				"environment variable '~ts'", [ Path, FirstEnvVar ] ) }
 
 	end,
 
@@ -538,7 +539,7 @@ get_us_config_directory() ->
 
 		Paths ->
 			{ Paths, text_utils:format( "paths '~ts' was obtained from "
-					"environment variable '~ts'", [ Paths, SecondEnvVar ] ) }
+				"environment variable '~ts'", [ Paths, SecondEnvVar ] ) }
 
 	end,
 
@@ -1271,8 +1272,8 @@ guess_app_base_directory( State ) ->
 	%
 	NativeGuessedDir = file_utils:join( [ CurrentDir , ".." ] ),
 
-	% Other builds (ex: continuous integration ones) may clone with the original
-	% name (with no "us_common" renaming), so:
+	% Other builds (e.g. continuous integration ones) may clone with the
+	% original name (with no "us_common" renaming), so:
 	%
 	OtherGuessedDir =
 		file_utils:join( [ CurrentDir , "..", "..", "us-common" ] ),
@@ -1346,8 +1347,8 @@ manage_log_directory( ConfigTable, State ) ->
 
 
 
-% @doc Manages any user-defined configuration filename for US-Main services (ex:
-% sensors).
+% @doc Manages any user-defined configuration filename for US-Main services
+% (e.g. sensors).
 %
 -spec manage_us_main_config( us_config_table(), wooper:state() ) ->
 											wooper:state().
@@ -1414,7 +1415,7 @@ manage_us_web_config( ConfigTable, State ) ->
 % @doc Returns the PID of the US configuration server, creating it if ever
 % necessary.
 %
-% Centralised here on behalf of clients (ex: US-Main, US-Web, etc.).
+% Centralised here on behalf of clients (e.g. US-Main, US-Web, etc.).
 %
 % This is an helper function, not a static method, as a trace emitter state
 % shall be specified as parameter, so that traces can be sent in all cases
@@ -1429,7 +1430,7 @@ get_us_config_server( State ) ->
 % @doc Returns the PID of the US configuration server, creating it if ever
 % necessary and if enabled.
 %
-% Centralised here on behalf of clients (ex: US-Main, US-Web, etc.).
+% Centralised here on behalf of clients (e.g. US-Main, US-Web, etc.).
 %
 % This is an helper function, not a static method, as a trace emitter state
 % shall be specified as parameter, so that traces can be sent in all cases

@@ -8,7 +8,7 @@ US_COMMON_TOP = .
 MODULES_DIRS = src doc conf test
 
 # To override the 'all' default target with a parallel version:
-BASE_MAKEFILE = true
+BASE_MAKEFILE := true
 
 
 
@@ -25,9 +25,9 @@ help-us-common:
 
 
 register-version-in-header:
-	@if [ -z "$(VERSION_FILE)" ] ; then \
-	echo "Error, no version file defined." 1>&2 ; exit 52 ; else \
-	$(MAKE) register-us-common ; fi
+	@if [ -z "$(VERSION_FILE)" ]; then \
+	echo "Error, no version file defined." 1>&2; exit 52; else \
+	$(MAKE) -s register-us-common; fi
 
 
 register-us-common:
@@ -36,22 +36,7 @@ register-us-common:
 
 # Useful to extract internal layout for re-use in upper layers:
 list-beam-dirs:
-	@for d in $(US_COMMON_BEAM_DIRS) ; do echo $$(readlink -f $$d) ; done
-
-
-# To synchronise from the local tree the code base of a remote server, with no
-# Git commit needed.
-#
-# If the source tree is built and up to date, no need to (re)build on the server
-# (if homogeneous in terms of versions).
-#
-# (note that files removed from the local sources will remain in the target
-# server)
-#
-sync-sources-to-server:
-	@$(MAKE) -s all
-	@if [ -n "$(US_COMMON_SRV)" ]; then if [ -n "$(US_COMMON_SYNC_TARGET_ROOT)" ]; then echo " Synchronising the $$(basename $$(pwd)) layer to $(US_COMMON_SRV):$(US_COMMON_SYNC_TARGET_ROOT)" ; $(SYNC_TOOL) $(SYNC_CODE_OPT) $(US_COMMON_TOP)/../us_common $(US_COMMON_SRV):$(US_COMMON_SYNC_TARGET_ROOT); else echo "Error, no US_COMMON_SYNC_TARGET_ROOT variable set." 1>&2; exit 4; fi; else echo "Error, no US_COMMON_SRV variable set." 1>&2; exit 5; fi
-
+	@for d in $(US_COMMON_BEAM_DIRS); do echo $$(readlink -f $$d); done
 
 
 stats:

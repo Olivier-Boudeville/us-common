@@ -28,6 +28,9 @@ fi
 
 
 
+epmd="$(which epmd 2>/dev/null)"
+
+
 # Sets notably: us_config_dir, us_config_file, epmd_opt, vm_cookie,
 # execution_context, us_username, us_groupname, us_app_base_dir, us_log_dir.
 #
@@ -158,11 +161,15 @@ read_us_config_file()
 	# US configuration content, read once for all, with comments (%) removed:
 	us_base_content=$(/bin/cat "${us_config_file}" | sed 's|^[[:space:]]*%.*||1')
 
+	# Note that the EPMD port may be overridden first here, at the overall
+	# US-level, but also later, at the one of each US-* (e.g. US-Main, US-Web)
+	# application.
+
 	erl_epmd_port=$(echo "${us_base_content}" | grep epmd_port | sed 's|^[[:space:]]*{[[:space:]]*epmd_port,[[:space:]]*||1' | sed 's|[[:space:]]*}.$||1')
 
 	if [ -z "${erl_epmd_port}" ]; then
 
-		#echo "No Erlang EPMD port specified, not interfering with context defaults."
+		#echo "No US-level Erlang EPMD port specified, not interfering with context defaults."
 
 		# For shell-like uses:
 		epmd_opt=""
@@ -182,7 +189,8 @@ read_us_config_file()
 
 	fi
 
-	#echo "epmd_opt = $epmd_opt"
+	#echo "epmd_opt = ${epmd_opt}"
+
 
 	# Note that these shell scripts shall fetch any cookie as it is, i.e. not
 	# surrounded by single quotes, otherwise it will not be accepted (ex: when

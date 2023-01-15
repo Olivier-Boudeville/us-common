@@ -37,7 +37,14 @@
 -type config_server_pid() :: server_pid().
 % The PID of a US-Config server.
 
--export_type([ config_server_pid/0 ]).
+
+-type epmd_origin() ::
+	'as_default'    % Just the default EPMD port applying for an US application.
+  | 'explicit_set'. % An EPMD port was explicitly set in the configuration of
+					% the US application.
+% The origin of an EPMD setting.
+
+-export_type([ config_server_pid/0, epmd_origin/0 ]).
 
 
 
@@ -79,12 +86,18 @@
 	% No vm_cookie :: net_utils:cookie() stored, as can be read directly from
 	% the VM.
 
-	% Otherwise a default port could apply (either Erlang's one or Myriad's
-	% one):
+
+	% If undefined, the Myriad default (rather than Erlang's one) is expected to
+	% apply.
+	%
+	% (note that this information is tracked yet currently not specifically used
+	% by the servers themselves - it is actually of interest mostly for the
+	% US-related management scripts in order that they can
+	% start/monitor/stop/kill instances)
 	%
 	{ epmd_port, maybe( tcp_port() ),
 	  "the EPMD TCP port presumably in use (as read from the configuration; "
-	  "if any)" },
+	  "if any; possibly overridden by the US-* application at hand)" },
 
 	{ tcp_port_range, maybe( tcp_port_range() ),
 	  "the range (if any) of TCP ports to use for out-of-band inter-VM "
@@ -215,6 +228,7 @@
 % Shorthands:
 
 -type execution_context() :: basic_utils:execution_context().
+-type module_name() :: basic_utils:module_name().
 
 -type ustring() :: text_utils:ustring().
 
@@ -227,7 +241,7 @@
 -type registration_name() :: naming_utils:registration_name().
 -type registration_scope() :: naming_utils:registration_scope().
 
-%-type tcp_port() :: net_utils:tcp_port().
+-type tcp_port() :: net_utils:tcp_port().
 %-type tcp_port_range() :: net_utils:tcp_port_range().
 
 -type server_pid() :: class_UniversalServer:server_pid().
@@ -388,6 +402,63 @@ getUSWebRuntimeSettings( State ) ->
 
 	wooper:return_state_result( RegState, { ?getAttr(config_base_directory),
 		?getAttr(execution_context), ?getAttr(us_web_config_filename) } ).
+
+
+
+% @doc Notifies this US server of a presumably current EPMD port, so that the
+% right information is known.
+%
+% Called by US-* applications (e.g. US-{Main,Web}) whose configuration file
+% allows to override any US-level setting.
+%
+-spec notifyEPMDPort( wooper:state(), tcp_port(), epmd_origin(), module_name(),
+					  server_pid() ) -> oneway_return().
+notifyEPMDPort( State, EPMDPort, _Origin=as_default, AppModName, AppSrvPid ) ->
+
+	NewEPMDPort = case ?getAttr(epmd_port) of
+
+		undefined ->
+			?info_fmt( "No US-level EPMD port was set, so the default "
+				"(port #~B) reported by application '~ts' (~w) should apply.",
+				[ EPMDPort, AppModName, AppSrvPid ] ),
+			EPMDPort;
+
+		OrigPort ->
+			?info_fmt( "A US-level EPMD port was already set (port #B), "
+				"so the default (port #~B) reported by application '~ts' "
+				"(~w) should not apply.",
+				[ OrigPort, EPMDPort, AppModName, AppSrvPid ] ),
+			OrigPort
+
+	end,
+
+	NewState = setAttribute( State, epmd_port, NewEPMDPort ),
+
+	wooper:return_state( NewState );
+
+
+notifyEPMDPort( State, EPMDPort, _Origin=explicit_set, AppModName,
+				AppSrvPid ) ->
+
+	% Just different traces:
+	case ?getAttr(epmd_port) of
+
+		undefined ->
+			?info_fmt( "No US-level EPMD port was set, so the port #~B, "
+				"reported by application '~ts' (~w), should apply.",
+				[ EPMDPort, AppModName, AppSrvPid ] );
+
+		OrigPort ->
+			?info_fmt( "The port #~B reported by application '~ts' "
+				"(~w) overrides the current US-level EPMD port (#~B).",
+				[ EPMDPort, AppModName, AppSrvPid, OrigPort ] )
+
+	end,
+
+	NewState = setAttribute( State, epmd_port, EPMDPort ),
+
+	wooper:return_state( NewState ).
+
 
 
 

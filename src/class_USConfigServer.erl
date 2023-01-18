@@ -767,23 +767,23 @@ find_file_in( _AllBasePaths=[], CfgSuffix, BaseMsg, Msgs ) ->
 
 find_file_in( _AllBasePaths=[ Path | T ], CfgSuffix, BaseMsg, Msgs ) ->
 
-	CfgFilePath = file_utils:normalise_path(
-					file_utils:join( Path, CfgSuffix ) ),
+	CfgFilePath =
+		file_utils:normalise_path( file_utils:join( Path, CfgSuffix ) ),
 
 	case file_utils:is_existing_file_or_link( CfgFilePath ) of
 
 		true ->
 			CfgDir = filename:dirname( CfgFilePath ),
 
-			FullMsg = text_utils:format( "Configuration directory found "
-				"as '~ts', as containing '~ts'", [ CfgDir, CfgFilePath ] )
+			FullMsg = text_utils:format( BaseMsg ++
+				"found as '~ts', as containing '~ts'", [ CfgDir, CfgFilePath ] )
 				++ case Msgs of
 
 					[] ->
 						"";
 
 					_ ->
-						", after having searched through: "
+						", after following look-up: "
 							++ text_utils:strings_to_enumerated_string(
 									lists:reverse( Msgs ) )
 
@@ -970,12 +970,13 @@ manage_epmd_port( ConfigTable, State ) ->
 			% daemons that can be updated/killed at will.
 			% So:
 
-			?debug( "No EPMD TCP port set by the user." ),
+			?debug( "No EPMD TCP port set by the user in the US overall "
+					"configuration file." ),
 			undefined;
 
 		{ value, UserEPMDPort } when is_integer( UserEPMDPort ) ->
 			?info_fmt( "Supposing already running using the user-defined "
-					   "EPMD TCP port #~B.", [ UserEPMDPort ] ),
+					   "US-level EPMD TCP port #~B.", [ UserEPMDPort ] ),
 			UserEPMDPort;
 
 		{ value, InvalidEPMDPort } ->
@@ -1669,7 +1670,8 @@ to_string( State ) ->
 	EPMDStr = case ?getAttr(epmd_port) of
 
 		undefined ->
-			"whose port has not been specified by the user configuration";
+			% Might be updated later by US servers:
+			"whose port has not been specified by the US-level configuration";
 
 		EPMDPort ->
 			text_utils:format( "expected by the configuration "

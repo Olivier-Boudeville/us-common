@@ -354,7 +354,7 @@ unregister_name( State ) ->
 to_string( State ) ->
 
 	StartTimestamp = time_utils:gregorian_ms_to_timestamp(
-						?getAttr(server_gregorian_start) ),
+		?getAttr(server_gregorian_start) ),
 
 	UptimeStr = time_utils:duration_to_string(
 		time_utils:get_monotonic_time() - ?getAttr(server_start) ),
@@ -384,5 +384,5 @@ to_string( State ) ->
 
 	end,
 
-	text_utils:format( "server named '~ts', ~ts, ~ts",
+	text_utils:format( "server named '~ts', ~ts, ~ts, ~ts",
 					   [ ?getAttr(name), TimeStr, RegStr, UserStr ] ).

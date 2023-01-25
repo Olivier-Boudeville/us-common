@@ -584,8 +584,8 @@ get_us_config_directory() ->
 
 		false ->
 			CfgHomeDefaultPath = file_utils:join( HomeDir, ".config" ),
-			CfgHomeMsg = text_utils:format(
-				"no '~ts' environment variable defined, defaulting to '~ts'",
+			CfgHomeMsg = text_utils:format( "no '~ts' environment variable "
+				"was defined, defaulting to '~ts'",
 				[ FirstEnvVar, CfgHomeDefaultPath ] ),
 			{ CfgHomeDefaultPath, CfgHomeMsg };
 
@@ -620,7 +620,7 @@ get_us_config_directory() ->
 
 	CfgSuffix = file_utils:join( ?app_subdir, ?us_config_filename ),
 
-	BaseMsg = text_utils:format( "searched for Universal Server "
+	BaseMsg = text_utils:format( "Searched for the Universal Server "
 		"configuration directory, based on suffix '~ts', knowing that: ~ts~n"
 		"Configuration directory ", [ CfgSuffix,
 				text_utils:strings_to_string( [ FirstMsg, SecondMsg ] ) ] ),

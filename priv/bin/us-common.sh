@@ -10,6 +10,10 @@
 #  - "-f" detects symlinks as well
 #  - some whitespace flexibility is allowed in the configuration files
 
+
+echo "### US-Common script being sourced."
+
+
 # Determining us_common_root if needed:
 if [ -z "${us_common_root}" ]; then
 
@@ -44,6 +48,8 @@ epmd="$(which epmd 2>/dev/null)"
 #
 read_us_config_file()
 {
+
+	echo "### Reading US-Common configuration file"
 
 	us_config_filename="us.config"
 
@@ -223,8 +229,15 @@ read_us_config_file()
 
 	us_groupname=$(echo "${us_base_content}" | grep us_groupname | sed 's|^{[[:space:]]*us_groupname,[[:space:]]"*||1' | sed 's|"[[:space:]]*}.$||1')
 
-	#echo "us_groupname = $us_groupname"
+	# As used by US-* projects:
+	if [ -z "${us_groupname}" ]; then
 
+		# Primary group of that user:
+		us_groupname="$(id -gn)"
+
+	fi
+
+	#echo "us_groupname = $us_groupname"
 
 	us_app_base_dir=$(echo "${us_base_content}" | grep us_app_base_dir | sed 's|^{[[:space:]]*us_app_base_dir,[[:space:]]*"||1' | sed 's|"[[:space:]]*}.$||1')
 

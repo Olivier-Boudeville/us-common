@@ -1154,7 +1154,7 @@ register_task_schedule( TaskId, TaskEntry, ScheduleOffsetMs, DurationFromNowMs,
 						State ) ->
 
 	%?debug_fmt
-	?warning_fmt( "Registering task #~B for schedule offset ~B (duration from "
+	?notice_fmt( "Registering task #~B for schedule offset ~B (duration from "
 		"now: ~ts): ~ts.", [ TaskId, ScheduleOffsetMs,
 			time_utils:duration_to_string( DurationFromNowMs ),
 			task_entry_to_string( TaskEntry, State ) ] ),

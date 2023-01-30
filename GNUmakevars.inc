@@ -177,10 +177,14 @@ endif
 # Note also we rely on the names of build roots (ex: myriad) as opposed to
 # project/repository names (ex: Ceylan-Myriad):
 #
-# First priority is the expected environment variable:
-ifneq ($(CEYLAN_TRACES),)
-	TRACES_TOP = $(CEYLAN_TRACES)
-else
+
+# First priority was the expected environment variable; now disabled as this led
+# to unfortunate user-based overriding due to .bashrc-related elements (prefer
+# symbolic links whenever needed):
+
+#ifneq ($(CEYLAN_TRACES),)
+#	TRACES_TOP = $(CEYLAN_TRACES)
+#else
 	ifneq ($(wildcard $(US_COMMON_TOP)/_checkouts/traces/.),)
 		TRACES_TOP = $(US_COMMON_TOP)/_checkouts/traces
 	else
@@ -196,7 +200,7 @@ else
 			endif
 		endif
 	endif
-endif
+#endif
 
 ifndef PREDECESSOR_LAYER_TOPS
 	PREDECESSOR_LAYER_TOPS := $(TRACES_TOP)

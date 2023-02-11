@@ -27,7 +27,7 @@
 -module(us_common_otp_application_test).
 
 
-% Exported for re-use by other tests (ex: in US-Web):
+% Exported for re-use by other tests (e.g. in US-Web):
 -export([ get_us_information/0 ]).
 
 
@@ -155,7 +155,7 @@ test_us_common_application( OrderedAppNames ) ->
 		naming_utils:registration_to_look_up_scope( CfgRegScope ) ),
 
 	% The top-level user process may not be aware that an OTP application fails
-	% (ex: because its main process crashed), which is a problem for a test. So
+	% (e.g. because its main process crashed), which is a problem for a test. So
 	% here we link explicitly this test process to the US configuration server,
 	% to have a chance of detecting issues:
 	%

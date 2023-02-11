@@ -34,7 +34,7 @@
 
 % Scheduling of tasks on behalf of the US framework.
 
--type scheduler_pid() :: class_UniversalServer:server_pid().
+-type scheduler_pid() :: class_USServer:server_pid().
 
 
 -type task_command() :: wooper:oneway_call().
@@ -130,7 +130,8 @@
 
 
 -export_type([ scheduler_pid/0, task_command/0, start_time/0,
-			   user_periodicity/0, requester_pid/0, actuator_pid/0,
+			   user_periodicity/0, periodicity/0, schedule_count/0,
+			   requester_pid/0, actuator_pid/0,
 			   task_registration_outcome/0, task_unregistration_outcome/0,
 			   task_id/0, timer_ref/0, timer_table/0 ]).
 
@@ -239,8 +240,8 @@
 % On task commands:
 %
 % We preferred to limit the ability of a scheduler only to sending *messages* to
-% whichever process needed (ex: no MFA direct calls), for a better separation of
-% concerns / state management.
+% whichever process needed (e.g. no MFA direct calls), for a better separation
+% of concerns / state management.
 %
 %
 % On synchronicity:
@@ -263,10 +264,10 @@
 % Timestamps (e.g. to designate Sunday, March 22, 2020 at noon) are converted
 % into internal time offsets whenever a scheduler registers a task.
 %
-% As a result, correct periodicities will be enforced (ex: really a 1-hour
+% As a result, correct periodicities will be enforced (e.g. really a 1-hour
 % wallclock duration between two schedulings, regardless of any time warp) but,
 % for example due to DST (Daylight Saving Time), tasks may appear to be executed
-% with a time offset (ex: at 1 PM instead of noon). Working with a monotonic,
+% with a time offset (e.g. at 1 PM instead of noon). Working with a monotonic,
 % UTC (Universal Coordinated Time)-like time is thus intentional.
 %
 % Due to some external event (e.g. system overload or suspension), task

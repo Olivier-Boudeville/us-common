@@ -36,20 +36,24 @@
 
 -type server_pid() :: class_TraceEmitter:emitter_pid().
 
--export_type([ server_pid/0 ]).
+-type ping_id() :: count().
+
+-export_type([ server_pid/0, ping_id/0 ]).
 
 
 
 % Shorthands:
 
+-type count() :: basic_utils:count().
+
 -type ustring() :: text_utils:ustring().
--type server_name() :: ustring().
 
 -type registration_name() :: naming_utils:registration_name().
 -type registration_scope() :: naming_utils:registration_scope().
 
 -type user_name() :: system_utils:user_name().
 
+-type emitter_init() :: class_TraceEmitter:emitter_init().
 
 
 % Design notes:
@@ -113,28 +117,28 @@
 
 % @doc Creates a server instance that is not registered, and that traps exits.
 %
-% Parameter is ServerName, the name of that server.
+% Parameter is ServerInit, the name of that server.
 %
 % It is not expected to be run as any specific user.
 %
--spec construct( wooper:state(), server_name() ) -> wooper:state().
-construct( State, ServerName ) ->
-	construct( State, ServerName, _TrapExits=true ).
+-spec construct( wooper:state(), emitter_init() ) -> wooper:state().
+construct( State, ServerInit ) ->
+	construct( State, ServerInit, _TrapExits=true ).
 
 
 
 % @doc Creates a server instance that is not registered, and that traps exits if
 % requested.
 %
-% Parameter is ServerName, the name of that US server, and whether it should
+% Parameter is ServerInit, the name of that US server, and whether it should
 % trap EXITS, if wanting a better control by resisting to exit messages being
 % received (see the onWOOPERExitReceived/3 callback).
 %
 % It is not expected to be run as any specific user.
 %
--spec construct( wooper:state(), server_name(), boolean() ) -> wooper:state().
-construct( State, ServerName, TrapExits ) ->
-	construct( State, ServerName, _MaybeRegistrationName=undefined,
+-spec construct( wooper:state(), emitter_init(), boolean() ) -> wooper:state().
+construct( State, ServerInit, TrapExits ) ->
+	construct( State, ServerInit, _MaybeRegistrationName=undefined,
 		_MaybeRegistrationScope=undefined, TrapExits ).
 
 
@@ -143,16 +147,16 @@ construct( State, ServerName, TrapExits ) ->
 % requested.
 %
 % Parameters are:
-% - ServerName, the name of that US server
+% - ServerInit, the name of that US server
 % - MaybeRegistrationName, any name under which this server shall be registered
 % - MaybeRegistrationScope, any scope at which this server shall be registered
 %
 % It is not expected to be run as any specific user.
 %
--spec construct( wooper:state(), server_name(), maybe( registration_name() ),
+-spec construct( wooper:state(), emitter_init(), maybe( registration_name() ),
 				 maybe( registration_scope() ) ) -> wooper:state().
-construct( State, ServerName, MaybeRegistrationName, MaybeRegistrationScope ) ->
-	construct( State, ServerName, MaybeRegistrationName, MaybeRegistrationScope,
+construct( State, ServerInit, MaybeRegistrationName, MaybeRegistrationScope ) ->
+	construct( State, ServerInit, MaybeRegistrationName, MaybeRegistrationScope,
 			   _TrapExits=true ).
 
 
@@ -161,18 +165,18 @@ construct( State, ServerName, MaybeRegistrationName, MaybeRegistrationScope ) ->
 % requested.
 %
 % Parameters are:
-% - ServerName, the name of that US server
+% - ServerInit, the name of that US server
 % - MaybeRegistrationName, any name under which this server shall be registered
 % - MaybeRegistrationScope, any scope at which this server shall be registered
 % - TrapExits tells whether EXIT messages shall be trapped
 %
 % It is not expected to be run as any specific user.
 %
--spec construct( wooper:state(), server_name(), maybe( registration_name() ),
+-spec construct( wooper:state(), emitter_init(), maybe( registration_name() ),
 				 maybe( registration_scope() ), boolean() ) -> wooper:state().
-construct( State, ServerName, MaybeRegistrationName, MaybeRegistrationScope,
+construct( State, ServerInit, MaybeRegistrationName, MaybeRegistrationScope,
 		   TrapExits ) ->
-	construct( State, ServerName, MaybeRegistrationName, MaybeRegistrationScope,
+	construct( State, ServerInit, MaybeRegistrationName, MaybeRegistrationScope,
 			   TrapExits, _MaybeUserName=undefined ).
 
 
@@ -181,16 +185,16 @@ construct( State, ServerName, MaybeRegistrationName, MaybeRegistrationScope,
 % requested, and is expected to be run as specified user (if any).
 %
 % Parameters are:
-% - ServerName, the name of that US server
+% - ServerInit, the name of that US server
 % - RegistrationName, the name under which this server shall be registered
 % - RegistrationScope, the scope at which this server shall be registered
 %
 % It is not expected to be run as any specific user.
 %
--spec construct( wooper:state(), server_name(), maybe( registration_name() ),
+-spec construct( wooper:state(), emitter_init(), maybe( registration_name() ),
 		maybe( registration_scope() ), boolean(), maybe( user_name() ) ) ->
 													wooper:state().
-construct( State, ServerName, MaybeRegistrationName, MaybeRegistrationScope,
+construct( State, ServerInit, MaybeRegistrationName, MaybeRegistrationScope,
 		   TrapExits, MaybeUserName ) ->
 
 	TrapExits =:= true andalso
@@ -201,7 +205,7 @@ construct( State, ServerName, MaybeRegistrationName, MaybeRegistrationScope,
 
 	% First the direct mother classes:
 	TraceState = class_TraceEmitter:construct( State,
-		?trace_categorize(ServerName) ),
+		?trace_categorize(ServerInit) ),
 
 	% Constant based on the number of milliseconds of the EPOCH, since year 0;
 	% used in order to compute the most complete offset (in UTC):
@@ -247,10 +251,9 @@ destruct( State ) ->
 % Any server must be able to answer to (asynchronous) ping requests from a
 % monitoring server.
 %
-% (const oneway, as meant to be asynchronous)
+% (const oneway, not request, as meant to be asynchronous)
 %
--spec ping( wooper:state(), class_Supervisor:ping_id(), pid() ) ->
-					const_oneway_return().
+-spec ping( wooper:state(), ping_id(), pid() ) -> const_oneway_return().
 ping( State, PingId, MonitorPid ) ->
 
 	% Sends back another oneway (no result expected here):
@@ -294,8 +297,8 @@ onWOOPERExitReceived( State, CrashPid, ExitType ) ->
 					 wooper:state() ) -> wooper:state().
 register_name( _RegistrationName=undefined, RegistrationScope, State ) ->
 
-	% May be done later in the construction of the actual instance (ex: based on
-	% a configuration file being then read):
+	% May be done later in the construction of the actual instance (e.g. based
+	% on a configuration file being then read):
 	%
 	cond_utils:if_defined( us_common_debug_registration,
 		?debug( "As a US server: no name to register, "

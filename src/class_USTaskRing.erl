@@ -42,13 +42,13 @@
 % A key property is that all registered tasks will be serialized (no
 % overlapping happening), and uniformly.
 %
-% A typical use-case is having a resource (ex: a tool for web analysis) used by
-% multiple consumers (ex: several websites) whose (single) state may not be
+% A typical use-case is having a resource (e.g. a tool for web analysis) used by
+% multiple consumers (e.g. several websites) whose (single) state may not be
 % protected against concurrent accesses.
 %
 % At any time, up to one consumer shall access that resource, none shall be
 % skipped, the expected pace shall be respected as much as possible, and
-% resource use shall be spaced as evenly as possible (ex: to avoiding spikes in
+% resource use shall be spaced as evenly as possible (e.g. to avoiding spikes in
 % resource consumption such as CPU).
 %
 % For that, a task ring registering all tasks is created;, it will register to
@@ -164,16 +164,16 @@ construct( State, RingName, Actuators, TaskOnewayName, TaskOnewayArgs,
 	SrvState = class_USServer:construct( State, ?trace_categorize(RingName) ),
 
 	TaskPeriodicity = class_USScheduler:vet_user_periodicity(
-						UserTaskPeriodicity, SrvState ),
+		UserTaskPeriodicity, SrvState ),
 
 	TaskCall = { TaskOnewayName,
 				 list_utils:append_at_end( self(), TaskOnewayArgs ) },
 
 	SetState = setAttributes( SrvState, [
-								{ task_periodicity, TaskPeriodicity },
-								{ task_call, TaskCall },
-								{ scheduler_pid, SchedulerPid },
-								{ waited_actuator_pid, undefined } ] ),
+		{ task_periodicity, TaskPeriodicity },
+		{ task_call, TaskCall },
+		{ scheduler_pid, SchedulerPid },
+		{ waited_actuator_pid, undefined } ] ),
 
 	{ RingPeriodicity, ActState } =
 		set_actuators( Actuators, TaskPeriodicity, SetState ),
@@ -258,8 +258,8 @@ triggerNextTask( State ) ->
 			%            [ ThisActuatorPid, TaskCall ] ),
 
 			TrigState = setAttributes( State, [
-					{ actuator_ring, NewRing },
-					{ waited_actuator_pid, ThisActuatorPid } ] ),
+				{ actuator_ring, NewRing },
+				{ waited_actuator_pid, ThisActuatorPid } ] ),
 
 			wooper:return_state( TrigState );
 
@@ -311,9 +311,10 @@ set_actuators( NewActuators, TaskPeriodicity, State ) ->
 	RingPeriodicity = erlang:round( TaskPeriodicity / ActuatorCount ),
 
 	?debug_fmt( "This ring is to be triggered by its scheduler every ~ts, as "
-	  "task-level periodicity is ~ts, and ~B actuators are being synchronised.",
-	  [ time_utils:duration_to_string( RingPeriodicity ),
-		time_utils:duration_to_string( TaskPeriodicity ), ActuatorCount ] ),
+		"task-level periodicity is ~ts, and ~B actuators are being "
+		"synchronised.",
+		[ time_utils:duration_to_string( RingPeriodicity ),
+		  time_utils:duration_to_string( TaskPeriodicity ), ActuatorCount ] ),
 
 	SetState = setAttribute( State, actuator_ring, NewActuatorRing ),
 

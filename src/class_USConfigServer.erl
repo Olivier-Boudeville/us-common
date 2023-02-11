@@ -111,11 +111,11 @@
 	  "the directory where all VM log files and US-specific higher-level "
 	  "traces will be stored" },
 
-	{ us_main_config_filename, maybe( bin_file_path() ),
+	{ us_main_config_filepath, maybe( bin_file_path() ),
 	  "the path to the configuration file (if any) regarding US-Main (i.e. "
 	  "for sensors and other elements)" },
 
-	{ us_web_config_filename, maybe( bin_file_path() ),
+	{ us_web_config_filepath, maybe( bin_file_path() ),
 	  "the path to the configuration file (if any) regarding US-Web (i.e. "
 	  "webserver, virtual hosting, etc.)" },
 
@@ -188,9 +188,9 @@
 -define( us_log_dir_key, us_log_dir ).
 
 
--define( us_main_config_filename_key, us_main_config_filename ).
+-define( us_main_config_filepath_key, us_main_config_filepath ).
 
--define( us_web_config_filename_key, us_web_config_filename ).
+-define( us_web_config_filepath_key, us_web_config_filepath ).
 
 
 % All known, licit keys for the US configuration file:
@@ -200,7 +200,7 @@
 	?us_server_registration_name_key,
 	?us_config_server_registration_name_key,
 	?us_app_base_dir_key, ?us_log_dir_key,
-	?us_main_config_filename_key, ?us_web_config_filename_key] ).
+	?us_main_config_filepath_key, ?us_web_config_filepath_key] ).
 
 
 % The last-resort environment variable:
@@ -212,6 +212,14 @@
 % Exported helpers:
 -export([ get_us_config_server/1, get_us_config_server/2,
 		  get_execution_target/0 ]).
+
+
+% Used by tests:
+-type us_config_table() :: table( atom(), term() ).
+% A table holding US configuration information.
+
+-export_type([ us_config_table/0 ]).
+
 
 
 % Allows to define WOOPER base variables and methods for that class:
@@ -244,11 +252,7 @@
 -type tcp_port() :: net_utils:tcp_port().
 %-type tcp_port_range() :: net_utils:tcp_port_range().
 
--type server_pid() :: class_UniversalServer:server_pid().
-
-
--type us_config_table() :: table( atom(), term() ).
-% A table holding US configuration information.
+-type server_pid() :: class_USServer:server_pid().
 
 
 
@@ -265,7 +269,7 @@ construct( State ) ->
 
 	% First the direct mother classes, then this class-specific actions:
 	TraceState = class_USServer:construct( State,
-							?trace_categorize("Configuration main server") ),
+		?trace_categorize("Configuration main server") ),
 
 	% Allows functions provided by lower-level libraries called directly from
 	% this instance process to plug to the same (trace aggregator) bridge, with
@@ -341,8 +345,8 @@ destruct( State ) ->
 % and requests related information from it.
 %
 -spec getUSMainRuntimeSettings( wooper:state() ) -> request_return(
-		{ bin_directory_path(), execution_context(), maybe( bin_file_path() ),
-		  maybe( server_pid() ) } ).
+		{ bin_directory_path(), execution_context(),
+		  maybe( bin_file_path() ) } ).
 getUSMainRuntimeSettings( State ) ->
 
 	USMainConfigServerPid = ?getSender(),
@@ -367,7 +371,7 @@ getUSMainRuntimeSettings( State ) ->
 	end,
 
 	wooper:return_state_result( RegState, { ?getAttr(config_base_directory),
-		?getAttr(execution_context), ?getAttr(us_main_config_filename) } ).
+		?getAttr(execution_context), ?getAttr(us_main_config_filepath) } ).
 
 
 
@@ -375,8 +379,8 @@ getUSMainRuntimeSettings( State ) ->
 % requests web-related information from it.
 %
 -spec getUSWebRuntimeSettings( wooper:state() ) -> request_return(
-		{ bin_directory_path(), execution_context(), maybe( bin_file_path() ),
-		  maybe( server_pid() ) } ).
+		{ bin_directory_path(), execution_context(),
+		  maybe( bin_file_path() ) } ).
 getUSWebRuntimeSettings( State ) ->
 
 	USWebConfigServerPid = ?getSender(),
@@ -401,7 +405,7 @@ getUSWebRuntimeSettings( State ) ->
 	end,
 
 	wooper:return_state_result( RegState, { ?getAttr(config_base_directory),
-		?getAttr(execution_context), ?getAttr(us_web_config_filename) } ).
+		?getAttr(execution_context), ?getAttr(us_web_config_filepath) } ).
 
 
 
@@ -598,7 +602,7 @@ get_us_config_directory() ->
 	SecondEnvVar = "XDG_CONFIG_DIRS",
 
 	{ ListedPathsAsStrings, SecondMsg } =
-		case system_utils:get_environment_variable( SecondEnvVar ) of
+			case system_utils:get_environment_variable( SecondEnvVar ) of
 
 		false ->
 			% A single one here:
@@ -623,7 +627,7 @@ get_us_config_directory() ->
 	BaseMsg = text_utils:format( "Searched for the Universal Server "
 		"configuration directory, based on suffix '~ts', knowing that: ~ts~n"
 		"Configuration directory ", [ CfgSuffix,
-				text_utils:strings_to_string( [ FirstMsg, SecondMsg ] ) ] ),
+			text_utils:strings_to_string( [ FirstMsg, SecondMsg ] ) ] ),
 
 	ResPair = find_file_in( AllBasePaths, CfgSuffix, BaseMsg, _Msgs=[] ),
 
@@ -686,7 +690,7 @@ get_configuration_table( BinCfgDir ) ->
 			static_return( diagnosed_fallible( maybe( file_name() ) ) ).
 get_us_main_configuration_filename( ConfigTable ) ->
 
-	CfgKey = ?us_main_config_filename_key,
+	CfgKey = ?us_main_config_filepath_key,
 
 	Res = case table:lookup_entry( CfgKey, ConfigTable ) of
 
@@ -698,7 +702,7 @@ get_us_main_configuration_filename( ConfigTable ) ->
 
 		{ value, InvalidUSMainFilename } ->
 
-			ErrorTuploid = { invalid_us_main_config_filename,
+			ErrorTuploid = { invalid_us_main_config_filepath,
 							 InvalidUSMainFilename, CfgKey },
 
 			ErrorMsg = text_utils:format( "Obtained invalid user-configured "
@@ -721,7 +725,7 @@ get_us_main_configuration_filename( ConfigTable ) ->
 			static_return( diagnosed_fallible( maybe( file_name() ) ) ).
 get_us_web_configuration_filename( ConfigTable ) ->
 
-	CfgKey = ?us_web_config_filename_key,
+	CfgKey = ?us_web_config_filepath_key,
 
 	Res = case table:lookup_entry( CfgKey, ConfigTable ) of
 
@@ -734,7 +738,7 @@ get_us_web_configuration_filename( ConfigTable ) ->
 		{ value, InvalidUSWebFilename } ->
 
 			ErrorTuploid =
-				{ invalid_us_web_config_filename, InvalidUSWebFilename,
+				{ invalid_us_web_config_filepath, InvalidUSWebFilename,
 				  CfgKey },
 
 			ErrorMsg = text_utils:format( "Obtained invalid user-configured "
@@ -1279,11 +1283,11 @@ manage_app_base_directory( ConfigTable, State ) ->
 
 			end;
 
-		{ value, D } when is_list( D ) ->
-			D;
+		{ value, DStr } when is_list( DStr ) ->
+			DStr;
 
-		{ value, D } when is_binary( D ) ->
-			file_utils:binary_to_string( D );
+		{ value, DBin } when is_binary( DBin ) ->
+			text_utils:binary_to_string( DBin );
 
 		{ value, InvalidDir }  ->
 			?error_fmt( "Read invalid user-configured US application base "
@@ -1447,7 +1451,7 @@ manage_us_main_config( ConfigTable, State ) ->
 
 	end,
 
-	setAttribute( State, us_main_config_filename, MaybeBinUSMainFilename ).
+	setAttribute( State, us_main_config_filepath, MaybeBinUSMainFilename ).
 
 
 
@@ -1480,7 +1484,7 @@ manage_us_web_config( ConfigTable, State ) ->
 
 	end,
 
-	setAttribute( State, us_web_config_filename, MaybeBinUSWebFilename ).
+	setAttribute( State, us_web_config_filepath, MaybeBinUSWebFilename ).
 
 
 
@@ -1534,25 +1538,21 @@ get_us_config_server( CreateIfNeeded, State ) ->
 	USCfgFilePath = file_utils:join( BinCfgDir, USCfgFilename ),
 
 	% Should, by design, never happen:
-	case file_utils:is_existing_file_or_link( USCfgFilePath ) of
-
-		true ->
-			ok;
-
-		false ->
+	file_utils:is_existing_file_or_link( USCfgFilePath ) orelse
+		begin
 			?error_fmt( "The overall US configuration file ('~ts') "
 						"could not be found.", [ USCfgFilePath ] ),
 			% Must have disappeared then:
 			throw( { us_config_file_not_found, USCfgFilePath } )
 
-	end,
+		end,
 
 	?info_fmt( "Reading the Universal Server configuration from '~ts'.",
 			   [ USCfgFilePath ] ),
 
 	% Ensures as well that all top-level terms are only pairs:
 	ConfigTable = table:new_from_unique_entries(
-							file_utils:read_terms( USCfgFilePath ) ),
+		file_utils:read_terms( USCfgFilePath ) ),
 
 	?info_fmt( "Read US configuration ~ts",
 			   [ table:to_string( ConfigTable ) ] ),
@@ -1687,5 +1687,5 @@ to_string( State ) ->
 		"and as US-Web one '~ts', knowing ~ts and ~ts",
 		[ RegString, ?getAttr(execution_context), EPMDStr,
 		  ?getAttr(config_base_directory), ?getAttr(log_directory),
-		  ?getAttr(us_main_config_filename), ?getAttr(us_web_config_filename),
+		  ?getAttr(us_main_config_filepath), ?getAttr(us_web_config_filepath),
 		  MainSrvString, WebSrvString ] ).

@@ -111,13 +111,15 @@
 	  "the directory where all VM log files and US-specific higher-level "
 	  "traces will be stored" },
 
-	{ us_main_config_filepath, maybe( bin_file_path() ),
-	  "the path to the configuration file (if any) regarding US-Main (i.e. "
-	  "for sensors and other elements)" },
+	{ us_main_config_filename, maybe( bin_filename() ),
+	  "the name to the configuration file (if any) regarding US-Main (i.e. "
+	  "for sensors and other elements), to be found in the US configuration "
+	  "directory" },
 
-	{ us_web_config_filepath, maybe( bin_file_path() ),
+	{ us_web_config_filename, maybe( bin_filename() ),
 	  "the path to the configuration file (if any) regarding US-Web (i.e. "
-	  "webserver, virtual hosting, etc.)" },
+	  "webserver, virtual hosting, etc.), to be found in the US configuration "
+	  "directory" },
 
 	{ us_username, system_utils:user_name(),
 	  "the user who runs the Universal server application (note that there "
@@ -188,9 +190,9 @@
 -define( us_log_dir_key, us_log_dir ).
 
 
--define( us_main_config_filepath_key, us_main_config_filepath ).
+-define( us_main_config_filename_key, us_main_config_filename ).
 
--define( us_web_config_filepath_key, us_web_config_filepath ).
+-define( us_web_config_filename_key, us_web_config_filename ).
 
 
 % All known, licit keys for the US configuration file:
@@ -200,7 +202,7 @@
 	?us_server_registration_name_key,
 	?us_config_server_registration_name_key,
 	?us_app_base_dir_key, ?us_log_dir_key,
-	?us_main_config_filepath_key, ?us_web_config_filepath_key] ).
+	?us_main_config_filename_key, ?us_web_config_filename_key] ).
 
 
 % The last-resort environment variable:
@@ -371,7 +373,7 @@ getUSMainRuntimeSettings( State ) ->
 	end,
 
 	wooper:return_state_result( RegState, { ?getAttr(config_base_directory),
-		?getAttr(execution_context), ?getAttr(us_main_config_filepath) } ).
+		?getAttr(execution_context), ?getAttr(us_main_config_filename) } ).
 
 
 
@@ -405,7 +407,7 @@ getUSWebRuntimeSettings( State ) ->
 	end,
 
 	wooper:return_state_result( RegState, { ?getAttr(config_base_directory),
-		?getAttr(execution_context), ?getAttr(us_web_config_filepath) } ).
+		?getAttr(execution_context), ?getAttr(us_web_config_filename) } ).
 
 
 
@@ -690,7 +692,7 @@ get_configuration_table( BinCfgDir ) ->
 			static_return( diagnosed_fallible( maybe( file_name() ) ) ).
 get_us_main_configuration_filename( ConfigTable ) ->
 
-	CfgKey = ?us_main_config_filepath_key,
+	CfgKey = ?us_main_config_filename_key,
 
 	Res = case table:lookup_entry( CfgKey, ConfigTable ) of
 
@@ -702,7 +704,7 @@ get_us_main_configuration_filename( ConfigTable ) ->
 
 		{ value, InvalidUSMainFilename } ->
 
-			ErrorTuploid = { invalid_us_main_config_filepath,
+			ErrorTuploid = { invalid_us_main_config_filename,
 							 InvalidUSMainFilename, CfgKey },
 
 			ErrorMsg = text_utils:format( "Obtained invalid user-configured "
@@ -725,7 +727,7 @@ get_us_main_configuration_filename( ConfigTable ) ->
 			static_return( diagnosed_fallible( maybe( file_name() ) ) ).
 get_us_web_configuration_filename( ConfigTable ) ->
 
-	CfgKey = ?us_web_config_filepath_key,
+	CfgKey = ?us_web_config_filename_key,
 
 	Res = case table:lookup_entry( CfgKey, ConfigTable ) of
 
@@ -738,7 +740,7 @@ get_us_web_configuration_filename( ConfigTable ) ->
 		{ value, InvalidUSWebFilename } ->
 
 			ErrorTuploid =
-				{ invalid_us_web_config_filepath, InvalidUSWebFilename,
+				{ invalid_us_web_config_filename, InvalidUSWebFilename,
 				  CfgKey },
 
 			ErrorMsg = text_utils:format( "Obtained invalid user-configured "
@@ -1451,7 +1453,7 @@ manage_us_main_config( ConfigTable, State ) ->
 
 	end,
 
-	setAttribute( State, us_main_config_filepath, MaybeBinUSMainFilename ).
+	setAttribute( State, us_main_config_filename, MaybeBinUSMainFilename ).
 
 
 
@@ -1484,7 +1486,7 @@ manage_us_web_config( ConfigTable, State ) ->
 
 	end,
 
-	setAttribute( State, us_web_config_filepath, MaybeBinUSWebFilename ).
+	setAttribute( State, us_web_config_filename, MaybeBinUSWebFilename ).
 
 
 
@@ -1687,5 +1689,5 @@ to_string( State ) ->
 		"and as US-Web one '~ts', knowing ~ts and ~ts",
 		[ RegString, ?getAttr(execution_context), EPMDStr,
 		  ?getAttr(config_base_directory), ?getAttr(log_directory),
-		  ?getAttr(us_main_config_filepath), ?getAttr(us_web_config_filepath),
+		  ?getAttr(us_main_config_filename), ?getAttr(us_web_config_filename),
 		  MainSrvString, WebSrvString ] ).

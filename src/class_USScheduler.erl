@@ -660,13 +660,33 @@ register_task( UserTaskCommand, UserStartTime, UserPeriodicity, UserCount,
 	ReqPid = ?getSender(),
 	ActPid = vet_actuator_pid( UserActPid ),
 
+	ActStr = case ActPid of
+
+		ReqPid ->
+			"which is also the requester";
+
+		_ ->
+			text_utils:format( "whereas the requester is ~w", [ ReqPid ] )
+
+	end,
+
+	HappenStr = case MsDurationBeforeStart of
+
+		0 ->
+			"immediately";
+
+		_ ->
+			text_utils:format( "in ~ts",
+				[ time_utils:duration_to_string( MsDurationBeforeStart ) ] )
+
+	end,
+
 	?info_fmt( "Registering task whose command is '~p', whose declared start "
-		"time is ~w (hence to happen in ~ts), to be triggered ~ts with ~ts "
-		"on actuator ~w (whereas requester is ~w).",
-		[ TaskCommand, UserStartTime,
-		  time_utils:duration_to_string( MsDurationBeforeStart ),
-		  schedule_count_to_string( Count ),
-		  periodicity_to_string( MaybePeriodicity ), ActPid, ReqPid ] ),
+		"time is ~ts (hence to happen ~ts), to be triggered ~ts with ~ts "
+		"on actuator ~w (~ts).",
+		[ TaskCommand, start_time_to_string( UserStartTime ),
+		  HappenStr, schedule_count_to_string( Count ),
+		  periodicity_to_string( MaybePeriodicity ), ActPid, ActStr ] ),
 
 	% Immediate launch requested?
 	case MsDurationBeforeStart of
@@ -806,7 +826,7 @@ unregister_task( TaskId, State ) when is_integer( TaskId ) andalso TaskId > 0 ->
 
 		% Could not have been allocated:
 		true ->
-			?error_fmt( "Requested to unregister task ~B, which never existed "
+			?error_fmt( "Requested to unregister task #~B, which never existed "
 				"(as the next task identifier is ~B).",
 				[ TaskId, NextTaskId ] ),
 			{ { task_unregistration_failed, never_existed }, State };
@@ -817,8 +837,8 @@ unregister_task( TaskId, State ) when is_integer( TaskId ) andalso TaskId > 0 ->
 
 				% Already dropped, hence done:
 				false ->
-					?info_fmt( "Unregistered task ~B, which was actually done.",
-							   [ TaskId ] ),
+					?info_fmt( "Unregistered task #~B, which was actually "
+							   "done.", [ TaskId ] ),
 					{ task_already_done, State };
 
 				{ TaskEntry, ShrunkTaskTable } ->
@@ -903,15 +923,16 @@ timerTrigger( State, ScheduleOffsetMs ) ->
 			%
 			OffsetThresholdMs = 250,
 
+			DiffMs = NowMs - ScheduleOffsetMs,
+
 			erlang:abs( DiffMs ) > OffsetThresholdMs andalso
-				?debug_fmt( "Triggered for offset #~B (~ts), while being at "
-					"#~B (~ts), hence with a signed drift of ~ts "
+				?debug_fmt( "Triggered for offset ~B (~ts), while being at "
+					"offset ~B (~ts), hence with a signed drift of ~ts "
 					"(late if positive).",
 					[ ScheduleOffsetMs,
 					  get_timestamp_string_for( ScheduleOffsetMs, State ),
 					  NowMs, get_timestamp_string_for( NowMs, State ),
-					  time_utils:duration_to_string(
-						NowMs - ScheduleOffsetMs ) ] )
+					  time_utils:duration_to_string( DiffMs ) ] )
 		end ),
 
 	TimerTable = ?getAttr(timer_table),
@@ -922,7 +943,7 @@ timerTrigger( State, ScheduleOffsetMs ) ->
 		?getAttr(task_table), State ),
 
 	cond_utils:if_defined( us_common_debug_scheduling,
-		?debug_fmt( "After having being triggered for #~B, went "
+		?debug_fmt( "After having being triggered for offset ~B, went "
 			"from ~ts to ~ts", [ ScheduleOffsetMs,
 				timer_table_to_string( TimerTable, State ),
 				timer_table_to_string( NewTimerTable, State ) ] ) ),
@@ -945,10 +966,11 @@ perform_schedule( ScheduleOffsetMs, NowMs,
 				  _SchedulePlan=[ { OffMs, TaskIds } | T ], TimerTable,
 				  TaskTable, State ) when OffMs < ScheduleOffsetMs ->
 
-	?error_fmt( "While scheduling #~B (~ts), found late offset #~B (~ts), "
-		"triggering its delayed tasks first: ~w.",
+	?error_fmt( "While scheduling target offset ~B (~ts), "
+		"found late offset ~B (~ts), triggering its delayed tasks first: #~ts.",
 		[ ScheduleOffsetMs, get_timestamp_string_for( ScheduleOffsetMs, State ),
-		  OffMs, get_timestamp_string_for( OffMs, State ), TaskIds ] ),
+		  OffMs, get_timestamp_string_for( OffMs, State ),
+		  text_utils:integers_to_listed_string( TaskIds ) ] ),
 
 	% Using OffMs rather than ScheduleOffsetMs here:
 	{ NewPlan, NewTimerTable, NewTaskTable } = trigger_tasks( TaskIds,
@@ -964,7 +986,8 @@ perform_schedule( ScheduleOffsetMs, NowMs,
 				  _SchedulePlan=[ { ScheduleOffsetMs, TaskIds } | T ],
 				  TimerTable, TaskTable, State ) ->
 
-	%?debug_fmt( "Normal scheduling of #~B (~ts), triggering its tasks: ~w.",
+	%?debug_fmt( "Normal scheduling of offset ~B (~ts), "
+	%   "triggering its tasks: ~w.",
 	%   [ ScheduleOffsetMs, get_timestamp_string_for( ScheduleOffsetMs, State ),
 	%     TaskIds ] ),
 
@@ -989,7 +1012,7 @@ perform_schedule( ScheduleOffsetMs, NowMs,
 perform_schedule( ScheduleOffsetMs, _NowMs, SchedulePlan, TimerTable, TaskTable,
 				  State ) ->
 
-	?warning_fmt( "Triggered schedule offset #~B (~ts) not found (whereas "
+	?warning_fmt( "Triggered schedule offset ~B (~ts) not found (whereas "
 		"schedule plan ~ts), ignoring it, as supposing this is a late "
 		"scheduling already applied.",
 		[ ScheduleOffsetMs, get_timestamp_string_for( ScheduleOffsetMs, State ),
@@ -1035,7 +1058,7 @@ trigger_tasks( _TaskIds=[ TaskId | T ], ScheduleOffsetMs, NowMs, SchedulePlan,
 	% next_schedule shall at least roughly match.
 
 	cond_utils:if_defined( us_common_debug_scheduling,
-		?debug_fmt( "Triggering task ~B: ~ts.",
+		?debug_fmt( "Triggering task #~B: ~ts.",
 					[ TaskId, task_entry_to_string( TaskEntry, State ) ] ) ),
 
 	launch_task( TaskEntry#task_entry.command,
@@ -1044,7 +1067,8 @@ trigger_tasks( _TaskIds=[ TaskId | T ], ScheduleOffsetMs, NowMs, SchedulePlan,
 	case decrement_count( TaskEntry#task_entry.count ) of
 
 		0 ->
-			?debug_fmt( "Dropping task ~B for good.", [ TaskId ] ),
+			?debug_fmt( "Dropping task #~B for good, as fully done.",
+						[ TaskId ] ),
 			ShrunkTimerTable = remove_timer( ScheduleOffsetMs, TimerTable ),
 			{ SchedulePlan, ShrunkTimerTable, ShrunkTaskTable };
 
@@ -1085,7 +1109,8 @@ trigger_tasks( _TaskIds=[ TaskId | T ], ScheduleOffsetMs, NowMs, SchedulePlan,
 				Periodicity, SchedulePlan, TimerTable ),
 
 			cond_utils:if_defined( us_common_debug_scheduling,
-				?debug_fmt( "New plan for #~B after trigger of task ~B: ~ts",
+				?debug_fmt( "New plan for offset ~B after trigger "
+					"of task #~B: ~ts",
 					[ ScheduleOffsetMs, TaskId,
 					  schedule_plan_to_string( NewPlan, State ) ] ) ),
 
@@ -1188,7 +1213,7 @@ insert_task_at( TaskId, ScheduleOffsetMs, DurationFromNowMs, Plan,
 	NewP = insert_task_at( TaskId, ScheduleOffsetMs, DurationFromNowMs, Plan,
 						   _AccPlan=[], TimerTable ),
 
-	%trace_bridge:debug_fmt( "After having inserted task ~B at offset #~B "
+	%trace_bridge:debug_fmt( "After having inserted task #~B at offset ~B "
 	%   "(duration from now: ~ts), new plan is:~n ~p",
 	%   [ TaskId, ScheduleOffsetMs,
 	%     time_utils:duration_to_string( DurationFromNowMs ), NewPlan ] ),
@@ -1266,7 +1291,7 @@ unschedule_task( TaskId, PlannedNextSchedule,
 				[] ->
 
 					%trace_bridge:debug_fmt(
-					%  "Removing empty schedule slot at #~B.",
+					%  "Removing empty schedule slot at offset ~B.",
 					%  [ PlannedNextSchedule ] ),
 
 					NewSchedPlan = lists:reverse( AccPlan ) ++ T,
@@ -1322,7 +1347,8 @@ add_timer( ScheduleOffsetMs, DurationFromNowMs, TimerTable ) ->
 -spec remove_timer( schedule_offset(), timer_table() ) -> timer_table().
 remove_timer( ScheduleOffsetMs, TimerTable ) ->
 
-	%trace_bridge:debug_fmt( "Removing timer for #~B.", [ ScheduleOffsetMs ] ),
+	%trace_bridge:debug_fmt( "Removing timer for offset ~B.",
+	%   [ ScheduleOffsetMs ] ),
 
 	{ TimerRef, ShrunkTimerTable } =
 		table:extract_entry( ScheduleOffsetMs, TimerTable ),
@@ -1334,7 +1360,7 @@ remove_timer( ScheduleOffsetMs, TimerTable ) ->
 
 		{ error, Reason } ->
 			trace_bridge:error_fmt( "The cancellation of timer '~p' "
-				"failed for schedule offset #~B (reason: '~p').",
+				"failed for schedule offset ~B (reason: '~p').",
 				[ TimerRef, ScheduleOffsetMs, Reason ] )
 			%throw( { timer_cancellation_failed, Reason,
 			%         TimerRef, ScheduleOffset } )
@@ -1527,7 +1553,7 @@ vet_start_time( _UserStartTime=StartTime, State ) ->
 
 				false ->
 					?error_fmt( "Invalid user-specified start time (neither "
-						"timestamp nor DHMS duration): '~p'.", [ StartTime ] ),
+						"timestamp nor DHMS duration):~n ~p", [ StartTime ] ),
 					throw( { invalid_start_time, StartTime } )
 
 			end
@@ -1661,7 +1687,8 @@ schedule_plan_to_string( _SchedulePlan=[], _State ) ->
 schedule_plan_to_string( SchedulePlan, State ) ->
 
 	NowOffset = get_current_schedule_offset( State ),
-	text_utils:format( "registers ~B trigger(s) (at #~B, i.e. ~ts): ~ts",
+	text_utils:format( "registers ~B trigger(s) (while being at offset ~B, "
+		"i.e. ~ts): ~ts",
 		[ length( SchedulePlan ), NowOffset,
 		  get_timestamp_string_for( NowOffset, State ),
 		  text_utils:strings_to_string(
@@ -1679,14 +1706,15 @@ timer_table_to_string( TimerTable, State ) ->
 			"no timer set";
 
 		[ Offset ] ->
-			text_utils:format( "a single timer set, at #~B (~ts)",
+			text_utils:format( "a single timer set, at offset ~B (~ts)",
 				[ Offset, get_timestamp_string_for( Offset, State ) ] );
 
 		Offsets ->
 			text_utils:format( "~B timers set, at: ~ts", [ length( Offsets ),
-				text_utils:strings_to_string( [ text_utils:format( "#~B (~ts)",
-					[ Off, get_timestamp_string_for( Off, State ) ] )
-						|| Off <- Offsets ] ) ] )
+				text_utils:strings_to_string(
+					[ text_utils:format( "offset ~B (~ts)",
+						[ Off, get_timestamp_string_for( Off, State ) ] )
+							|| Off <- Offsets ] ) ] )
 
 	end.
 
@@ -1695,7 +1723,7 @@ timer_table_to_string( TimerTable, State ) ->
 % @doc Returns a textual description of the specified schedule pair.
 -spec trigger_to_string( schedule_pair(), wooper:state() ) -> ustring().
 trigger_to_string( { Offset, TaskIds }, State ) ->
-	text_utils:format( "at offset #~B (~ts), ~B task(s) registered: ~w",
+	text_utils:format( "at offset ~B (~ts), ~B task(s) registered: ~w",
 		[ Offset, get_timestamp_string_for( Offset, State ),
 		  length( TaskIds ), TaskIds ] ).
 
@@ -1727,14 +1755,14 @@ task_entry_to_string( #task_entry{ id=_TaskId,
 					% First and last are the same here:
 					MaybeStartOffset = MaybeLastOffset,
 					text_utils:format(
-						"already executed a single time, at #~B (~ts)",
+						"already executed a single time, at offset ~B (~ts)",
 						[ StartOffset,
 						  get_timestamp_string_for( StartOffset, State ) ] );
 
 				% Expected higher than 1:
 				C when C > 1 ->
-					text_utils:format( "already executed ~B times, the "
-						"first at #~B (~ts) and the last at #~B (~ts)",
+					text_utils:format( "already executed ~B times, the first "
+						"at offset ~B (~ts) and the last at offset ~B (~ts)",
 						[ C, StartOffset,
 						  get_timestamp_string_for( StartOffset, State ),
 						  MaybeLastOffset,
@@ -1751,14 +1779,14 @@ task_entry_to_string( #task_entry{ id=_TaskId,
 	CountStr = schedule_count_to_string( Count ),
 
 	text_utils:format( "task to trigger command '~p' on actuator ~w, ~ts, "
-		"to be scheduled next at offset #~B (~ts) according to ~ts, "
+		"to be scheduled next at offset ~B (~ts) according to ~ts, "
 		"and for ~ts; it was declared by ~w",
 		[ Cmd, ActuatorPid, ExecStr, NextSchedOffset, NextSchedTime, PeriodStr,
 		  CountStr, RequesterPid ] ).
 
 
 
-% @doc Returns a textual description of specified periodicity.
+% @doc Returns a textual description of the specified periodicity.
 -spec periodicity_to_string( periodicity() ) -> ustring().
 % Should never happen:
 periodicity_to_string( _Periodicity=undefined ) ->
@@ -1770,7 +1798,7 @@ periodicity_to_string( Periodicity ) ->
 
 
 
-% @doc Returns a textual description of specified schedule count.
+% @doc Returns a textual description of the specified schedule count.
 -spec schedule_count_to_string( schedule_count() ) -> ustring().
 schedule_count_to_string( _Count=unlimited ) ->
 	"an unlimited number of times";
@@ -1780,3 +1808,31 @@ schedule_count_to_string( _Count=1 ) ->
 
 schedule_count_to_string( Count ) ->
 	text_utils:format( "~B times", [ Count ] ).
+
+
+
+% @doc Returns a textual description of the specified start time information.
+-spec start_time_to_string( start_time() ) -> ustring().
+start_time_to_string( _StartTime=asap ) ->
+	"as soon as possible";
+
+start_time_to_string( _StartTime=flexible ) ->
+	"flexible";
+
+start_time_to_string( _StartTime=Seconds ) when is_integer( Seconds ) ->
+	text_utils:format( "in ~ts",
+					   [ time_utils:duration_to_string( 1000 * Seconds ) ] );
+
+start_time_to_string( StartTime ) ->
+
+	case time_utils:is_timestamp( StartTime ) of
+
+		true ->
+			time_utils:timestamp_to_string( StartTime );
+
+		false ->
+			% By elimination, a DHMS:
+			Secs = time_utils:dhms_to_seconds( StartTime ),
+			start_time_to_string( Secs )
+
+	end.

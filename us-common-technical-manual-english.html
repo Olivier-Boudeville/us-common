@@ -32,10 +32,10 @@
 <tr class="field"><th class="field-name">Creation date:</th><td class="field-body"><p class="first">Saturday, May 2, 2020</p>
 </td>
 </tr>
-<tr class="field"><th class="field-name">Lastly updated:</th><td class="field-body"><p class="first">Sunday, January 1, 2023</p>
+<tr class="field"><th class="field-name">Lastly updated:</th><td class="field-body"><p class="first">Wednesday, February 22, 2023</p>
 </td>
 </tr>
-<tr class="field"><th class="field-name">Version:</th><td class="field-body"><p class="first">0.0.9</p>
+<tr class="field"><th class="field-name">Version:</th><td class="field-body"><p class="first">0.1.1</p>
 </td>
 </tr>
 <tr class="field"><th class="field-name">Status:</th><td class="field-body"><p class="first">Stable</p>
@@ -158,26 +158,26 @@
 <p>This is the installation method that we use and recommend; the US-Common <tt class="docutils literal">master</tt> branch is meant to stick to the latest stable version: we try to ensure that this main line always stays functional (sorry for the pun). Evolutions are to take place in feature branches and to be merged only when ready.</p>
 <p>Once Erlang is available, it should be just a matter of executing:</p>
 <pre class="code bash literal-block">
-$ git clone https://github.com/Olivier-Boudeville/Ceylan-Myriad myriad
-$ <span class="nb">cd</span> myriad <span class="o">&amp;&amp;</span> make all <span class="o">&amp;&amp;</span> <span class="nb">cd</span> ..
+$<span class="w"> </span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Olivier-Boudeville/Ceylan-Myriad<span class="w"> </span>myriad<span class="w">
+</span>$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>myriad<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>make<span class="w"> </span>all<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">cd</span><span class="w"> </span>..<span class="w">
 
-$ git clone https://github.com/Olivier-Boudeville/Ceylan-WOOPER wooper
-$ <span class="nb">cd</span> wooper <span class="o">&amp;&amp;</span> make all <span class="o">&amp;&amp;</span> <span class="nb">cd</span> ..
+</span>$<span class="w"> </span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Olivier-Boudeville/Ceylan-WOOPER<span class="w"> </span>wooper<span class="w">
+</span>$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>wooper<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>make<span class="w"> </span>all<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">cd</span><span class="w"> </span>..<span class="w">
 
-$ git clone https://github.com/Olivier-Boudeville/Ceylan-Traces traces
-$ <span class="nb">cd</span> traces <span class="o">&amp;&amp;</span> make all <span class="o">&amp;&amp;</span> <span class="nb">cd</span> ..
+</span>$<span class="w"> </span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Olivier-Boudeville/Ceylan-Traces<span class="w"> </span>traces<span class="w">
+</span>$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>traces<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>make<span class="w"> </span>all<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">cd</span><span class="w"> </span>..<span class="w">
 
-<span class="c1"># Note the dash becoming an underscore, for OTP compliance:
-</span>$ git clone https://github.com/Olivier-Boudeville/us-common us_common
-$ <span class="nb">cd</span> us_common <span class="o">&amp;&amp;</span> make all
+</span><span class="c1"># Note the dash becoming an underscore, for OTP compliance:
+</span>$<span class="w"> </span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Olivier-Boudeville/us-common<span class="w"> </span>us_common<span class="w">
+</span>$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>us_common<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>make<span class="w"> </span>all
 </pre>
 <p>Running a corresponding test just then boils down to:</p>
 <pre class="code bash literal-block">
-$ <span class="nb">cd</span> <span class="nb">test</span> <span class="o">&amp;&amp;</span> make class_USScheduler_run <span class="nv">CMD_LINE_OPT</span><span class="o">=</span><span class="s2">&quot;--batch&quot;</span>
+$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span><span class="nb">test</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>make<span class="w"> </span>class_USScheduler_run<span class="w"> </span><span class="nv">CMD_LINE_OPT</span><span class="o">=</span><span class="s2">&quot;--batch&quot;</span>
 </pre>
 <p>Should LogMX be installed and available in the PATH, the test may simply become:</p>
 <pre class="code bash literal-block">
-$ make class_USScheduler_run
+$<span class="w"> </span>make<span class="w"> </span>class_USScheduler_run
 </pre>
 <p><span class="raw-html"><a name="otp"></a></span></p>
 </div>

@@ -444,8 +444,8 @@ triggerOneshotTask( State, UserTaskCommand, UserActPid ) ->
 % Note: if the deadline is specified in absolute terms (e.g. as {{2020,3,22},
 % {16,1,48}}), the conversion to internal time will be done immediately (at task
 % submission time), resulting in any system time change (e.g. DST) not being
-% taken into account (as the respect of periodicities is preferred over the one
-% of literal timestamps).
+% taken into account (as the respect of actual periodicities is preferred over
+% the one of literal timestamps).
 %
 -spec registerOneshotTask( wooper:state(), task_command(), start_time() ) ->
 								request_return( task_registration_outcome() ).
@@ -470,8 +470,8 @@ registerOneshotTask( State, UserTaskCommand, UserStartTime ) ->
 % Note: if the deadline is specified in absolute terms (e.g. as {{2020,3,22},
 % {16,1,48}}), the conversion to internal time will be done immediately (at task
 % submission time), resulting in any system time change (e.g. DST) not being
-% taken into account (as the respect of periodicities is preferred over the one
-% of literal timestamps).
+% taken into account (as the respect of actual periodicities is preferred over
+% the one of literal timestamps).
 %
 -spec registerOneshotTask( wooper:state(), task_command(), start_time(),
 			actuator_pid() ) -> request_return( task_registration_outcome() ).
@@ -539,8 +539,8 @@ registerTask( State, UserTaskCommand, UserPeriodicity, UserCount ) ->
 % Note: if the deadline is specified in absolute terms (e.g. as {{2020,3,22},
 % {16,1,48}}), the conversion to internal time will be done immediately (at task
 % submission time), resulting in any future system time change (e.g. DST) not
-% being taken into account at this level (as the respect of periodicities is
-% preferred over the one of literal timestamps).
+% being taken into account at this level (as the respect of actual periodicities
+% is preferred over the one of literal timestamps).
 %
 -spec registerTask( wooper:state(), task_command(), start_time(),
 					user_periodicity(), schedule_count() ) ->
@@ -564,8 +564,8 @@ registerTask( State, UserTaskCommand, UserStartTime, UserPeriodicity,
 % Note: if the deadline is specified in absolute terms (e.g. as {{2020,3,22},
 % {16,1,48}}), the conversion to internal time will be done immediately (at task
 % submission time), resulting in any future system time change (e.g. DST) not
-% being taken into account at this level (as the respect of periodicities is
-% preferred over the one of literal timestamps).
+% being taken into account at this level (as the respect of actual periodicities
+% is preferred over the one of literal timestamps).
 %
 -spec registerTaskAsync( wooper:state(), task_command(), start_time(),
 					user_periodicity(), schedule_count() ) -> oneway_return().
@@ -598,8 +598,8 @@ registerTaskAsync( State, UserTaskCommand, UserStartTime, UserPeriodicity,
 % Note: if the deadline is specified in absolute terms (e.g. as {{2020,3,22},
 % {16,1,48}}), the conversion to internal time will be done immediately (at task
 % submission time), resulting in any future system time change (e.g. DST) not
-% being taken into account at this level (as the respect of periodicities is
-% preferred over the one of literal timestamps).
+% being taken into account at this level (as the respect of actual periodicities
+% is preferred over the one of literal timestamps).
 %
 -spec registerTask( wooper:state(), task_command(), start_time(),
 					user_periodicity(), schedule_count(), actuator_pid() ) ->
@@ -623,8 +623,8 @@ registerTask( State, UserTaskCommand, UserStartTime, UserPeriodicity,
 % Note: if the deadline is specified in absolute terms (e.g. as {{2020,3,22},
 % {16,1,48}}), the conversion to internal time will be done immediately (at task
 % submission time), resulting in any future system time change (e.g. DST) not
-% being taken into account at this level (as the respect of periodicities is
-% preferred over the one of literal timestamps).
+% being taken into account at this level (as the respect of actual periodicities
+% is preferred over the one of literal timestamps).
 %
 -spec registerTaskAsync( wooper:state(), task_command(), start_time(),
 					user_periodicity(), schedule_count(), actuator_pid() ) ->
@@ -645,6 +645,8 @@ registerTaskAsync( State, UserTaskCommand, UserStartTime, UserPeriodicity,
 
 
 
+% The actual registering of new tasks.
+%
 % (helper)
 -spec register_task( task_command(), start_time(), user_periodicity(),
 					 schedule_count(), actuator_pid(), wooper:state() ) ->
@@ -684,8 +686,8 @@ register_task( UserTaskCommand, UserStartTime, UserPeriodicity, UserCount,
 	?info_fmt( "Registering task whose command is '~p', whose declared start "
 		"time is ~ts (hence to happen ~ts), to be triggered ~ts with ~ts "
 		"on actuator ~w (~ts).",
-		[ TaskCommand, start_time_to_string( UserStartTime ),
-		  HappenStr, schedule_count_to_string( Count ),
+		[ TaskCommand, start_time_to_string( UserStartTime ), HappenStr,
+		  schedule_count_to_string( Count ),
 		  periodicity_to_string( MaybePeriodicity ), ActPid, ActStr ] ),
 
 	% Immediate launch requested?
@@ -702,7 +704,7 @@ register_task( UserTaskCommand, UserStartTime, UserPeriodicity, UserCount,
 					% Just to be executed once (implied and checked: Count=1).
 					%
 					% Not even recording it then, it was just fire and forget:
-					% no task entry, just updating the task count.
+					% neither task entry, just updating the task count.
 					%
 					{ task_done, incrementAttribute( State, next_task_id ) };
 
@@ -926,7 +928,7 @@ timerTrigger( State, ScheduleOffsetMs ) ->
 			DiffMs = NowMs - ScheduleOffsetMs,
 
 			erlang:abs( DiffMs ) > OffsetThresholdMs andalso
-				?debug_fmt( "Triggered for offset ~B (~ts), while being at "
+				?warning_fmt( "Triggered for offset ~B (~ts), while being at "
 					"offset ~B (~ts), hence with a signed drift of ~ts "
 					"(late if positive).",
 					[ ScheduleOffsetMs,
@@ -938,19 +940,23 @@ timerTrigger( State, ScheduleOffsetMs ) ->
 	TimerTable = ?getAttr(timer_table),
 
 	% Resorb any pending schedule:
-	{ NewPlan, NewTimerTable, NewTaskTable } = perform_schedule(
-		ScheduleOffsetMs, NowMs, ?getAttr(schedule_plan), TimerTable,
-		?getAttr(task_table), State ),
+	{ TriggeredPlan, TriggeredTimerTable, TriggeredTaskTable } =
+		perform_schedule( ScheduleOffsetMs, NowMs, ?getAttr(schedule_plan),
+						  TimerTable, ?getAttr(task_table), State ),
 
 	cond_utils:if_defined( us_common_debug_scheduling,
-		?debug_fmt( "After having being triggered for offset ~B, went "
-			"from ~ts to ~ts", [ ScheduleOffsetMs,
+		?debug_fmt( "After having handled the triggered tasks for offset ~B, "
+			"went from ~ts to ~ts", [ ScheduleOffsetMs,
 				timer_table_to_string( TimerTable, State ),
-				timer_table_to_string( NewTimerTable, State ) ] ) ),
+				timer_table_to_string( TriggeredTimerTable, State ) ] ) ),
 
-	TrigState = setAttributes( State, [ { schedule_plan, NewPlan },
-										{ timer_table, NewTimerTable },
-										{ task_table, NewTaskTable } ] ),
+	% Intercept any scheduling already late and process it:
+	{ LatePlan, LateTimerTable, LateTaskTable } = piggy_back_late_schedules(
+		NowMs, TriggeredPlan, TriggeredTimerTable, TriggeredTaskTable, State ),
+
+	TrigState = setAttributes( State, [ { schedule_plan, LatePlan },
+										{ timer_table, LateTimerTable },
+										{ task_table, LateTaskTable } ] ),
 
 	wooper:return_state( TrigState ).
 
@@ -962,17 +968,19 @@ timerTrigger( State, ScheduleOffsetMs ) ->
 -spec perform_schedule( schedule_offset(), schedule_offset(), schedule_plan(),
 						timer_table(), task_table(), wooper:state() ) ->
 							{ schedule_plan(), timer_table(), task_table() }.
+% Abnormal case of an unhandled past schedule (we still compensate for it):
 perform_schedule( ScheduleOffsetMs, NowMs,
 				  _SchedulePlan=[ { OffMs, TaskIds } | T ], TimerTable,
 				  TaskTable, State ) when OffMs < ScheduleOffsetMs ->
 
-	?error_fmt( "While scheduling target offset ~B (~ts), "
-		"found late offset ~B (~ts), triggering its delayed tasks first: #~ts.",
+	?error_fmt( "While scheduling target offset ~B (~ts), found past "
+		"non-scheduled offset ~B (~ts), triggering its delayed tasks first: "
+		"#~ts.",
 		[ ScheduleOffsetMs, get_timestamp_string_for( ScheduleOffsetMs, State ),
 		  OffMs, get_timestamp_string_for( OffMs, State ),
 		  text_utils:integers_to_listed_string( TaskIds ) ] ),
 
-	% Using OffMs rather than ScheduleOffsetMs here:
+	% Using OffMs (second parameter) rather than ScheduleOffsetMs here:
 	{ NewPlan, NewTimerTable, NewTaskTable } = trigger_tasks( TaskIds,
 		OffMs, NowMs, _NewerPlan=T, TimerTable, TaskTable, State ),
 
@@ -1025,6 +1033,35 @@ perform_schedule( ScheduleOffsetMs, _NowMs, SchedulePlan, TimerTable, TaskTable,
 
 
 
+% @doc Flushes and executes any schedule known to be already late.
+%
+% This extra security should be useless, as the very last clause of
+% trigger_tasks/7 (when NextScheduleMs =< NowMs) should have already managed
+% such cases.
+%
+-spec piggy_back_late_schedules( schedule_offset(), schedule_plan(),
+						timer_table(), task_table(), wooper:state() ) ->
+							{ schedule_plan(), timer_table(), task_table() }.
+piggy_back_late_schedules( NowMs, _SchedulePlan=[ { OffMs, TaskIds } | T ],
+		TimerTable, TaskTable, State ) when OffMs =< NowMs ->
+
+	?error_fmt( "Scheduling directly tasks #~ts that were already "
+		"in the past (~ts).",
+		[ text_utils:integers_to_listed_string( TaskIds ), OffMs ] ),
+
+	{ NewPlan, NewTimerTable, NewTaskTable } = trigger_tasks( TaskIds,
+		OffMs, NowMs, _NewerPlan=T, TimerTable, TaskTable, State ),
+
+	piggy_back_late_schedules( NowMs, NewPlan, NewTimerTable, NewTaskTable,
+							   State );
+
+% Here OffMs > NowMs (normal situation):
+piggy_back_late_schedules( _NowMs, SchedulePlan, TimerTable, TaskTable,
+						   _State ) ->
+	{ SchedulePlan, TimerTable, TaskTable }.
+
+
+
 % @doc Triggers the specified tasks, and returns updated schedule plan, timer
 % and task tables.
 %
@@ -1058,8 +1095,10 @@ trigger_tasks( _TaskIds=[ TaskId | T ], ScheduleOffsetMs, NowMs, SchedulePlan,
 	% next_schedule shall at least roughly match.
 
 	cond_utils:if_defined( us_common_debug_scheduling,
-		?debug_fmt( "Triggering task #~B: ~ts.",
-					[ TaskId, task_entry_to_string( TaskEntry, State ) ] ) ),
+		?debug_fmt( "Triggering task #~B (difference between now and "
+			"scheduled: ~ts): ~ts.", [ TaskId,
+				time_utils:duration_to_string( NowMs - ScheduleOffsetMs ),
+				task_entry_to_string( TaskEntry, State ) ] ) ),
 
 	launch_task( TaskEntry#task_entry.command,
 				 TaskEntry#task_entry.actuator_pid, State ),
@@ -1072,6 +1111,7 @@ trigger_tasks( _TaskIds=[ TaskId | T ], ScheduleOffsetMs, NowMs, SchedulePlan,
 			ShrunkTimerTable = remove_timer( ScheduleOffsetMs, TimerTable ),
 			{ SchedulePlan, ShrunkTimerTable, ShrunkTaskTable };
 
+		% Possibly unlimited:
 		NewCount ->
 			% Will thus be still scheduled again afterwards.
 
@@ -1079,7 +1119,7 @@ trigger_tasks( _TaskIds=[ TaskId | T ], ScheduleOffsetMs, NowMs, SchedulePlan,
 			StartOffsetMs = case TaskEntry#task_entry.started_on of
 
 				undefined ->
-					% Now rather than scheduled:
+					% Now rather than scheduled (ScheduleOffsetMs):
 					NowMs;
 
 				AlreadyStartOffsetMs ->
@@ -1102,20 +1142,46 @@ trigger_tasks( _TaskIds=[ TaskId | T ], ScheduleOffsetMs, NowMs, SchedulePlan,
 				started_on=StartOffsetMs,
 				last_schedule=NowMs },
 
+			% Updating previous version thereof:
 			NewTaskTable = table:add_entry( TaskId, NewTaskEntry,
 											ShrunkTaskTable ),
 
-			{ NewPlan, NewTimerTable } = insert_task_at( TaskId, NextScheduleMs,
-				Periodicity, SchedulePlan, TimerTable ),
+			case NextScheduleMs > NowMs of
 
-			cond_utils:if_defined( us_common_debug_scheduling,
-				?debug_fmt( "New plan for offset ~B after trigger "
-					"of task #~B: ~ts",
-					[ ScheduleOffsetMs, TaskId,
-					  schedule_plan_to_string( NewPlan, State ) ] ) ),
+				true ->
 
-			trigger_tasks( T, ScheduleOffsetMs, NowMs, NewPlan, NewTimerTable,
-						   NewTaskTable, State )
+					% Knowing that we do not program timer at absolute times but
+					% after a given duration, if DurationFromNowMs was just
+					% Periodicity, then the duration of the trigger logic would
+					% not be taken into account, and delays would accumulate
+					% (e.g. 1ms every 5s, leading quickly to too large errors)
+					%
+					% So we subtract the current error (which is
+					% Err = NowMs - ScheduleOffsetMs > 0):
+					%
+					DurationFromNowMs = Periodicity + ScheduleOffsetMs - NowMs,
+
+					{ NewPlan, NewTimerTable } = insert_task_at( TaskId,
+						NextScheduleMs, DurationFromNowMs, SchedulePlan,
+						TimerTable ),
+
+					cond_utils:if_defined( us_common_debug_scheduling,
+						?debug_fmt( "New plan for offset ~B after trigger "
+							"of task #~B: ~ts",
+							[ ScheduleOffsetMs, TaskId,
+							  schedule_plan_to_string( NewPlan, State ) ] ) ),
+
+					trigger_tasks( T, ScheduleOffsetMs, NowMs, NewPlan,
+						NewTimerTable, NewTaskTable, State );
+
+				false ->
+					?warning_fmt( "Next scheduling of task #~B to happen in "
+						"the past (at offset ~B), forcing it now.",
+						[ TaskId, NextScheduleMs ] ),
+					trigger_tasks( [ TaskId | T ], ScheduleOffsetMs, NowMs,
+						SchedulePlan, TimerTable, NewTaskTable, State )
+
+			end
 
 	end.
 
@@ -1203,7 +1269,7 @@ register_task_schedule( TaskId, TaskEntry, ScheduleOffsetMs, DurationFromNowMs,
 
 
 
-% @doc Inserts the specified task at the specified offset in plan.
+% @doc Inserts the specified task at the specified offset in the specified plan.
 -spec insert_task_at( task_id(), schedule_offset(), ms_duration(),
 		schedule_plan(), timer_table() ) -> { schedule_plan(), timer_table() }.
 insert_task_at( TaskId, ScheduleOffsetMs, DurationFromNowMs, Plan,
@@ -1234,23 +1300,23 @@ insert_task_at( TaskId, ScheduleOffsetMs, DurationFromNowMs, _SchedulePlan=[],
 	  NewTimeTable };
 
 
-% Too early in plan, continue:
+% Too early in plan, ScheduleOffsetMs not reached, continue:
 insert_task_at( TaskId, ScheduleOffsetMs, DurationFromNowMs,
 				_SchedulePlan=[ H={ OffMs, _Ids } | T ], AccPlan, TimeTable )
 										when OffMs < ScheduleOffsetMs ->
 	insert_task_at( TaskId, ScheduleOffsetMs, DurationFromNowMs, T,
 					[ H | AccPlan ], TimeTable );
 
-% Matching offset found, registering and stopping:
+% Current offset found matching ScheduleOffsetMs , registering and stopping:
 insert_task_at( TaskId, ScheduleOffsetMs, _DurationFromNowMs,
 		_SchedulePlan=[ { ScheduleOffsetMs, Ids } | T ], AccPlan, TimeTable ) ->
 
-	% Timer already set for that offset, none to add:
+	% Timer already set for that offset, so none to add:
 	{ lists:reverse( AccPlan )
 			++ [ { ScheduleOffsetMs, [ TaskId | Ids ] } | T ],
 	  TimeTable };
 
-% Gone past target:
+% Gone past ScheduleOffsetMs target:
 insert_task_at( TaskId, ScheduleOffsetMs, DurationFromNowMs,
 		SchedulePlan, % Implicit: SchedulePlan=[ { OffMs, Ids } | T ],
 		AccPlan, TimeTable ) -> % Implicit: when OffMs > ScheduleOffsetMS
@@ -1320,7 +1386,7 @@ unschedule_task( TaskId, PlannedNextSchedule, _SchedulePlan=[ P | T ], Acc,
 
 
 
-% @doc Adds a timer to trigger a future scheduler.
+% @doc Adds a timer to trigger a future scheduling.
 -spec add_timer( schedule_offset(), ms_duration(), timer_table() ) ->
 						timer_table().
 add_timer( ScheduleOffsetMs, DurationFromNowMs, TimerTable ) ->
@@ -1328,7 +1394,10 @@ add_timer( ScheduleOffsetMs, DurationFromNowMs, TimerTable ) ->
 	% WOOPER oneway to be sent to this instance:
 	Message = { timerTrigger, [ ScheduleOffsetMs ] },
 
-	% Duration not exact, but is at least as long as requested:
+	% Note that we cannot set an absolute timer, but one relative to the current
+	% time (be careful not to accumulate errors between planned and current
+	% times, for example by adding constant, "theoritical" durations here):
+	%
 	case timer:send_after( DurationFromNowMs, Message ) of
 
 		% TimerRef useful to cancel; not expected to be already existing:
@@ -1411,7 +1480,7 @@ get_schedule_offset_for( UserTimestamp, State ) ->
 	% Number of milliseconds since year 0:
 	GregorianMillisecs =
 		1000 * calendar:datetime_to_gregorian_seconds(
-				time_utils:local_to_universal_time( UserTimestamp ) ),
+			time_utils:local_to_universal_time( UserTimestamp ) ),
 
 	GregorianMillisecs - ?getAttr(server_gregorian_start).
 
@@ -1824,7 +1893,6 @@ start_time_to_string( _StartTime=Seconds ) when is_integer( Seconds ) ->
 					   [ time_utils:duration_to_string( 1000 * Seconds ) ] );
 
 start_time_to_string( StartTime ) ->
-
 	case time_utils:is_timestamp( StartTime ) of
 
 		true ->

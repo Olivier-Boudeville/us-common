@@ -1036,8 +1036,8 @@ perform_schedule( ScheduleOffsetMs, _NowMs, SchedulePlan, TimerTable, TaskTable,
 % @doc Flushes and executes any schedule known to be already late.
 %
 % This extra security should be useless, as the very last clause of
-% trigger_tasks/7 (when NextScheduleMs =< NowMs) should have already managed
-% such cases.
+% trigger_tasks/7, when testing whether NextScheduleMs is lower or equal to
+% NowMs, should have already managed such cases.
 %
 -spec piggy_back_late_schedules( schedule_offset(), schedule_plan(),
 						timer_table(), task_table(), wooper:state() ) ->

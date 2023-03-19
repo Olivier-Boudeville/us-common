@@ -32,7 +32,7 @@
 <tr class="field"><th class="field-name">Creation date:</th><td class="field-body"><p class="first">Saturday, May 2, 2020</p>
 </td>
 </tr>
-<tr class="field"><th class="field-name">Lastly updated:</th><td class="field-body"><p class="first">Wednesday, February 22, 2023</p>
+<tr class="field"><th class="field-name">Lastly updated:</th><td class="field-body"><p class="first">Sunday, March 19, 2023</p>
 </td>
 </tr>
 <tr class="field"><th class="field-name">Version:</th><td class="field-body"><p class="first">0.1.1</p>
@@ -115,10 +115,10 @@
 <h1><a class="toc-backref" href="#toc-entry-3">Facilities Provided by this Layer</a></h1>
 <p>These are mainly common services centralised here so that the various US applications can make use of them:</p>
 <ul class="simple">
-<li><a class="reference external" href="https://github.com/Olivier-Boudeville/us-common/blob/master/src/class_USServer.erl">USServer</a>: a general <strong>abstraction of a server</strong>, so that all US ones inherit the corresponding base features (ex: name registration, uptime information, applicative ping, state description, etc.)</li>
+<li><a class="reference external" href="https://github.com/Olivier-Boudeville/us-common/blob/master/src/class_USServer.erl">USServer</a>: a general <strong>abstraction of a server</strong>, so that all US ones inherit the corresponding base features (e.g. name registration, uptime information, applicative ping, state description, etc.)</li>
 <li><a class="reference external" href="https://github.com/Olivier-Boudeville/us-common/blob/master/src/class_USConfigServer.erl">USConfigServer</a>: a server (usually a singleton) in charge of <strong>managing all US-level configuration information</strong> on behalf of the other US servers; this comprises the look-up, parsing and checking of the relevant configuration files, the setting of the corresponding information then made available to the rest of the US framework (EPMD port, TCP port range, cookie, execution context, application and log directories, name and scope of registrations, user/group information, etc.)</li>
 <li><a class="reference external" href="https://github.com/Olivier-Boudeville/us-common/blob/master/src/class_USScheduler.erl">USScheduler</a>: a server whose purpose is to <strong>schedule any kind of asynchronous, independent tasks</strong> (think: &quot;crontab on steroids&quot;); it allows planning task commands to be issued to actuators one time, multiple ones, or indefinitely, based on user-level periods with various policies, on a best-effort basis yet reliably (proper time and timer management), trying to find a balance between the respect of the requested periodicities and the correction of any delay incurred (see also a <a class="reference external" href="https://github.com/Olivier-Boudeville/us-common/blob/master/test/class_USScheduler_test.erl">corresponding test</a> of it)</li>
-<li><a class="reference external" href="https://github.com/Olivier-Boudeville/us-common/blob/master/src/class_USTaskRing.erl">USTaskRing</a>: a facility useful to <strong>schedule a set of periodic tasks synchronously</strong> (no overlapping between them) <strong>and uniformly</strong> (as evenly as possible over time); typically useful to pace regularly a set of actions of indefinite number that are ruled by a common periodicity and/or to share a resource unable to cope with concurrent accesses (ex: a non-reentrant third-party log analysis tool that maintains its own opaque state on filesystem, yet have to operate on a set of virtual hosts)</li>
+<li><a class="reference external" href="https://github.com/Olivier-Boudeville/us-common/blob/master/src/class_USTaskRing.erl">USTaskRing</a>: a facility useful to <strong>schedule a set of periodic tasks synchronously</strong> (no overlapping between them) <strong>and uniformly</strong> (as evenly as possible over time); typically useful to pace regularly a set of actions of indefinite number that are ruled by a common periodicity and/or to share a resource unable to cope with concurrent accesses (e.g. a non-reentrant third-party log analysis tool that maintains its own opaque state on filesystem, yet have to operate on a set of virtual hosts)</li>
 </ul>
 </div>
 <div class="section" id="configuration">
@@ -137,7 +137,7 @@
 </div>
 <div class="section" id="client-configuration">
 <h2><a class="toc-backref" href="#toc-entry-6">Client Configuration</a></h2>
-<p>Each US service (ex: <tt class="docutils literal"><span class="pre">US-Main</span></tt>, <tt class="docutils literal"><span class="pre">US-Web</span></tt>, etc.) can be monitored (locally or remotely) thanks to a corresponding <tt class="docutils literal"><span class="pre">priv/bin/monitor-us-*.sh</span></tt> script, which must be given the necessary information (hostname, cookie, TCP port range, etc.) in order to contact the target US instance.</p>
+<p>Each US service (e.g. <tt class="docutils literal"><span class="pre">US-Main</span></tt>, <tt class="docutils literal"><span class="pre">US-Web</span></tt>, etc.) can be monitored (locally or remotely) thanks to a corresponding <tt class="docutils literal"><span class="pre">priv/bin/monitor-us-*.sh</span></tt> script, which must be given the necessary information (hostname, cookie, TCP port range, etc.) in order to contact the target US instance.</p>
 <p>This information is typically stored in a <tt class="docutils literal"><span class="pre">us-*-remote-access.config</span></tt> ETF file, located as well in the aforementioned <a class="reference internal" href="#us-configuration-directory">US configuration directory</a>.</p>
 </div>
 </div>
@@ -145,14 +145,14 @@
 <span id="free-software"></span><h1><a class="toc-backref" href="#toc-entry-7">Licence</a></h1>
 <p><tt class="docutils literal"><span class="pre">US-Common</span></tt> is licensed by its author (Olivier Boudeville) under the <a class="reference external" href="https://www.gnu.org/licenses/agpl-3.0.en.html">GNU Affero General Public License</a> as published by the Free Software Foundation, either version 3 of this license, or (at your option) any later version.</p>
 <p>This allows the use of the US-Common code in a wide a variety of software projects, while still maintaining copyleft on this code, ensuring improvements are shared.</p>
-<p>We hope indeed that enhancements will be back-contributed (ex: thanks to merge requests), so that everyone will be able to benefit from them.</p>
+<p>We hope indeed that enhancements will be back-contributed (e.g. thanks to merge requests), so that everyone will be able to benefit from them.</p>
 </div>
 <div class="section" id="current-stable-version-download">
 <h1><a class="toc-backref" href="#toc-entry-8">Current Stable Version &amp; Download</a></h1>
 <p>In general, we prefer using GNU/Linux, sticking to the latest stable release of Erlang, and building it from sources, thanks to GNU <tt class="docutils literal">make</tt>.</p>
 <p>As mentioned, the single, direct prerequisite of <a class="reference external" href="https://github.com/Olivier-Boudeville/US-Common">US-Common</a> is <a class="reference external" href="https://github.com/Olivier-Boudeville/Ceylan-Traces">Ceylan-Traces</a>, which implies in turn <a class="reference external" href="https://github.com/Olivier-Boudeville/Ceylan-WOOPER">Ceylan-WOOPER</a>, then <a class="reference external" href="https://github.com/Olivier-Boudeville/Ceylan-Myriad">Ceylan-Myriad</a> and <a class="reference external" href="http://erlang.org">Erlang</a>.</p>
 <p>Refer to the corresponding <a class="reference external" href="http://myriad.esperide.org#prerequisites">Myriad prerequisite section</a>  for more precise guidelines, knowing that US-Common does not need modules with conditional support such as <tt class="docutils literal">crypto</tt> or <tt class="docutils literal">wx</tt>.</p>
-<p>Most uses of US-Common will require <tt class="docutils literal">authbind</tt> (ex: on Arch Linux, obtained from the AUR, typically with thanks to the AUR installer that <a class="reference external" href="https://github.com/Olivier-Boudeville/Ceylan-Hull/blob/master/update-aur-installer.sh">Ceylan-Hull recommends and installs</a> ).</p>
+<p>Most uses of US-Common will require <tt class="docutils literal">authbind</tt> (e.g. on Arch Linux, obtained from the AUR, typically with thanks to the AUR installer that <a class="reference external" href="https://github.com/Olivier-Boudeville/Ceylan-Hull/blob/master/update-aur-installer.sh">Ceylan-Hull recommends and installs</a> ).</p>
 <div class="section" id="using-cutting-edge-git">
 <h2><a class="toc-backref" href="#toc-entry-9">Using Cutting-Edge GIT</a></h2>
 <p>This is the installation method that we use and recommend; the US-Common <tt class="docutils literal">master</tt> branch is meant to stick to the latest stable version: we try to ensure that this main line always stays functional (sorry for the pun). Evolutions are to take place in feature branches and to be merged only when ready.</p>

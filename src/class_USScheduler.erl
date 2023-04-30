@@ -747,7 +747,7 @@ register_task( UserTaskCommand, UserStartTime, UserPeriodicity, UserCount,
 
 			end;
 
-		% Deferred launch here:
+		% Deferred launch here (most common case):
 		_ ->
 			TaskId = ?getAttr(next_task_id),
 			NowMs = get_current_schedule_offset( State ),
@@ -768,6 +768,10 @@ register_task( UserTaskCommand, UserStartTime, UserPeriodicity, UserCount,
 
 			RegState = register_task_schedule( TaskId, TI, NextSchedule,
 											   MsDurationBeforeStart, State ),
+
+			cond_utils:if_defined( us_common_debug_scheduling,
+				?debug_fmt( "Resulting scheduler state: ~ts.",
+							[ to_string( RegState ) ] ) ),
 
 			{ { task_registered, TaskId }, RegState }
 
@@ -875,6 +879,11 @@ unregister_task( TaskId, State ) when is_integer( TaskId ) andalso TaskId > 0 ->
 								{ schedule_plan, NewPlan },
 								{ timer_table, NewTimerTable } ] ),
 
+							cond_utils:if_defined( us_common_debug_scheduling,
+								?debug_fmt( "Resulting scheduler state after "
+									"unregistering: ~ts.",
+									[ to_string( NewState ) ] ) ),
+
 							{ task_unregistered, NewState }
 
 					end
@@ -957,6 +966,10 @@ timerTrigger( State, ScheduleOffsetMs ) ->
 	TrigState = setAttributes( State, [ { schedule_plan, LatePlan },
 										{ timer_table, LateTimerTable },
 										{ task_table, LateTaskTable } ] ),
+
+	cond_utils:if_defined( us_common_debug_scheduling,
+		?debug_fmt( "Resulting scheduler state after performing trigger: ~ts.",
+					[ to_string( TrigState ) ] ) ),
 
 	wooper:return_state( TrigState ).
 
@@ -1258,14 +1271,21 @@ register_task_schedule( TaskId, TaskEntry, ScheduleOffsetMs, DurationFromNowMs,
 		DurationFromNowMs, ?getAttr(schedule_plan), _AccPlan=[],
 		?getAttr(timer_table) ),
 
-	cond_utils:if_defined( us_common_debug_scheduling,
-		?debug_fmt( "New plan: ~p~nNew timer table: ~p.",
-					[ NewPlan, NewTimerTable ] ) ),
+	RegState = setAttributes( State, [ { task_table, NewTaskTable },
+									   { schedule_plan, NewPlan },
+									   { timer_table, NewTimerTable },
+									   { next_task_id, TaskId+1 } ] ),
 
-	setAttributes( State, [ { task_table, NewTaskTable },
-							{ schedule_plan, NewPlan },
-							{ timer_table, NewTimerTable },
-							{ next_task_id, TaskId+1 } ] ).
+	%cond_utils:if_defined( us_common_debug_scheduling,
+	%   ?debug_fmt( "New plan: ~p~nNew timer table: ~p.",
+	%               [ NewPlan, NewTimerTable ] ) ),
+
+	% Even more complete:
+	cond_utils:if_defined( us_common_debug_scheduling,
+		?debug_fmt( "Resulting scheduler state after registering: ~ts.",
+					[ to_string( RegState ) ] ) ),
+
+	RegState.
 
 
 
@@ -1343,8 +1363,8 @@ unschedule_task( _TaskId, _PlannedNextSchedule, _SchedulePlan=[], _AccPlan,
 	not_found;
 
 unschedule_task( TaskId, PlannedNextSchedule,
-			 _SchedulePlan=[ { PlannedNextSchedule, TaskIds } | T ], AccPlan,
-			TimerTable ) ->
+		_SchedulePlan=[ { PlannedNextSchedule, TaskIds } | T ], AccPlan,
+		TimerTable ) ->
 
 	case lists:member( TaskId, TaskIds ) of
 

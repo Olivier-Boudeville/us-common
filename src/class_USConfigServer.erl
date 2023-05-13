@@ -419,20 +419,23 @@ getUSWebRuntimeSettings( State ) ->
 %
 -spec notifyEPMDPort( wooper:state(), tcp_port(), epmd_origin(), module_name(),
 					  server_pid() ) -> oneway_return().
+% Sending notice traces rather than info ones, as we do not want them to be
+% deactivated (too inconvenient for troubleshooting):
+%
 notifyEPMDPort( State, EPMDPort, _Origin=as_default, AppModName, AppSrvPid ) ->
 
 	NewEPMDPort = case ?getAttr(epmd_port) of
 
 		undefined ->
-			?info_fmt( "No US-level EPMD port was set, so the default "
-				"(port #~B) reported by application '~ts' (~w) should apply.",
+			?notice_fmt( "No US-level EPMD port was set, so the default "
+				"(port #~B) reported by application '~ts' (~w) will apply.",
 				[ EPMDPort, AppModName, AppSrvPid ] ),
 			EPMDPort;
 
 		OrigPort ->
-			?info_fmt( "A US-level EPMD port was already set (port #B), "
+			?notice_fmt( "A US-level EPMD port was already set (port #B), "
 				"so the default (port #~B) reported by application '~ts' "
-				"(~w) should not apply.",
+				"(~w) will not apply.",
 				[ OrigPort, EPMDPort, AppModName, AppSrvPid ] ),
 			OrigPort
 
@@ -450,13 +453,13 @@ notifyEPMDPort( State, EPMDPort, _Origin=explicit_set, AppModName,
 	case ?getAttr(epmd_port) of
 
 		undefined ->
-			?info_fmt( "No US-level EPMD port was set, so the port #~B, "
-				"reported by application '~ts' (~w), should apply.",
+			?notice_fmt( "No US-level EPMD port was set, so the port #~B, "
+				"reported by application '~ts' (~w), will apply.",
 				[ EPMDPort, AppModName, AppSrvPid ] );
 
 		OrigPort ->
-			?info_fmt( "The port #~B reported by application '~ts' "
-				"(~w) overrides the current US-level EPMD port (#~B).",
+			?notice_fmt( "The port #~B reported by application '~ts' "
+				"(~w) will override the current US-level EPMD port (#~B).",
 				[ EPMDPort, AppModName, AppSrvPid, OrigPort ] )
 
 	end,

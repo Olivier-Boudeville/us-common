@@ -199,7 +199,7 @@ read_us_config_file()
 
 
 	# Note that these shell scripts shall fetch any cookie as it is, i.e. not
-	# surrounded by single quotes, otherwise it will not be accepted (ex: when
+	# surrounded by single quotes, otherwise it will not be accepted (e.g. when
 	# using erl_call).
 
 	# Strangely unable to protect single quotes with backslash, so having to use

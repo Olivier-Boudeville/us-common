@@ -68,8 +68,8 @@
 
 	% Listing an application here seems necessary (otherwise its .app file will
 	% not be found), however it will also result in its automatic starting with
-	% no specfied arguments, whereas at least for some (ex: simple_bridge) we
-	% need to specify them (ex: which backend to be used).
+	% no specfied arguments, whereas at least for some (e.g. simple_bridge) we
+	% need to specify them (e.g. which backend to be used).
 	%
 	% Listing 'traces' here implies its prerequisites (namely Myriad and WOOPER)
 	% and is needed, otherwise their respective modules will not be in the

@@ -1,7 +1,7 @@
 US_COMMON_TOP = .
 
 
-.PHONY: help help-intro help-us-common register-version-in-header              \
+.PHONY: help help-us-common register-version-in-header                  \
 		register-us-common info info-local info-conditionals info-deps
 
 
@@ -11,14 +11,8 @@ MODULES_DIRS = src doc conf test
 BASE_MAKEFILE := true
 
 
-
 # Default target:
 help: help-intro help-us-common
-
-
-help-intro:
-	@echo " Following main make targets are available for package $(PACKAGE_NAME):"
-
 
 help-us-common:
 	@cd $(TRACES_TOP) && $(MAKE) -s help-traces

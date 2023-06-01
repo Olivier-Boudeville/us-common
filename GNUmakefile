@@ -63,10 +63,10 @@ info-versions:
 
 info-deps:
 	@echo "MYRIAD_TOP = $(MYRIAD_TOP) (i.e. $$(realpath $(MYRIAD_TOP)))"
-	@echo "WOOPER_TOP = $(WOOPER_TOP)) (i.e. $$(realpath $(WOOPER_TOP)))"
-	@echo "TRACES_TOP = $(TRACES_TOP)) (i.e. $$(realpath $(TRACES_TOP)))"
-	@echo "SEAPLUS_TOP = $(SEAPLUS_TOP)) (i.e. $$(realpath $(SEAPLUS_TOP)))"
-	@echo "MOBILE_TOP = $(MOBILE_TOP)) (i.e. $$(realpath $(MOBILE_TOP)))"
+	@echo "WOOPER_TOP = $(WOOPER_TOP) (i.e. $$(realpath $(WOOPER_TOP)))"
+	@echo "TRACES_TOP = $(TRACES_TOP) (i.e. $$(realpath $(TRACES_TOP)))"
+	@echo "SEAPLUS_TOP = $(SEAPLUS_TOP) (i.e. $$(realpath $(SEAPLUS_TOP)))"
+	@echo "MOBILE_TOP = $(MOBILE_TOP) (i.e. $$(realpath $(MOBILE_TOP)))"
 
 
 include $(US_COMMON_TOP)/GNUmakesettings.inc

@@ -157,7 +157,7 @@ US_COMMON_PLT_FILE := $(US_COMMON_TOP)/US-Common.plt
 # For us-common, it is the PLT of 'Traces':
 #
 ifndef PREDECESSOR_PLT_FILE
-   PREDECESSOR_PLT_FILE = $(TRACES_PLT_FILE)
+	PREDECESSOR_PLT_FILE = $(TRACES_PLT_FILE)
 endif
 
 

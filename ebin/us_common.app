@@ -21,7 +21,7 @@
 
 {application, us_common,
  [{description, "US-Common, the base OTP active application on which the various Universal Service elements are built (see http://us-common.esperide.org)"},
-  {vsn, "0.0.9"},
+  {vsn, "0.1.3"},
   {registered, []},
 
   % Regarding:

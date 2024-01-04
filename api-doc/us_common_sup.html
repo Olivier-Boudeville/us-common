@@ -12,7 +12,7 @@
 <h1>Module us_common_sup</h1>
 <ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>Module implementing the <b>root OTP supervisor of US-Common</b>.
 
-<p><b>Behaviours:</b> <a href="supervisor.html"><tt>supervisor</tt></a>.</p>
+<p><b>Behaviours:</b> <a href="supervisor.html"><code>supervisor</code></a>.</p>
 
 <h2><a name="description">Description</a></h2><p>Module implementing the <b>root OTP supervisor of US-Common</b>.</p>
 
@@ -23,7 +23,7 @@
 <h2><a name="types">Data Types</a></h2>
 
 <h3 class="typedecl"><a name="type-child_spec">child_spec()</a></h3>
-<p><tt>child_spec() = <a href="http://www.erlang.org/edoc/doc/stdlib/doc/supervisor.html#type-child_spec">supervisor:child_spec()</a></tt></p>
+<p><code>child_spec() = <a href="http://www.erlang.org/edoc/doc/stdlib/doc/supervisor.html#type-child_spec">supervisor:child_spec()</a></code></p>
 
 
 <h2><a name="index">Function Index</a></h2>
@@ -37,7 +37,7 @@ supervision bridge.</td></tr>
 
 <h3 class="function"><a name="init-1">init/1</a></h3>
 <div class="spec">
-<p><tt>init(Args::list()) -&gt; {ok, {<a href="http://www.erlang.org/edoc/doc/stdlib/doc/supervisor.html#type-sup_flags">supervisor:sup_flags()</a>, [<a href="#type-child_spec">child_spec()</a>]}}</tt><br></p>
+<p><code>init(Args::list()) -&gt; {ok, {<a href="http://www.erlang.org/edoc/doc/stdlib/doc/supervisor.html#type-sup_flags">supervisor:sup_flags()</a>, [<a href="#type-child_spec">child_spec()</a>]}}</code><br></p>
 <p> </p>
 </div><p>Callback to initialise this US-Common root supervisor bridge, typically
  in answer to start_link/0 above being executed.
@@ -45,7 +45,7 @@ supervision bridge.</td></tr>
 
 <h3 class="function"><a name="start_link-0">start_link/0</a></h3>
 <div class="spec">
-<p><tt>start_link() -&gt; <a href="http://www.erlang.org/edoc/doc/stdlib/doc/supervisor.html#type-startlink_ret">supervisor:startlink_ret()</a></tt><br></p>
+<p><code>start_link() -&gt; <a href="http://www.erlang.org/edoc/doc/stdlib/doc/supervisor.html#type-startlink_ret">supervisor:startlink_ret()</a></code><br></p>
 <p> </p>
 </div><p><p>Starts and links the US-Common root supervisor, creating in turn a proper 
 supervision bridge.</p>

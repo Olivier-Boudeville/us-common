@@ -15,7 +15,7 @@
  US-Common supervision tree, through the US-Common root supervisor, defined in
  the us_common_sup module.
 
-<p><b>Behaviours:</b> <a href="supervisor_bridge.html"><tt>supervisor_bridge</tt></a>.</p>
+<p><b>Behaviours:</b> <a href="supervisor_bridge.html"><code>supervisor_bridge</code></a>.</p>
 
 <h2><a name="description">Description</a></h2>Module implementing the <b>OTP supervisor bridge for the US-Common
  configuration server</b>, so that this (singleton) server is attached to the
@@ -34,7 +34,7 @@ server.</td></tr>
 
 <h3 class="function"><a name="init-1">init/1</a></h3>
 <div class="spec">
-<p><tt>init(Args::list()) -&gt; {ok, pid(), State::term()} | ignore | {error, Error::term()}</tt><br></p>
+<p><code>init(Args::list()) -&gt; {ok, pid(), State::term()} | ignore | {error, Error::term()}</code><br></p>
 <p> </p>
 </div><p>Callback to initialise this supervisor bridge, typically in answer to
  start_link/0 being executed.
@@ -42,7 +42,7 @@ server.</td></tr>
 
 <h3 class="function"><a name="start_link-0">start_link/0</a></h3>
 <div class="spec">
-<p><tt>start_link() -&gt; term()</tt><br></p>
+<p><code>start_link() -&gt; term()</code><br></p>
 <p> </p>
 </div><p><p>Starts and links a US-Common supervision bridge to the US configuration 
 server.</p>
@@ -54,7 +54,7 @@ server.</p>
 
 <h3 class="function"><a name="terminate-2">terminate/2</a></h3>
 <div class="spec">
-<p><tt>terminate(Reason::shutdown | term(), State::term()) -&gt; <a href="#type-void">void()</a></tt><br></p>
+<p><code>terminate(Reason::shutdown | term(), State::term()) -&gt; <a href="#type-void">void()</a></code><br></p>
 <p> </p>
 </div><p>Callback to terminate this supervisor bridge.</p>
 <hr>

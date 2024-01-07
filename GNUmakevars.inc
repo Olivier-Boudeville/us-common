@@ -86,14 +86,14 @@ ifndef PROJECT_SHORT_NAME
 endif
 
 
-# PROJECT_NAME_FOR_REBAR should be defined on a per-project basis.
-ifndef PROJECT_NAME_FOR_REBAR
-	PROJECT_NAME_FOR_REBAR := $(PROJECT_SHORT_NAME)
+# PROJECT_NAME_FOR_OTP should be defined on a per-project basis.
+ifndef PROJECT_NAME_FOR_OTP
+	PROJECT_NAME_FOR_OTP := $(PROJECT_SHORT_NAME)
 endif
 
 
 # The uniquely-defined version of this layer, for all uses, including rebar:
-US_COMMON_VERSION := 0.1.3
+US_COMMON_VERSION := 0.1.4
 
 
 # PROJECT_VERSION should be defined on a per-project basis:

@@ -11,8 +11,8 @@
 % ./ebin/us_common.app
 % ./src/us_common.app.src -> ../ebin/us_common.app
 %
-% For more information see the Ceylan-Myriad 'rebar3-create-app-file' make
-% target and its associated comments.
+% For more information see the Ceylan-Myriad 'create-app-file' make target and
+% its associated comments.
 
 % See also:
 % - http://erlang.org/doc/man/app.html
@@ -21,7 +21,7 @@
 
 {application, us_common,
  [{description, "US-Common, the base OTP active application on which the various Universal Service elements are built (see http://us-common.esperide.org)"},
-  {vsn, "0.1.3"},
+  {vsn, "0.1.4"},
   {registered, []},
 
   % Regarding:

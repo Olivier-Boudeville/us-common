@@ -58,7 +58,8 @@ ifeq ($(EXECUTION_TARGET),development)
 	# Does not exist: US_COMMON_CHECK_FLAGS += -Dus_common_check_scheduling
 endif
 
-ERLANG_COMPILER_OPT_BASE += $(US_COMMON_DEBUG_FLAGS) \
+ERLANG_COMPILER_OPT_BASE += -Dus_common_version=\"$(US_COMMON_VERSION)\" \
+							$(US_COMMON_DEBUG_FLAGS) \
 							$(US_COMMON_CHECK_FLAGS)
 
 
@@ -92,8 +93,10 @@ ifndef PROJECT_NAME_FOR_OTP
 endif
 
 
-# The uniquely-defined version of this layer, for all uses, including rebar:
-US_COMMON_VERSION := 0.1.4
+# The uniquely-defined version of this layer, for all uses (including rebar, hex
+# and the code itself, see class_USServer:get_us_common_version{_string,}/0):
+#
+US_COMMON_VERSION := 0.1.5
 
 
 # PROJECT_VERSION should be defined on a per-project basis:

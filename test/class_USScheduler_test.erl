@@ -119,7 +119,7 @@ run() ->
 
 	test_facilities:display( "Testing the scheduling services." ),
 
-	test_facilities:display( "The version of this currently tested US_Common "
+	test_facilities:display( "The version of this currently tested US-Common "
 		"library is ~ts (i.e. ~w).", [
 			class_USConfigServer:get_us_common_version_string(),
 			class_USConfigServer:get_us_common_version() ] ),

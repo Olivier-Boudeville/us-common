@@ -239,6 +239,7 @@
 
 -type execution_context() :: basic_utils:execution_context().
 -type module_name() :: basic_utils:module_name().
+-type three_digit_version() :: basic_utils:three_digit_version().
 
 -type ustring() :: text_utils:ustring().
 
@@ -472,6 +473,22 @@ notifyEPMDPort( State, EPMDPort, _Origin=explicit_set, AppModName,
 
 
 % Static section.
+
+
+% Version-related static methods.
+
+% @doc Returns the version of the US-Common library being used.
+-spec get_us_common_version() -> static_return( three_digit_version() ).
+get_us_common_version() ->
+	wooper:return_static(
+		basic_utils:parse_version( get_us_common_version_string() ) ).
+
+
+% @doc Returns the version of the US-Common library being used, as a string.
+-spec get_us_common_version_string() -> static_return( ustring() ).
+get_us_common_version_string() ->
+	% As defined (uniquely) in GNUmakevars.inc:
+	wooper:return_static( ?us_common_version ).
 
 
 % @doc Returns the main default settings regarding the US configuration server,
@@ -1079,17 +1096,10 @@ manage_execution_context( ConfigTable, State ) ->
 
 	end,
 
-	case Context of
-
-		USCommonExecTarget ->
-			ok;
-
-		_OtherContext ->
-			?warning_fmt( "The runtime user-configured execution context (~ts) "
-				"does not match the compile-time execution target of this "
-				"Universal Server (~ts).", [ Context, USCommonExecTarget ] )
-
-	end,
+	Context =:= USCommonExecTarget orelse
+		?warning_fmt( "The runtime user-configured execution context (~ts) "
+			"does not match the compile-time execution target of this "
+			"Universal Server (~ts).", [ Context, USCommonExecTarget ] ),
 
 	setAttribute( State, execution_context, Context ).
 
@@ -1309,7 +1319,7 @@ manage_app_base_directory( ConfigTable, State ) ->
 		true ->
 			text_utils:string_to_binary( BaseDir );
 
-		false ->
+		_False ->
 			?error_fmt( "No US application base directory could be determined "
 						"(tried '~ts').", [ BaseDir ] ),
 			throw( { non_existing_us_app_base_directory, BaseDir,
@@ -1403,17 +1413,12 @@ manage_log_directory( ConfigTable, State ) ->
 
 	end,
 
-	case file_utils:is_existing_directory_or_link( BaseDir ) of
-
-		true ->
-			ok;
-
-		false ->
+	file_utils:is_existing_directory_or_link( BaseDir ) orelse
+		begin
 			?warning_fmt( "The log directory '~ts' does not exist, "
 						  "creating it.", [ BaseDir ] )
 			%throw( { non_existing_log_directory, BaseDir } )
-
-	end,
+		end,
 
 	% Would lead to inconvenient paths, at least if defined as relative:
 	%LogDir = file_utils:join( BaseDir, ?app_subdir ),
@@ -1549,7 +1554,6 @@ get_us_config_server( CreateIfNeeded, State ) ->
 						"could not be found.", [ USCfgFilePath ] ),
 			% Must have disappeared then:
 			throw( { us_config_file_not_found, USCfgFilePath } )
-
 		end,
 
 	?info_fmt( "Reading the Universal Server configuration from '~ts'.",

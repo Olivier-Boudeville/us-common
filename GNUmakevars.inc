@@ -59,7 +59,7 @@ ifeq ($(EXECUTION_TARGET),development)
 endif
 
 ERLANG_COMPILER_OPT_BASE += -Dus_common_version=\"$(US_COMMON_VERSION)\" \
-							$(US_COMMON_DEBUG_FLAGS) \
+							$(US_COMMON_DEBUG_FLAGS)                      \
 							$(US_COMMON_CHECK_FLAGS)
 
 

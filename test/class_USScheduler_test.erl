@@ -121,8 +121,8 @@ run() ->
 
 	test_facilities:display( "The version of this currently tested US_Common "
 		"library is ~ts (i.e. ~w).", [
-			class_USServer:get_us_common_version_string(),
-			class_USServer:get_us_common_version() ] ),
+			class_USConfigServer:get_us_common_version_string(),
+			class_USConfigServer:get_us_common_version() ] ),
 
 	SchedPid = class_USScheduler:new_link(),
 

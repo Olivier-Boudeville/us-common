@@ -19,11 +19,13 @@
 % Author: Olivier Boudeville [olivier (dot) boudeville (at) esperide (dot) com]
 % Creation date: Tuesday, December 24, 2019.
 
-
-% @doc Class defining the singleton server holding the <b>configuration
-% information</b> of the Universal Server, at the level of US-Common.
-%
 -module(class_USConfigServer).
+
+-moduledoc """
+Class defining the singleton server holding the **configuration information** of
+the Universal Server, at the level of US-Common.
+""".
+
 
 -define( class_description,
 		 "Singleton server holding the configuration information of the "
@@ -34,15 +36,16 @@
 -define( superclasses, [ class_USServer ] ).
 
 
+-doc "The PID of a US-Config server.".
 -type config_server_pid() :: server_pid().
-% The PID of a US-Config server.
 
 
+-doc "The origin of an EPMD setting.".
 -type epmd_origin() ::
 	'as_default'    % Just the default EPMD port applying for an US application.
   | 'explicit_set'. % An EPMD port was explicitly set in the configuration of
 					% the US application.
-% The origin of an EPMD setting.
+
 
 -export_type([ config_server_pid/0, epmd_origin/0 ]).
 
@@ -95,11 +98,11 @@
 	% US-related management scripts in order that they can
 	% start/monitor/stop/kill instances)
 	%
-	{ epmd_port, maybe( tcp_port() ),
+	{ epmd_port, option( tcp_port() ),
 	  "the EPMD TCP port presumably in use (as read from the configuration; "
 	  "if any; possibly overridden by the US-* application at hand)" },
 
-	{ tcp_port_range, maybe( tcp_port_range() ),
+	{ tcp_port_range, option( tcp_port_range() ),
 	  "the range (if any) of TCP ports to use for out-of-band inter-VM "
 	  "communication (not using the Erlang carrier; for example for "
 	  "send_file)" },
@@ -111,12 +114,12 @@
 	  "the directory where all VM log files and US-specific higher-level "
 	  "traces will be stored" },
 
-	{ us_main_config_filename, maybe( bin_filename() ),
+	{ us_main_config_filename, option( bin_filename() ),
 	  "the name to the configuration file (if any) regarding US-Main (i.e. "
 	  "for sensors and other elements), to be found in the US configuration "
 	  "directory" },
 
-	{ us_web_config_filename, maybe( bin_filename() ),
+	{ us_web_config_filename, option( bin_filename() ),
 	  "the path to the configuration file (if any) regarding US-Web (i.e. "
 	  "webserver, virtual hosting, etc.), to be found in the US configuration "
 	  "directory" },
@@ -129,10 +132,10 @@
 	{ us_groupname, system_utils:group_name(),
 	  "the group that shall be common to all US-related users" },
 
-	{ us_main_config_server_pid, maybe( server_pid() ),
+	{ us_main_config_server_pid, option( server_pid() ),
 	  "the PID of the US-Main configuration server (if any)" },
 
-	{ us_web_config_server_pid, maybe( server_pid() ),
+	{ us_web_config_server_pid, option( server_pid() ),
 	  "the PID of the US-Web configuration server (if any)" },
 
 	% Cannot easily be obtained otherwise:
@@ -235,7 +238,7 @@
 
 
 
-% Shorthands:
+% Type shorthands:
 
 -type execution_context() :: basic_utils:execution_context().
 -type module_name() :: basic_utils:module_name().
@@ -259,11 +262,12 @@
 
 
 
-% @doc Constructs the US configuration server, using the default logic to find
-% its configuration file.
-%
-% Note: must be kept in line with the next constructor.
-%
+-doc """
+Constructs the US configuration server, using the default logic to find its
+configuration file.
+
+Note: must be kept in line with the next constructor.
+""".
 -spec construct( wooper:state() ) -> wooper:state().
 construct( State ) ->
 
@@ -302,13 +306,13 @@ construct( State ) ->
 
 
 
-% @doc Constructs the US configuration server, using specified configuration
-% directory.
-%
-% Useful for example to create auxiliary universal servers or perform tests.
-%
-% Note: must be kept in line with the next constructor.
-%
+-doc """
+Constructs the US configuration server, using specified configuration directory.
+
+Useful for example to create auxiliary universal servers or perform tests.
+
+Note: must be kept in line with the next constructor.
+""".
 -spec construct( wooper:state(), directory_path() ) -> wooper:state().
 construct( State, ConfigDir ) when is_list( ConfigDir ) ->
 
@@ -329,7 +333,7 @@ construct( State, ConfigDir ) when is_list( ConfigDir ) ->
 
 
 
-% @doc Overridden destructor.
+-doc "Overridden destructor.".
 -spec destruct( wooper:state() ) -> wooper:state().
 destruct( State ) ->
 
@@ -344,12 +348,13 @@ destruct( State ) ->
 % Method section.
 
 
-% @doc Notifies this server about the specified US-Main configuration server,
-% and requests related information from it.
-%
+-doc """
+Notifies this server about the specified US-Main configuration server, and
+requests related information from it.
+""".
 -spec getUSMainRuntimeSettings( wooper:state() ) -> request_return(
 		{ bin_directory_path(), execution_context(),
-		  maybe( bin_file_path() ) } ).
+		  option( bin_file_path() ) } ).
 getUSMainRuntimeSettings( State ) ->
 
 	USMainConfigServerPid = ?getSender(),
@@ -378,12 +383,13 @@ getUSMainRuntimeSettings( State ) ->
 
 
 
-% @doc Notifies this server about the specified US-Web configuration server, and
-% requests web-related information from it.
-%
+-doc """
+Notifies this server about the specified US-Web configuration server, and
+requests web-related information from it.
+""".
 -spec getUSWebRuntimeSettings( wooper:state() ) -> request_return(
 		{ bin_directory_path(), execution_context(),
-		  maybe( bin_file_path() ) } ).
+		  option( bin_file_path() ) } ).
 getUSWebRuntimeSettings( State ) ->
 
 	USWebConfigServerPid = ?getSender(),
@@ -412,12 +418,13 @@ getUSWebRuntimeSettings( State ) ->
 
 
 
-% @doc Notifies this US server of a presumably current EPMD port, so that the
-% right information is known.
-%
-% Called by US-* applications (e.g. US-{Main,Web}) whose configuration file
-% allows to override any US-level setting.
-%
+-doc """
+Notifies this US server of a presumably current EPMD port, so that the right
+information is known.
+
+Called by US-* applications (e.g. US-{Main,Web}) whose configuration file allows
+to override any US-level setting.
+""".
 -spec notifyEPMDPort( wooper:state(), tcp_port(), epmd_origin(), module_name(),
 					  server_pid() ) -> oneway_return().
 % Sending notice traces rather than info ones, as we do not want them to be
@@ -477,23 +484,27 @@ notifyEPMDPort( State, EPMDPort, _Origin=explicit_set, AppModName,
 
 % Version-related static methods.
 
-% @doc Returns the version of the US-Common library being used.
+
+-doc "Returns the version of the US-Common library being used.".
 -spec get_us_common_version() -> static_return( three_digit_version() ).
 get_us_common_version() ->
 	wooper:return_static(
 		basic_utils:parse_version( get_us_common_version_string() ) ).
 
 
-% @doc Returns the version of the US-Common library being used, as a string.
+
+-doc "Returns the version of the US-Common library being used, as a string.".
 -spec get_us_common_version_string() -> static_return( ustring() ).
 get_us_common_version_string() ->
 	% As defined (uniquely) in GNUmakevars.inc:
 	wooper:return_static( ?us_common_version ).
 
 
-% @doc Returns the main default settings regarding the US configuration server,
-% for its clients.
-%
+
+-doc """
+Returns the main default settings regarding the US configuration server, for its
+clients.
+""".
 -spec get_default_settings() -> static_return( { file_name(),
 		basic_utils:atom_key(), registration_name(),
 		naming_utils:look_up_scope() } ).
@@ -587,15 +598,15 @@ get_default_settings() ->
 
 
 
-% @doc Returns any found configuration directory and a corresponding trace
-% message.
-%
-% This is a static method (no state involved), so that both this kind of servers
-% and others (e.g. web configuration ones), and even tests, can use the same,
-% factored, logic.
-%
+-doc """
+Returns any found configuration directory and a corresponding trace message.
+
+This is a static method (no state involved), so that both this kind of servers
+and others (e.g. web configuration ones), and even tests, can use the same,
+factored, logic.
+""".
 -spec get_us_config_directory() ->
-			static_return( { maybe( bin_directory_path() ), ustring() } ).
+			static_return( { option( bin_directory_path() ), ustring() } ).
 get_us_config_directory() ->
 
 	HomeDir = system_utils:get_user_home_directory(),
@@ -657,11 +668,12 @@ get_us_config_directory() ->
 
 
 
-% @doc Returns the US-Common configuration table, as read from the main US
-% configuration file, together with the path of this file.
-%
-% Static method, to be available from external code such as clients or tests.
-%
+-doc """
+Returns the US-Common configuration table, as read from the main US
+configuration file, together with the path of this file.
+
+Static method, to be available from external code such as clients or tests.
+""".
 -spec get_configuration_table( bin_directory_path() ) ->
 	static_return( diagnosed_fallible( { us_config_table(), file_path() } ) ).
 get_configuration_table( BinCfgDir ) ->
@@ -704,12 +716,13 @@ get_configuration_table( BinCfgDir ) ->
 
 
 
-% @doc Returns the name of the expected US-Main configuration file.
-%
-% Static method, to be available from outside, typically for tests.
-%
+-doc """
+Returns the name of the expected US-Main configuration file.
+
+Static method, to be available from outside, typically for tests.
+""".
 -spec get_us_main_configuration_filename( us_config_table() ) ->
-			static_return( diagnosed_fallible( maybe( file_name() ) ) ).
+			static_return( diagnosed_fallible( option( file_name() ) ) ).
 get_us_main_configuration_filename( ConfigTable ) ->
 
 	CfgKey = ?us_main_config_filename_key,
@@ -739,12 +752,13 @@ get_us_main_configuration_filename( ConfigTable ) ->
 
 
 
-% @doc Returns the name of the expected US-Web configuration file.
-%
-% Static method, to be available from outside, typically for tests.
-%
+-doc """
+Returns the name of the expected US-Web configuration file.
+
+Static method, to be available from outside, typically for tests.
+""".
 -spec get_us_web_configuration_filename( us_config_table() ) ->
-			static_return( diagnosed_fallible( maybe( file_name() ) ) ).
+			static_return( diagnosed_fallible( option( file_name() ) ) ).
 get_us_web_configuration_filename( ConfigTable ) ->
 
 	CfgKey = ?us_web_config_filename_key,
@@ -826,7 +840,7 @@ find_file_in( _AllBasePaths=[ Path | T ], CfgSuffix, BaseMsg, Msgs ) ->
 
 
 
-% @doc Performs set-up actions common to all constructors.
+-doc "Performs set-up actions common to all constructors.".
 -spec perform_setup( bin_directory_path(), wooper:state() ) ->
 								wooper:state().
 perform_setup( BinCfgDir, State ) ->
@@ -881,10 +895,11 @@ perform_setup( BinCfgDir, State ) ->
 
 
 
-% @doc Returns the Universal Server configuration table (that is the one of US,
-% not specifically of any specialised US-*), and directly applies some of the
-% read settings.
-%
+-doc """
+Returns the Universal Server configuration table (that is the one of US, not
+specifically of any specialised US-*), and directly applies some of the read
+settings.
+""".
 -spec load_configuration( bin_directory_path(), wooper:state() ) ->
 								wooper:state().
 load_configuration( BinCfgDir, State ) ->
@@ -948,7 +963,7 @@ load_configuration( BinCfgDir, State ) ->
 
 
 
-% @doc Manages any user-configured VM cookie.
+-doc "Manages any user-configured VM cookie.".
 -spec manage_vm_cookie( us_config_table(), wooper:state() ) -> void().
 manage_vm_cookie( ConfigTable, State ) ->
 
@@ -977,7 +992,7 @@ manage_vm_cookie( ConfigTable, State ) ->
 
 
 
-% @doc Manages any user-configured EPMD port.
+-doc "Manages any user-configured EPMD port.".
 -spec manage_epmd_port( us_config_table(), wooper:state() ) -> wooper:state().
 manage_epmd_port( ConfigTable, State ) ->
 
@@ -1016,7 +1031,7 @@ manage_epmd_port( ConfigTable, State ) ->
 
 
 
-% @doc Manages any user-configured TCP port range.
+-doc "Manages any user-configured TCP port range.".
 -spec manage_tcp_port_range( us_config_table(), wooper:state() ) ->
 									wooper:state().
 manage_tcp_port_range( ConfigTable, State ) ->
@@ -1046,7 +1061,7 @@ manage_tcp_port_range( ConfigTable, State ) ->
 
 
 
-% @doc Manages any user-configured execution context.
+-doc "Manages any user-configured execution context.".
 -spec manage_execution_context( us_config_table(), wooper:state() ) ->
 									wooper:state().
 manage_execution_context( ConfigTable, State ) ->
@@ -1105,9 +1120,10 @@ manage_execution_context( ConfigTable, State ) ->
 
 
 
-% @doc Manages any user-configured specification regarding the (operating-system
-% level) US user and group.
-%
+-doc """
+Manages any user-configured specification regarding the (operating-system level)
+US user and group.
+""".
 -spec manage_os_user_group( us_config_table(), wooper:state() ) ->
 									wooper:state().
 manage_os_user_group( ConfigTable, State ) ->
@@ -1153,7 +1169,6 @@ manage_os_user_group( ConfigTable, State ) ->
 
 	end,
 
-
 	UsGroupname = case table:lookup_entry( ?us_groupname_key, ConfigTable ) of
 
 		key_not_found ->
@@ -1191,9 +1206,10 @@ manage_os_user_group( ConfigTable, State ) ->
 
 
 
-% @doc Manages any user-configured registration names for this instance and for
-% the US server.
-%
+-doc """
+Manages any user-configured registration names for this instance and for the US
+server.
+""".
 -spec manage_registration_names( us_config_table(), wooper:state() ) ->
 										wooper:state().
 manage_registration_names( ConfigTable, State ) ->
@@ -1226,10 +1242,11 @@ manage_registration_names( ConfigTable, State ) ->
 
 
 
-% @doc Returns information about the naming registration of various US servers.
-%
-% Static for sharing with clients, tests, etc.
-%
+-doc """
+Returns information about the naming registration of various US servers.
+
+Static for sharing with clients, tests, etc.
+""".
 -spec get_registration_info( us_config_table() ) -> static_return(
 		fallible( { registration_name(), registration_scope(), ustring() } ) ).
 get_registration_info( ConfigTable ) ->
@@ -1262,7 +1279,7 @@ get_registration_info( ConfigTable ) ->
 
 
 
-% @doc Manages any user-configured application base directory.
+-doc "Manages any user-configured application base directory.".
 -spec manage_app_base_directory( us_config_table(), wooper:state() ) ->
 										wooper:state().
 manage_app_base_directory( ConfigTable, State ) ->
@@ -1385,9 +1402,9 @@ guess_app_base_directory( State ) ->
 
 
 
-% @doc Manages any user-configured log directory to rely on, creating it if
-% necessary.
-%
+-doc """
+Manages any user-configured log directory to rely on, creating it if necessary.
+""".
 -spec manage_log_directory( us_config_table(), wooper:state() ) ->
 								wooper:state().
 manage_log_directory( ConfigTable, State ) ->
@@ -1433,9 +1450,10 @@ manage_log_directory( ConfigTable, State ) ->
 
 
 
-% @doc Manages any user-defined configuration filename for US-Main services
-% (e.g. sensors).
-%
+-doc """
+Manages any user-defined configuration filename for US-Main services
+(e.g. sensors).
+""".
 -spec manage_us_main_config( us_config_table(), wooper:state() ) ->
 											wooper:state().
 manage_us_main_config( ConfigTable, State ) ->
@@ -1465,9 +1483,10 @@ manage_us_main_config( ConfigTable, State ) ->
 
 
 
-% @doc Manages any user-defined configuration filename for US-Web services
-% (webservers, virtual hosting, etc.).
-%
+-doc """
+Manages any user-defined configuration filename for US-Web services (webservers,
+virtual hosting, etc.).
+""".
 -spec manage_us_web_config( us_config_table(), wooper:state() ) ->
 											wooper:state().
 manage_us_web_config( ConfigTable, State ) ->
@@ -1498,30 +1517,29 @@ manage_us_web_config( ConfigTable, State ) ->
 
 
 
-% @doc Returns the PID of the US configuration server, creating it if ever
-% necessary.
-%
-% Centralised here on behalf of clients (e.g. US-Main, US-Web, etc.).
-%
-% This is an helper function, not a static method, as a trace emitter state
-% shall be specified as parameter, so that traces can be sent in all cases
-% needed.
-%
+-doc """
+Returns the PID of the US configuration server, creating it if ever necessary.
+
+Centralised here on behalf of clients (e.g. US-Main, US-Web, etc.).
+
+This is an helper function, not a static method, as a trace emitter state shall
+be specified as parameter, so that traces can be sent in all cases needed.
+""".
 -spec get_us_config_server( wooper:state() ) -> config_server_pid().
 get_us_config_server( State ) ->
 	get_us_config_server( _CreateIfNeeded=true, State ).
 
 
 
-% @doc Returns the PID of the US configuration server, creating it if ever
-% necessary and if enabled.
-%
-% Centralised here on behalf of clients (e.g. US-Main, US-Web, etc.).
-%
-% This is an helper function, not a static method, as a trace emitter state
-% shall be specified as parameter, so that traces can be sent in all cases
-% needed.
-%
+-doc """
+Returns the PID of the US configuration server, creating it if ever necessary
+and if enabled.
+
+Centralised here on behalf of clients (e.g. US-Main, US-Web, etc.).
+
+This is an helper function, not a static method, as a trace emitter state shall
+be specified as parameter, so that traces can be sent in all cases needed.
+""".
 -spec get_us_config_server( boolean(), wooper:state() ) -> config_server_pid().
 get_us_config_server( CreateIfNeeded, State ) ->
 
@@ -1648,7 +1666,7 @@ get_us_config_server( CreateIfNeeded, State ) ->
 
 
 
-% @doc Returns a textual description of this server.
+-doc "Returns a textual description of this server.".
 -spec to_string( wooper:state() ) -> ustring().
 to_string( State ) ->
 

@@ -19,9 +19,12 @@
 % Author: Olivier Boudeville [olivier (dot) boudeville (at) esperide (dot) com]
 % Creation date: Saturday, June 28, 2014.
 
-
-% @doc The <b>mother class</b> of all US servers.
 -module(class_USServer).
+
+-moduledoc """
+The **mother class** of all US servers.
+""".
+
 
 -define( class_description, "Mother class of all US servers." ).
 
@@ -34,15 +37,18 @@
 -export([ register_name/3, unregister_name/1, to_string/1 ]).
 
 
+-doc "The PID of a US server.".
 -type server_pid() :: class_TraceEmitter:emitter_pid().
 
+
 -type ping_id() :: count().
+
 
 -export_type([ server_pid/0, ping_id/0 ]).
 
 
 
-% Shorthands:
+% Type shorthands:
 
 -type count() :: basic_utils:count().
 
@@ -90,15 +96,15 @@
 	% The reference to tell whether a server shall be registered (regardless of
 	% the scope):
 	%
-	{ registration_name, maybe( registration_name() ),
+	{ registration_name, option( registration_name() ),
 	  "records the name of this server, as possibly registered in the "
 	  "naming service" },
 
-	{ registration_scope, maybe( registration_scope() ),
+	{ registration_scope, option( registration_scope() ),
 	  "records the scope of the registration of this server in the naming "
 	  "service" },
 
-	{ username, maybe( user_name() ),
+	{ username, option( user_name() ),
 	  "the user (if any) under which this server is expected to run" } ] ).
 
 
@@ -115,27 +121,29 @@
 
 
 
-% @doc Creates a server instance that is not registered, and that traps exits.
-%
-% Parameter is ServerInit, the name of that server.
-%
-% It is not expected to be run as any specific user.
-%
+-doc """
+Creates a server instance that is not registered, and that traps exits.
+
+Parameter is ServerInit, the name of that server.
+
+It is not expected to be run as any specific user.
+""".
 -spec construct( wooper:state(), emitter_init() ) -> wooper:state().
 construct( State, ServerInit ) ->
 	construct( State, ServerInit, _TrapExits=true ).
 
 
 
-% @doc Creates a server instance that is not registered, and that traps exits if
-% requested.
-%
-% Parameter is ServerInit, the name of that US server, and whether it should
-% trap EXITS, if wanting a better control by resisting to exit messages being
-% received (see the onWOOPERExitReceived/3 callback).
-%
-% It is not expected to be run as any specific user.
-%
+-doc """
+Creates a server instance that is not registered, and that traps exits if
+requested.
+
+Parameter is ServerInit, the name of that US server, and whether it should trap
+EXITS, if wanting a better control by resisting to exit messages being received
+(see the onWOOPERExitReceived/3 callback).
+
+It is not expected to be run as any specific user.
+""".
 -spec construct( wooper:state(), emitter_init(), boolean() ) -> wooper:state().
 construct( State, ServerInit, TrapExits ) ->
 	construct( State, ServerInit, _MaybeRegistrationName=undefined,
@@ -143,37 +151,37 @@ construct( State, ServerInit, TrapExits ) ->
 
 
 
-% @doc Creates a server instance that is registered, and traps exits if
-% requested.
-%
-% Parameters are:
-% - ServerInit, the name of that US server
-% - MaybeRegistrationName, any name under which this server shall be registered
-% - MaybeRegistrationScope, any scope at which this server shall be registered
-%
-% It is not expected to be run as any specific user.
-%
--spec construct( wooper:state(), emitter_init(), maybe( registration_name() ),
-				 maybe( registration_scope() ) ) -> wooper:state().
+-doc """
+Creates a server instance that is registered, and traps exits if requested.
+
+Parameters are:
+- ServerInit, the name of that US server
+- MaybeRegistrationName, any name under which this server shall be registered
+- MaybeRegistrationScope, any scope at which this server shall be registered
+
+It is not expected to be run as any specific user.
+""".
+-spec construct( wooper:state(), emitter_init(), option( registration_name() ),
+				 option( registration_scope() ) ) -> wooper:state().
 construct( State, ServerInit, MaybeRegistrationName, MaybeRegistrationScope ) ->
 	construct( State, ServerInit, MaybeRegistrationName, MaybeRegistrationScope,
 			   _TrapExits=true ).
 
 
 
-% @doc Creates a server instance that is registered, and traps exits if
-% requested.
-%
-% Parameters are:
-% - ServerInit, the name of that US server
-% - MaybeRegistrationName, any name under which this server shall be registered
-% - MaybeRegistrationScope, any scope at which this server shall be registered
-% - TrapExits tells whether EXIT messages shall be trapped
-%
-% It is not expected to be run as any specific user.
-%
--spec construct( wooper:state(), emitter_init(), maybe( registration_name() ),
-				 maybe( registration_scope() ), boolean() ) -> wooper:state().
+-doc """
+Creates a server instance that is registered, and traps exits if requested.
+
+Parameters are:
+- ServerInit, the name of that US server
+- MaybeRegistrationName, any name under which this server shall be registered
+- MaybeRegistrationScope, any scope at which this server shall be registered
+- TrapExits tells whether EXIT messages shall be trapped
+
+It is not expected to be run as any specific user.
+""".
+-spec construct( wooper:state(), emitter_init(), option( registration_name() ),
+				 option( registration_scope() ), boolean() ) -> wooper:state().
 construct( State, ServerInit, MaybeRegistrationName, MaybeRegistrationScope,
 		   TrapExits ) ->
 	construct( State, ServerInit, MaybeRegistrationName, MaybeRegistrationScope,
@@ -181,18 +189,19 @@ construct( State, ServerInit, MaybeRegistrationName, MaybeRegistrationScope,
 
 
 
-% @doc Creates a server instance that is registered, traps exits if
-% requested, and is expected to be run as specified user (if any).
-%
-% Parameters are:
-% - ServerInit, the name of that US server
-% - RegistrationName, the name under which this server shall be registered
-% - RegistrationScope, the scope at which this server shall be registered
-%
-% It is not expected to be run as any specific user.
-%
--spec construct( wooper:state(), emitter_init(), maybe( registration_name() ),
-		maybe( registration_scope() ), boolean(), maybe( user_name() ) ) ->
+-doc """
+Creates a server instance that is registered, traps exits if requested, and is
+expected to be run as specified user (if any).
+
+Parameters are:
+- ServerInit, the name of that US server
+- RegistrationName, the name under which this server shall be registered
+- RegistrationScope, the scope at which this server shall be registered
+
+It is not expected to be run as any specific user.
+""".
+-spec construct( wooper:state(), emitter_init(), option( registration_name() ),
+		option( registration_scope() ), boolean(), option( user_name() ) ) ->
 													wooper:state().
 construct( State, ServerInit, MaybeRegistrationName, MaybeRegistrationScope,
 		   TrapExits, MaybeUserName ) ->
@@ -229,7 +238,7 @@ construct( State, ServerInit, MaybeRegistrationName, MaybeRegistrationScope,
 
 
 
-% @doc Overridden destructor.
+-doc "Overridden destructor.".
 -spec destruct( wooper:state() ) -> wooper:state().
 destruct( State ) ->
 
@@ -246,13 +255,14 @@ destruct( State ) ->
 % Method section.
 
 
-% @doc Pings this server.
-%
-% Any server must be able to answer to (asynchronous) ping requests from a
-% monitoring server.
-%
-% (const oneway, not request, as meant to be asynchronous)
-%
+-doc """
+Pings this server.
+
+Any server must be able to answer to (asynchronous) ping requests from a
+monitoring server.
+
+(const oneway, not request, as meant to be asynchronous)
+""".
 -spec ping( wooper:state(), ping_id(), pid() ) -> const_oneway_return().
 ping( State, PingId, MonitorPid ) ->
 
@@ -263,9 +273,10 @@ ping( State, PingId, MonitorPid ) ->
 
 
 
-% @doc Callback triggered, if this server enabled the trapping of exits,
-% whenever a linked process terminates.
-%
+-doc """
+Callback triggered, if this server enabled the trapping of exits, whenever a
+linked process terminates.
+""".
 -spec onWOOPERExitReceived( wooper:state(), pid(),
 		basic_utils:exit_reason() ) -> const_oneway_return().
 onWOOPERExitReceived( State, StoppedPid, _ExitType=normal ) ->
@@ -289,10 +300,11 @@ onWOOPERExitReceived( State, CrashPid, ExitType ) ->
 % Exported helpers.
 
 
-% @doc Registers this (supposedly not registered) server to naming server.
-%
-% (exported helper)
-%
+-doc """
+Registers this (supposedly not registered) server to the naming server.
+
+(exported helper)
+""".
 -spec register_name( registration_name(), registration_scope(),
 					 wooper:state() ) -> wooper:state().
 register_name( _RegistrationName=undefined, RegistrationScope, State ) ->
@@ -321,10 +333,11 @@ register_name( RegistrationName, RegistrationScope, State ) ->
 
 
 
-% @doc Unregisters this (supposedly registered) server from naming server.
-%
-% (exported helper)
-%
+-doc """
+Unregisters this (supposedly registered) server from the naming server.
+
+(exported helper)
+""".
 -spec unregister_name( wooper:state() ) -> wooper:state().
 unregister_name( State ) ->
 
@@ -352,7 +365,7 @@ unregister_name( State ) ->
 
 
 
-% @doc Returns a textual description of this server.
+-doc "Returns a textual description of this server.".
 -spec to_string( wooper:state() ) -> ustring().
 to_string( State ) ->
 

@@ -19,12 +19,13 @@
 % Author: Olivier Boudeville [olivier (dot) boudeville (at) esperide (dot) com]
 % Creation date: Thursday, May 7, 2020.
 
-
-% @doc Testing of <b>US-Common as an OTP active application</b>, directly from
-% within its code base (hence without needing to create a separate, mock-up test
-% OTP release for that).
-%
 -module(us_common_otp_application_test).
+
+-moduledoc """
+Testing of **US-Common as an OTP active application**>, directly from within its
+code base (hence without needing to create a separate, mock-up test OTP release
+for that).
+""".
 
 
 % Exported for re-use by other tests (e.g. in US-Web):
@@ -41,7 +42,7 @@
 -include("us_common_defines.hrl").
 
 
-% Shorthands:
+% Type shorthands:
 
 -type bin_directory_path() :: file_utils:bin_directory_path().
 -type file_path() :: file_utils:file_path().
@@ -52,6 +53,8 @@
 -type us_config_table() :: class_USConfigServer:us_config_table().
 
 
+
+-doc "Returns US-level configuration information.".
 -spec get_us_information() -> { bin_directory_path(), file_path(),
 			us_config_table(), registration_name(), registration_scope() }.
 get_us_information() ->
@@ -220,10 +223,11 @@ test_us_common_application( OrderedAppNames ) ->
 
 
 
-% Note that the {us_common, traces, wooper, myriad}.app files will have to be
-% found and used for this test to succeed: US-Common, Traces, WOOPER and Myriad
-% must be already available as prerequisite, fully-built OTP applications.
-%
+-doc """
+Note that the {us_common, traces, wooper, myriad}.app files will have to be
+found and used for this test to succeed: US-Common, Traces, WOOPER and Myriad
+must be already available as prerequisite, fully-built OTP applications.
+""".
 -spec run() -> no_return().
 run() ->
 

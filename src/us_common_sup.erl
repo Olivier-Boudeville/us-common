@@ -19,14 +19,15 @@
 % Author: Olivier Boudeville [olivier (dot) boudeville (at) esperide (dot) com]
 % Creation date: Sunday, July 14, 2019.
 
-
-% @doc Module implementing the <b>root OTP supervisor of US-Common</b>.
-%
-% In practice, it will supervise a single process, the one of the (singleton) US
-% configuration server, through a dedicated supervision bridge, defined in the
-% us_common_bridge_sup module.
-%
 -module(us_common_sup).
+
+-moduledoc """
+Module implementing the **root OTP supervisor of US-Common**.
+
+In practice, it will supervise a single process, the one of the (singleton) US
+configuration server, through a dedicated supervision bridge, defined in the
+us_common_bridge_sup module.
+""".
 
 
 % Implementing the OTP supervisor behaviour:
@@ -39,7 +40,7 @@
 
 % Callback of the supervisor behaviour.
 %
-% See [https://erlang.org/doc/design_principles/sup_princ.html].
+% See https://erlang.org/doc/design_principles/sup_princ.html.
 %
 -export([ init/1 ]).
 
@@ -47,19 +48,20 @@
 -define( root_supervisor_name, ?MODULE ).
 
 
-% Shorthands:
+% Type shorthands:
 
 -type execution_target() :: basic_utils:execution_target().
 -type child_spec() :: supervisor:child_spec().
 
 
 
-% @doc Starts and links the US-Common root supervisor, creating in turn a proper
-% supervision bridge.
-%
-% Note: typically called by us_common_app:start/2, hence generally triggered by
-% the application initialisation.
-%
+-doc """
+Starts and links the US-Common root supervisor, creating in turn a proper
+supervision bridge.
+
+Note: typically called by us_common_app:start/2, hence generally triggered by
+the application initialisation.
+""".
 -spec start_link() -> supervisor:startlink_ret().
 start_link() ->
 
@@ -71,9 +73,10 @@ start_link() ->
 
 
 
-% @doc Callback to initialise this US-Common root supervisor bridge, typically
-% in answer to start_link/0 above being executed.
-%
+-doc """
+Callback to initialise this US-Common root supervisor bridge, typically in
+answer to start_link/0 above being executed.
+""".
 -spec init( list() ) -> { 'ok', { supervisor:sup_flags(), [ child_spec() ] } }.
 init( Args=[] ) ->
 
@@ -90,7 +93,7 @@ init( Args=[] ) ->
 	% corresponding to the execution target this layer was compiled with:
 	%
 	SupSettings = otp_utils:get_supervisor_settings(
-					_RestartStrategy=one_for_one, ExecTarget ),
+		_RestartStrategy=one_for_one, ExecTarget ),
 
 	% First child, a bridge in charge of the US configuration server:
 	CfgBridgeChildSpec = get_config_bridge_spec( ExecTarget ),
@@ -107,7 +110,7 @@ init( Args=[] ) ->
 
 
 
-% @doc Returns the bridge spec for the US-Common configuration server.
+-doc "Returns the bridge spec for the US-Common configuration server.".
 -spec get_config_bridge_spec( execution_target() ) -> child_spec().
 get_config_bridge_spec( ExecTarget ) ->
 
@@ -133,7 +136,7 @@ get_config_bridge_spec( ExecTarget ) ->
 
 
 
-% @doc Returns the bridge spec for the US-Common scheduler.
+-doc "Returns the bridge spec for the US-Common scheduler.".
 -spec get_scheduler_bridge_spec( execution_target() ) -> child_spec().
 get_scheduler_bridge_spec( ExecTarget ) ->
 

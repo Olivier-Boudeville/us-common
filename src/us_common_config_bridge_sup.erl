@@ -19,13 +19,14 @@
 % Author: Olivier Boudeville [olivier (dot) boudeville (at) esperide (dot) com]
 % Creation date: Wednesday, May 6, 2020.
 
-
-% @doc Module implementing the <b>OTP supervisor bridge for the US-Common
-% configuration server</b>, so that this (singleton) server is attached to the
-% US-Common supervision tree, through the US-Common root supervisor, defined in
-% the us_common_sup module.
-%
 -module(us_common_config_bridge_sup).
+
+-moduledoc """
+Module implementing the **OTP supervisor bridge for the US-Common configuration
+server**, so that this (singleton) server is attached to the US-Common
+supervision tree, through the US-Common root supervisor, defined in the
+us_common_sup module.
+""".
 
 
 % The US configuration server is not a gen_server but a WOOPER instance,
@@ -60,13 +61,13 @@
 
 
 
-% @doc Starts and links a US-Common supervision bridge to the US configuration
-% server.
-%
-% Note: typically spawned as a supervised child of the US-Common root supervisor
-% (see us_common_sup:init/1), hence generally triggered by the application
-% initialisation.
-%
+-doc """
+Starts and links a US-Common supervision bridge to the US configuration server.
+
+Note: typically spawned as a supervised child of the US-Common root supervisor
+(see us_common_sup:init/1), hence generally triggered by the application
+initialisation.
+""".
 -spec start_link() -> term().
 start_link() ->
 
@@ -79,11 +80,12 @@ start_link() ->
 
 
 
-% @doc Callback to initialise this supervisor bridge, typically in answer to
-% start_link/0 being executed.
-%
+-doc """
+Callback to initialise this supervisor bridge, typically in answer to
+start_link/0 being executed.
+""".
 -spec init( list() ) -> { 'ok', pid(), State :: term() }
-							| 'ignore' | { 'error', Error :: term() }.
+						| 'ignore' | { 'error', Error :: term() }.
 init( _Args=[] ) ->
 
 	trace_bridge:info( "Initializing the US-Common supervisor bridge for "
@@ -96,7 +98,7 @@ init( _Args=[] ) ->
 
 
 
-% @doc Callback to terminate this supervisor bridge.
+-doc "Callback to terminate this supervisor bridge.".
 -spec terminate( Reason :: 'shutdown' | term(), State :: term() ) -> void().
 terminate( Reason, _BridgeState=CfgServerPid ) when is_pid( CfgServerPid ) ->
 

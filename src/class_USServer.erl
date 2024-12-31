@@ -41,10 +41,14 @@ The **mother class** of all US servers.
 -type server_pid() :: class_TraceEmitter:emitter_pid().
 
 
+-doc "The PID of a client of a US server.".
+-type client_pid() :: pid().
+
+
 -type ping_id() :: count().
 
 
--export_type([ server_pid/0, ping_id/0 ]).
+-export_type([ server_pid/0, client_pid/0, ping_id/0 ]).
 
 
 

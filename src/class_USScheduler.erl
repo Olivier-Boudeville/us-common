@@ -39,7 +39,6 @@ Class corresponding to the **task scheduler** of the US framework.
 
 
 -doc "PID of a scheduler.".
-
 -type scheduler_pid() :: class_USServer:server_pid().
 
 

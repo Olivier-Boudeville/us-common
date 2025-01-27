@@ -133,7 +133,8 @@ The PID of the process to which a task command will be sent whenever scheduled.
 
 -doc "Outcome of a task registration.".
 -type task_registration_outcome() ::
-		'task_done' | { 'task_registered', task_id() }.
+		'task_done' % The task command has been immediately processed.
+	  | { 'task_registered', task_id() }. % Planned when appropriate.
 
 
 
@@ -1271,6 +1272,19 @@ launch_task( Cmd, ActuatorPid, State ) ->
 	ActuatorPid ! Cmd.
 
 
+
+-doc """
+Requests this scheduler to log its state.
+
+Useful to check for example that there is no accumulation of lost tasks.
+""".
+-spec logState( wooper:state() ) -> const_oneway_return().
+logState( State ) ->
+	?info_fmt( "Reporting current state: ~ts", [ to_string( State ) ] ),
+	wooper:const_return().
+
+
+
 % onWOOPERExitReceived/3 inherited.
 
 
@@ -1824,11 +1838,13 @@ to_string( State ) ->
 
 	TimerStr = timer_table_to_string( ?getAttr(timer_table), State ),
 
+	TotalTaskCount = ?getAttr(next_task_id) - 1,
+
 	text_utils:format( "US scheduler, a ~ts; "
 		"registering ~ts (with a total of ~B task(s) already declared); "
 		"current schedule ~ts; with ~ts",
-		[ class_USServer:to_string( State ), TaskStr,
-		  ?getAttr(next_task_id) - 1, SchedStr, TimerStr ] ).
+		[ class_USServer:to_string( State ), TaskStr, TotalTaskCount,
+		  SchedStr, TimerStr ] ).
 
 
 

@@ -498,6 +498,27 @@ registerOneshotTask( State, UserTaskCommand, UserStartTime ) ->
 	wooper:return_state_result( NewState, Result ).
 
 
+-doc """
+Registers (synchronously) the specified one-shot task: the specified command
+will be executed once, after the specified duration, being assigned to the
+requesting process (as actuator).
+
+Returns either 'task_done' if the task was done on the fly (hence is already
+triggered; then no task identifier applies), or {'task_registered', TaskId} if
+it is registered for a later trigger (then its assigned task identifier is
+returned).
+""".
+-spec registerOneshotTaskIn( wooper:state(), task_command(),
+		dhms_duration() | seconds() ) ->
+			request_return( task_registration_outcome() ).
+registerOneshotTaskIn( State, UserTaskCommand, AfterDuration ) ->
+	StartTime = time_utils:timestamp_in( AfterDuration ),
+	{ NewState, Result } = registerTask( State, UserTaskCommand, StartTime,
+		_Periodicity=once, _Count=1, _ActPid=?getSender() ),
+
+	wooper:return_state_result( NewState, Result ).
+
+
 
 -doc """
 Registers (synchronously) the specified one-shot task: the specified command
@@ -527,10 +548,10 @@ registerOneshotTask( State, UserTaskCommand, UserStartTime, UserActPid ) ->
 
 
 -doc """
-Registers (synchronously) the specified task: the specified command will be
-executed starting immediately (in a flexible manner), at the specified user
-periodicity and indefinitely, being assigned to the requesting process (as
-actuator).
+Registers (synchronously) the specified (potentially periodical) task: the
+specified command will be executed starting immediately (in a flexible manner),
+at the specified user periodicity and indefinitely, being assigned to the
+requesting process (as actuator).
 
 Returns {'task_registered', TaskId}, where TaskId is its assigned task
 identifier.
@@ -548,10 +569,10 @@ registerTask( State, UserTaskCommand, UserPeriodicity ) ->
 
 
 -doc """
-Registers (synchronously) the specified task: the specified command will be
-executed starting immediately (in a flexible manner), at the specified user
-periodicity, for the specified number of times, being assigned to the requesting
-process (as actuator).
+Registers (synchronously) the specified (potentially periodical) task: the
+specified command will be executed starting immediately (in a flexible manner),
+at the specified user periodicity, for the specified number of times, being
+assigned to the requesting process (as actuator).
 
 Returns either 'task_done' if the task was done on the fly (hence is already
 triggered, in a case where no task identifier applies since it is fully
@@ -571,9 +592,10 @@ registerTask( State, UserTaskCommand, UserPeriodicity, UserCount ) ->
 
 
 -doc """
-Registers (synchronously) the specified task: the specified command will be
-executed starting from the specified time, at the specified user periodicity,
-for the specified number of times, being assigned to the requesting process.
+Registers (synchronously) the specified (potentially periodical) task: the
+specified command will be executed starting from the specified time, at the
+specified user periodicity, for the specified number of times, being assigned to
+the requesting process.
 
 Returns either 'task_done' if the task was done on the fly (hence is already
 triggered, in a case where no task identifier applies since it is fully
@@ -601,9 +623,10 @@ registerTask( State, UserTaskCommand, UserStartTime, UserPeriodicity,
 
 -doc """
 Registers asynchronously (hence with neither result - not even the task
-identifier, nor synchronisation) the specified task: the specified command will
-be executed starting from the specified time, at the specified user periodicity,
-for the specified number of times, being assigned to the requesting process.
+identifier, nor synchronisation) the specified (potentially periodical) task:
+the specified command will be executed starting from the specified time, at the
+specified user periodicity, for the specified number of times, being assigned to
+the requesting process.
 
 Note: if the deadline is specified in absolute terms (e.g. as {{2020,3,22},
 {16,1,48}}), the conversion to internal time will be done immediately (at task
@@ -630,10 +653,10 @@ registerTaskAsync( State, UserTaskCommand, UserStartTime, UserPeriodicity,
 
 
 -doc """
-Registers (synchronously) the specified task: the specified command will be
-executed starting from the specified time, at the specified user periodicity,
-for the specified number of times, being assigned to the specified actuator
-process.
+Registers (synchronously) the specified (potentially periodical) task: the
+specified command will be executed starting from the specified time, at the
+specified user periodicity, for the specified number of times, being assigned to
+the specified actuator process.
 
 Returns either 'task_done' if the task was done on the fly (hence is already
 triggered, in a case where no task identifier applies since it is fully
@@ -662,10 +685,10 @@ registerTask( State, UserTaskCommand, UserStartTime, UserPeriodicity,
 
 -doc """
 Registers asynchronously (hence with neither result - not even the task
-identifier, nor synchronisation) the specified task: the specified command will
-be executed starting from the specified time, at the specified user periodicity,
-for the specified number of times, being assigned to the specified actuator
-process.
+identifier, nor synchronisation) the specified (potentially periodical) task:
+the specified command will be executed starting from the specified time, at the
+specified user periodicity, for the specified number of times, being assigned to
+the specified actuator process.
 
 Note: if the deadline is specified in absolute terms (e.g. as {{2020,3,22},
 {16,1,48}}), the conversion to internal time will be done immediately (at task

@@ -214,7 +214,7 @@ destruct( State ) ->
 	SchedPid ! { unregisterTask, [ TaskId ], self() },
 
 	?info_fmt( "Being destructed, unregistering from scheduler ~w "
-			   "(task: #B).", [ SchedPid, TaskId ] ),
+			   "(task: #~B).", [ SchedPid, TaskId ] ),
 
 	receive
 

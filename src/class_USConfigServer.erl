@@ -441,7 +441,7 @@ notifyEPMDPort( State, EPMDPort, _Origin=as_default, AppModName, AppSrvPid ) ->
 			EPMDPort;
 
 		OrigPort ->
-			?notice_fmt( "A US-level EPMD port was already set (port #B), "
+			?notice_fmt( "A US-level EPMD port was already set (port #~B), "
 				"so the default (port #~B) reported by application '~ts' "
 				"(~w) will not apply.",
 				[ OrigPort, EPMDPort, AppModName, AppSrvPid ] ),
@@ -651,7 +651,7 @@ get_us_config_directory() ->
 
 	end,
 
-	ListedPaths = text_utils:split( ListedPathsAsStrings, _Seps=[ $: ] ),
+	ListedPaths = text_utils:split( ListedPathsAsStrings, _Sep=$: ),
 
 	AllBasePaths = [ FirstPath | ListedPaths ],
 

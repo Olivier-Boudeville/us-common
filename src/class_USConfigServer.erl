@@ -26,7 +26,6 @@ Class defining the singleton server holding the **configuration information** of
 the Universal Server, at the level of US-Common.
 """.
 
-
 -define( class_description,
 		 "Singleton server holding the configuration information of the "
 		 "Universal Server, at the level of US-Common." ).

@@ -57,6 +57,8 @@ verbatim to their actuators.
 
 
 
+
+
 % To avoid mistakes between amounts of milliseconds:
 
 -doc "Milliseconds since beginning of year 0 (in monotonic time).".
@@ -133,14 +135,40 @@ The PID of the process to which a task command will be sent whenever scheduled.
 
 -doc "Outcome of a task registration.".
 -type task_registration_outcome() ::
-		'task_done' % The task command has been immediately processed.
-	  | { 'task_registered', task_id() }. % Planned when appropriate.
+
+	% The task command has been immediately processed (no identifier returned,
+    % no task entry was even created):
+    %
+	'task_done'
+
+    % Planned whenever appropriate:
+  | { 'task_registered', task_id() }.
 
 
 
--doc "Outcome of a task unregistration.".
--type task_unregistration_outcome():: 'task_unregistered' | 'task_already_done'
-			| { 'task_unregistration_failed', basic_utils:error_reason() }.
+-doc """
+Outcome of a task unregistration.
+
+The identifier of the unregistered task is returned, to allow for concurrent
+caller-side operations.
+""".
+-type task_unregistration_outcome()::
+
+    % If the unregistration succeeded:
+    { 'task_unregistered', task_id() }
+
+    % If the task was already fully done:
+    %
+    % (thus any number of next unregistrations will result in this outcome)
+    %
+  | { 'task_already_done', task_id() }
+
+    % If the unregistration failed:
+    %
+    % (term returned if returning any caller-specified invalid task identifier)
+    %
+  | { 'task_unregistration_failed', error_reason(), task_id() | term() }.
+
 
 
 
@@ -355,6 +383,7 @@ Schedule pairs, ordered from closest future (sooner) to most remote one (later).
 % Type shorthands:
 
 -type count() :: basic_utils:count().
+-type error_reason() :: basic_utils:error_reason().
 
 -type ustring() :: text_utils:ustring().
 
@@ -854,9 +883,7 @@ register_task( UserTaskCommand, UserStartTime, UserPeriodicity, UserCount,
 -doc """
 Unregisters the specified task, based on its identifier.
 
-Returns either 'task_unregistered' if the operation succeeded, or
-'task_already_done' if the task was already fully done, or
-{'task_unregistration_failed',Reason} if the operation failed.
+Returns a suitable outcome to the caller.
 """.
 -spec unregisterTask( wooper:state(), task_id() ) ->
 						request_return( task_unregistration_outcome() ).
@@ -871,11 +898,8 @@ unregisterTask( _State, Other ) ->
 
 -doc """
 Unregisters the specified tasks, based on their identifier.
-%
-% Returns, in order, for each task either 'task_unregistered' if the operation
-% succeeded, 'task_already_done' if the task was already fully done, or
-% {'task_unregistration_failed',Reason} if the operation failed.
-%
+
+Returns outcomes in order to the caller.
 """.
 -spec unregisterTasks( wooper:state(), [ task_id() ] ) ->
 							request_return( [ task_unregistration_outcome() ] ).
@@ -908,9 +932,9 @@ unregister_task( TaskId, State ) when is_integer( TaskId ) andalso TaskId > 0 ->
 		% Could not have been allocated:
 		true ->
 			?error_fmt( "Requested to unregister task #~B, which never existed "
-				"(as the next task identifier is ~B).",
+				"(as the next task identifier is #~B).",
 				[ TaskId, NextTaskId ] ),
-			{ { task_unregistration_failed, never_existed }, State };
+			{ { task_unregistration_failed, never_existed, TaskId }, State };
 
 		false ->
 			case table:extract_entry_if_existing( TaskId,
@@ -919,8 +943,8 @@ unregister_task( TaskId, State ) when is_integer( TaskId ) andalso TaskId > 0 ->
 				% Already dropped, hence done:
 				false ->
 					?info_fmt( "Unregistered task #~B, which was actually "
-							   "done.", [ TaskId ] ),
-					{ task_already_done, State };
+							   "already done.", [ TaskId ] ),
+					{ { task_already_done, TaskId }, State };
 
 				{ TaskEntry, ShrunkTaskTable } ->
 
@@ -943,8 +967,8 @@ unregister_task( TaskId, State ) when is_integer( TaskId ) andalso TaskId > 0 ->
 							NewState = setAttribute( State, task_table,
 													 ShrunkTaskTable ),
 
-							{ { task_unregistration_failed, internal_error },
-							  NewState };
+							{ { task_unregistration_failed, internal_error,
+                                TaskId }, NewState };
 
 
 						{ NewPlan, NewTimerTable } ->
@@ -959,7 +983,7 @@ unregister_task( TaskId, State ) when is_integer( TaskId ) andalso TaskId > 0 ->
 									"unregistering: ~ts.",
 									[ to_string( NewState ) ] ) ),
 
-							{ task_unregistered, NewState }
+							{ { task_unregistered, TaskId }, NewState }
 
 					end
 
@@ -970,12 +994,14 @@ unregister_task( TaskId, State ) when is_integer( TaskId ) andalso TaskId > 0 ->
 unregister_task( TaskId, State ) ->
 	?error_fmt( "Task unregistering failed, invalid task identifier: '~p'.",
 				[ TaskId ] ),
-	{ { task_unregistration_failed, { invalid_task_id, TaskId } }, State }.
+	{ { task_unregistration_failed, invalid_task_id, TaskId }, State }.
 
 
 
 -doc """
 Unregisters asynchronously the specified task, based on its identifier.
+
+Asa a result, no outcome will be available to the caller.
 """.
 -spec unregisterTaskAsync( wooper:state(), task_id() ) -> oneway_return().
 unregisterTaskAsync( State, TaskId )
@@ -1303,6 +1329,7 @@ Useful to check for example that there is no accumulation of lost tasks.
 """.
 -spec logState( wooper:state() ) -> const_oneway_return().
 logState( State ) ->
+
 	?info_fmt( "Reporting current state: ~ts", [ to_string( State ) ] ),
 	wooper:const_return().
 
@@ -1319,6 +1346,7 @@ logState( State ) ->
 -spec get_main_scheduler() -> static_return( option( scheduler_pid() ) ).
 get_main_scheduler() ->
 
+    list_utils:are_equal(List)
 	LookupScope = naming_utils:registration_to_look_up_scope(
 		_RegScope=?us_common_scheduler_registration_scope ),
 

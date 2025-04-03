@@ -85,8 +85,7 @@ check_command_acks( TotalExpectedSchedulings ) ->
 
 -doc "Waits for the specified number of command acks.".
 wait_for_command_acks( _Count=0 ) ->
-	trace_utils:debug( "All command acks received." ),
-	ok;
+	trace_utils:debug( "All command acks received." );
 
 wait_for_command_acks( Count ) ->
 
@@ -174,7 +173,7 @@ run() ->
 		time_utils:offset_timestamp( NowTimestamp, _Seconds=2 ),
 
 	SchedPid ! { registerOneshotTask, [ get_command( fifth ),
-						OneshotFutureTimestamp, FirstActuatorPid ], self() },
+		OneshotFutureTimestamp, FirstActuatorPid ], self() },
 
 	{ task_registered, _IdFifthTask=5 } = test_receive(),
 
@@ -225,9 +224,13 @@ run() ->
 
 	receive
 
-		{ wooper_result, { task_unregistration_failed, never_existed } } ->
-			ok
+		{ wooper_result, { task_unregistration_failed, never_existed,
+                           NonExistingId } } ->
+			ok;
 
+
+        O ->
+            throw({aa, O})
 	end,
 
 
@@ -238,7 +241,7 @@ run() ->
 
 	receive
 
-		{ wooper_result, task_already_done } ->
+		{ wooper_result, { task_already_done, IdFirstTask } } ->
 			ok
 
 	end,
@@ -248,7 +251,7 @@ run() ->
 
 	receive
 
-		{ wooper_result, task_unregistered } ->
+		{ wooper_result, { task_unregistered, IdSixthTask } } ->
 			ok
 
 	end,
@@ -266,7 +269,8 @@ run() ->
 		true ->
 			receive
 
-				{ wooper_result, [ task_already_done, task_already_done ] } ->
+				{ wooper_result, [ { task_already_done, IdSixthTask },
+                                   { task_already_done, IdSeventhTask } ] } ->
 					ok
 
 			end;
@@ -282,13 +286,26 @@ run() ->
 
 	end,
 
-	test_facilities:display(
-		"Checking that no extraneous registration ack was received." ),
+	test_facilities:display( "Checking that no extraneous (un)registration "
+                             "ack was received." ),
 
 	receive
 
-		{ wooper_result, { task_registered, AnyCount } } ->
-			throw( { extra_task_registration_ack, AnyCount } )
+		{ wooper_result, { task_registered, AnyId } } ->
+			throw( { extra_task_registration_ack, AnyId } );
+
+		{ wooper_result, { task_unregistered, AnyId } } ->
+			throw( { extra_task_unregistration_ack, task_unregistered,
+                     AnyId } );
+
+		{ wooper_result, { task_already_done, AnyId } } ->
+			throw( { extra_task_unregistration_ack, task_already_done,
+                     AnyId } );
+
+		{ wooper_result, { task_unregistration_failed, AnyId } } ->
+			throw( { extra_task_unregistration_ack, task_unregistration_failed,
+                     AnyId } )
+
 
 	after 1000 ->
 

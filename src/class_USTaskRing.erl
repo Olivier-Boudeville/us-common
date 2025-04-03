@@ -218,10 +218,13 @@ destruct( State ) ->
 
 	receive
 
-		task_unregistered ->
+		{ task_unregistered, TaskId } ->
 			ok;
 
-		{ task_unregistration_failed, Error } ->
+		{ task_already_done, TaskId } ->
+			ok;
+
+		{ task_unregistration_failed, Error, TaskId } ->
 			?error_fmt( "Unregistration of task #~B failed "
 						"at deletion: ~p.", [ TaskId, Error ] )
 

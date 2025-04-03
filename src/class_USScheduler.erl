@@ -1001,7 +1001,7 @@ unregister_task( TaskId, State ) ->
 -doc """
 Unregisters asynchronously the specified task, based on its identifier.
 
-Asa a result, no outcome will be available to the caller.
+As a result, no outcome will be available to the caller.
 """.
 -spec unregisterTaskAsync( wooper:state(), task_id() ) -> oneway_return().
 unregisterTaskAsync( State, TaskId )

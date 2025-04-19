@@ -480,7 +480,7 @@ destruct( State ) ->
 
 -doc """
 Triggers immediately (synchronously) the specified one-shot task: the specified
-command will be triggered at once, a single time, being assigned to actuator
+command will be triggered at once, a single time, being assigned to the actuator
 process.
 
 Returns either 'task_done' if the task was done on the fly (hence is already
@@ -1346,7 +1346,6 @@ logState( State ) ->
 -spec get_main_scheduler() -> static_return( option( scheduler_pid() ) ).
 get_main_scheduler() ->
 
-    list_utils:are_equal(List)
 	LookupScope = naming_utils:registration_to_look_up_scope(
 		_RegScope=?us_common_scheduler_registration_scope ),
 

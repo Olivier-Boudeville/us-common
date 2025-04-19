@@ -72,8 +72,8 @@ check_command_acks( TotalExpectedSchedulings ) ->
 	% Wait for any extraneous, faulty command ack:
 	receive
 
-		{ operated, _AnyPid } ->
-			throw( extraneous_command_ack )
+		{ operated, Name, AnyPid } ->
+			throw( { extraneous_command_ack, { Name, AnyPid } } )
 
 	after 1000 ->
 
@@ -143,11 +143,27 @@ run() ->
 
 	task_done = test_receive(),
 
+    receive
+
+        { operated, _Name=first, FirstActuatorPid } ->
+            ok
+
+    end,
+
+
+	test_facilities:display( "Next immediate schedulings." ),
 
 	SchedPid ! { registerOneshotTask, [ get_command( second ),
 		_SecondOneshotStartTime=asap, FirstActuatorPid ], self() },
 
 	task_done = test_receive(),
+
+    receive
+
+        { operated, second, FirstActuatorPid } ->
+            ok
+
+    end,
 
 
 	SchedPid ! { registerOneshotTask, [ get_command( third ),
@@ -155,6 +171,12 @@ run() ->
 
 	task_done = test_receive(),
 
+    receive
+
+        { operated, third, FirstActuatorPid } ->
+            ok
+
+    end,
 
 
 	test_facilities:display( "Second testing, as deferred schedulings." ),
@@ -164,6 +186,13 @@ run() ->
 		_OneshotDHMSDuration={ 0, 0, 0, 1 }, FirstActuatorPid ], self() },
 
 	{ task_registered, _IdFourthTask=4 } = test_receive(),
+
+    receive
+
+        { operated, fourth, FirstActuatorPid } ->
+            ok
+
+    end,
 
 
 	% Timestamp-based schedule, in two seconds from now:
@@ -177,12 +206,18 @@ run() ->
 
 	{ task_registered, _IdFifthTask=5 } = test_receive(),
 
+    receive
+
+        { operated, fifth, FirstActuatorPid } ->
+            ok
+
+    end,
 
 
 	test_facilities:display( "Testing multiple (deferred) schedulings." ),
 
 	% Expected to be unregistered prior its sole trigger:
-	SixthDHMSDuration={ 0, 0, 0, 30 },
+	SixthDHMSDuration={ 0, 0, 0, _Secs=300 },
 
 	% Actually a single scheduling:
 	SchedPid ! { registerTask, [ get_command( sixth ), SixthDHMSDuration,
@@ -190,19 +225,22 @@ run() ->
 
 	{ task_registered, IdSixthTask=6 } = test_receive(),
 
+    % No waiting for any {operated, sixth, FirstActuatorPid}
 
-	% After 1 second: every 2 seconds, for a total of 5 times.
+	% After 2 seconds: every 1 second, for a total of 5 times.
 
-	SeventhDHMSDuration = { 0, 0, 0, 1 },
+    SeventhOffsetSecs = 2,
+
+	SeventhDHMSDuration = { 0, 0, 0, SeventhOffsetSecs },
 
 	SchedPid ! { registerTask, [ get_command( seventh ), SeventhDHMSDuration,
-		_SeventhPeriodicity=2, _SeventhCount=5, FirstActuatorPid ], self() },
+		SeventhPeriodicitySecs=1, SeventhCount=5, FirstActuatorPid ],
+                 self() },
 
 	{ task_registered, IdSeventhTask=7 } = test_receive(),
 
-
 	% To wait not a lot, for the seventh task to still have triggers:
-	WaitMs = 2000,
+    WaitMs = 2000,
 
 	% To wait for the seventh task to be fully over:
 	%WaitMs = 15000,
@@ -212,13 +250,27 @@ run() ->
 
 	timer:sleep( WaitMs ),
 
+    % Managed below:
+	%% basic_utils:repeat(
+    %%     fun() ->
+    %%         %trace_utils:debug( "Waiting for task registration." ),
+    %%         receive
+
+    %%             { operated, seventh, FirstActuatorPid } ->
+    %%                 ok
+
+    %%         end
+
+    %%     end,
+    %%     SeventhCount ),
+
 
 	test_facilities:display( "Testing the unregistering of tasks." ),
 
 	NonExistingId = 1000,
 
 	test_facilities:display( "Next error message about the unregistering "
-							 "of task ~B is expected:", [ NonExistingId ] ),
+							 "of task ~B *is* expected:", [ NonExistingId ] ),
 
 	SchedPid ! { unregisterTask, NonExistingId, self() },
 
@@ -226,13 +278,11 @@ run() ->
 
 		{ wooper_result, { task_unregistration_failed, never_existed,
                            NonExistingId } } ->
-			ok;
-
-
-        O ->
-            throw({aa, O})
+			ok
 	end,
 
+
+    test_facilities:display( "Unregistering first task (done)." ),
 
 	IdFirstTask = 1,
 
@@ -246,6 +296,9 @@ run() ->
 
 	end,
 
+
+    test_facilities:display( "Unregistering sixth (not done yet) task." ),
+
 	% Supposedly still active:
 	SchedPid ! { unregisterTask, IdSixthTask, self() },
 
@@ -256,17 +309,22 @@ run() ->
 
 	end,
 
+    test_facilities:display( "Unregistering seventh (possibly partly done) "
+                             "task." ),
+
 	% First done, seventh supposedly still active:
 	ToUnregister = [ IdSixthTask, IdSeventhTask ],
 	SchedPid ! { unregisterTasks, [ ToUnregister ], self() },
 
-	% Very approximate, but sufficient for this test (false increment to
-	% outsmart the compiler):
-	%
-	case WaitMs + basic_utils:identity( 0 ) > 10000 of
+	% Very approximate, but sufficient for this test:
 
-		% Task 7 must be over then:
+    SeventhTotalDurSecs = SeventhOffsetSecs
+        + SeventhPeriodicitySecs * SeventhCount,
+
+	case WaitMs div 1000 > SeventhTotalDurSecs of
+
 		true ->
+            test_facilities:display( "Expecting task 7 to be over." ),
 			receive
 
 				{ wooper_result, [ { task_already_done, IdSixthTask },
@@ -275,11 +333,13 @@ run() ->
 
 			end;
 
-		% Task 7 not fully completed:
 		false ->
+            test_facilities:display( "Expecting task 7 to be still ongoing." ),
+
 			receive
 
-				{ wooper_result, [ task_already_done, task_unregistered ] } ->
+				{ wooper_result, [ { task_already_done, IdSixthTask },
+                                   { task_unregistered, IdSeventhTask } ] } ->
 					ok
 
 			end
@@ -302,10 +362,9 @@ run() ->
 			throw( { extra_task_unregistration_ack, task_already_done,
                      AnyId } );
 
-		{ wooper_result, { task_unregistration_failed, AnyId } } ->
+		{ wooper_result, { task_unregistration_failed, Reason, AnyId } } ->
 			throw( { extra_task_unregistration_ack, task_unregistration_failed,
-                     AnyId } )
-
+                     Reason, AnyId } )
 
 	after 1000 ->
 
@@ -313,7 +372,7 @@ run() ->
 
 	end,
 
-	% Cannot be done now that the seventh task is unregistered as an unspecified
+	% Cannot be done now that the seventh task is unregistered at an unspecified
 	% time:
 	%
 	%check_command_acks( _TotalExpectedSchedulings=11 ),

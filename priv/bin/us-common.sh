@@ -110,7 +110,7 @@ read_us_config_file()
 
 		us_config_file="${us_config_dir}/${us_config_filename}"
 
-		echo "Looking up '${us_config_file}'..."
+		echo "Looking up first '${us_config_file}'..."
 
 		if [ ! -f "${us_config_file}" ]; then
 
@@ -132,7 +132,7 @@ read_us_config_file()
 			us_config_dir="${base_path}/${app_dir}"
 			us_config_file="${us_config_dir}/${us_config_filename}"
 
-			echo "Looking up '${us_config_file}'..."
+			echo "Looking up then '${us_config_file}'..."
 
 			if [ -f "${us_config_file}" ]; then
 
@@ -150,7 +150,7 @@ read_us_config_file()
 				#execution_context="production"
 
 				# So:
-				echo " Error, no command-line specified or default US configuration file found." 1>&2
+				echo " Error, neither command-line specified nor default US configuration file found." 1>&2
 
 				exit 20
 

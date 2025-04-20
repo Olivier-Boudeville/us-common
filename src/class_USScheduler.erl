@@ -57,8 +57,6 @@ verbatim to their actuators.
 
 
 
-
-
 % To avoid mistakes between amounts of milliseconds:
 
 -doc "Milliseconds since beginning of year 0 (in monotonic time).".

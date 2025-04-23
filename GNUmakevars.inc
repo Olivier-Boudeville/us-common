@@ -149,6 +149,9 @@ endif
 
 
 # To enforce specific settings such as registration scopes:
+#
+# (not to be mixed up with our priv/conf/us.config)
+#
 INTERNAL_OPTIONS += --config $(US_COMMON_TOP)/conf/us-common.config
 
 

@@ -149,7 +149,7 @@ In practice, often the ``~/.config/universal-server/us.config`` location is pref
 
 All US configuration files are in the `ETF <http://myriad.esperide.org/#etf>`_ format (for *Erlang Term Format*).
 
-One may refer to `this example us.config <https://github.com/Olivier-Boudeville/us-common/blob/master/priv/for-testing/us.config>`_ to learn their structure and derive one's own ``us.config``.
+One may refer to `this example us.config <https://github.com/Olivier-Boudeville/us-common/blob/master/priv/conf/us.config>`_ to learn their structure and derive one's own ``us.config``.
 
 
 Client Configuration
@@ -162,7 +162,6 @@ This information is typically stored in a ``us-*-remote-access.config`` ETF file
 
 
 .. _`free software`:
-
 
 -------
 Licence

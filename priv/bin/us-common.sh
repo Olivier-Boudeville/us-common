@@ -11,7 +11,7 @@
 #  - some whitespace flexibility is allowed in the configuration files
 
 
-echo "### US-Common script being sourced."
+#echo "### US-Common script being sourced."
 
 
 # Determining us_common_root if needed:
@@ -49,7 +49,7 @@ epmd="$(which epmd 2>/dev/null)"
 read_us_config_file()
 {
 
-	echo "### Reading US-Common configuration file"
+	#echo "### Reading US-Common configuration file"
 
 	us_config_filename="us.config"
 

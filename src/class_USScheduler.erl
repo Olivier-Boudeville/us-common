@@ -1040,7 +1040,7 @@ timerTrigger( State, ScheduleOffsetMs ) ->
 			erlang:abs( DiffMs ) > OffsetThresholdMs andalso
 				?warning_fmt( "Triggered for offset ~B (~ts), while being at "
 					"offset ~B (~ts), hence with a signed drift of ~ts "
-					"(late if positive).",
+					"(thus being late iff positive).",
 					[ ScheduleOffsetMs,
 					  get_timestamp_string_for( ScheduleOffsetMs, State ),
 					  NowMs, get_timestamp_string_for( NowMs, State ),
@@ -1113,12 +1113,11 @@ perform_schedule( ScheduleOffsetMs, NowMs,
 	%   [ ScheduleOffsetMs, get_timestamp_string_for( ScheduleOffsetMs, State ),
 	%     TaskIds ] ),
 
-	% Dropping current offset:
-	{ NewPlan, NewTimerTable, NewTaskTable } = trigger_tasks( TaskIds,
-		ScheduleOffsetMs, NowMs, _NewerPlan=T, TimerTable, TaskTable, State ),
-
-	% Stop recursing here, keeping the next schedules to come:
-	{ NewPlan, NewTimerTable, NewTaskTable };
+	% Dropping current offset, stop recursing here, keeping the next schedules
+	% to come, returning {NewPlan, NewTimerTable, NewTaskTable}:
+    %
+    trigger_tasks( TaskIds, ScheduleOffsetMs, NowMs, _NewerPlan=T, TimerTable,
+                   TaskTable, State );
 
 
 % This triggered offset is not found; this is possible: should a T1 timer be
@@ -1128,8 +1127,8 @@ perform_schedule( ScheduleOffsetMs, NowMs,
 % finally triggered, none of its tasks is left, and this should not be then a
 % fatal error.
 %
-% So, in all other cases (either there exists future offsets or none at all), we
-% do not trigger offsets anymore this time, we just disregard the current one:
+% So, in all other cases (either future offsets exist, or none at all), we do
+% not trigger offsets anymore this time, we just disregard the current one:
 %
 perform_schedule( ScheduleOffsetMs, _NowMs, SchedulePlan, TimerTable, TaskTable,
 				  State ) ->
@@ -1160,9 +1159,10 @@ should have already managed such cases.
 piggy_back_late_schedules( NowMs, _SchedulePlan=[ { OffMs, TaskIds } | T ],
 		TimerTable, TaskTable, State ) when OffMs =< NowMs ->
 
-	?error_fmt( "Scheduling directly tasks #~ts that were already "
-		"in the past (~ts).",
-		[ text_utils:integers_to_listed_string( TaskIds ), OffMs ] ),
+	?error_fmt( "Scheduling directly task(s) ~ts that were already "
+		"in the past (at ~B, while now is ~B).",
+		[ text_utils:integers_to_listed_string( TaskIds ), OffMs,
+          NowMs ] ),
 
 	{ NewPlan, NewTimerTable, NewTaskTable } = trigger_tasks( TaskIds,
 		OffMs, NowMs, _NewerPlan=T, TimerTable, TaskTable, State ),
@@ -1186,6 +1186,7 @@ Note that:
 trigger, it may be significantly in the past of the current offset
 - the specified schedule plan is supposed to have already the entry for the
 specified schedule offset removed
+- the specified State is const (used for traces)
 
 (helper)
 """.
@@ -1195,7 +1196,10 @@ specified schedule offset removed
 trigger_tasks( _TaskIds=[], ScheduleOffsetMs, _NowMs, SchedulePlan, TimerTable,
 			   TaskTable, _State ) ->
 
-	 ShrunkTimerTable = remove_timer( ScheduleOffsetMs, TimerTable ),
+    % In the final clause, as a single timer per offset is created, even if
+    % multiple tasks are scheduled then:
+    %
+	ShrunkTimerTable = remove_timer( ScheduleOffsetMs, TimerTable ),
 
 	{ SchedulePlan, ShrunkTimerTable, TaskTable };
 
@@ -1219,13 +1223,13 @@ trigger_tasks( _TaskIds=[ TaskId | T ], ScheduleOffsetMs, NowMs, SchedulePlan,
 	launch_task( TaskEntry#task_entry.command,
 				 TaskEntry#task_entry.actuator_pid, State ),
 
+    % In all cases this timer is removed exactly once (by the final clause):
 	case decrement_count( TaskEntry#task_entry.count ) of
 
 		0 ->
 			?debug_fmt( "Dropping task #~B for good, as fully done.",
 						[ TaskId ] ),
-			ShrunkTimerTable = remove_timer( ScheduleOffsetMs, TimerTable ),
-			{ SchedulePlan, ShrunkTimerTable, ShrunkTaskTable };
+			{ SchedulePlan, TimerTable, ShrunkTaskTable };
 
 		% Possibly unlimited:
 		NewCount ->
@@ -1447,7 +1451,7 @@ insert_task_at( TaskId, ScheduleOffsetMs, DurationFromNowMs,
 	insert_task_at( TaskId, ScheduleOffsetMs, DurationFromNowMs, T,
 					[ H | AccPlan ], TimeTable );
 
-% Current offset found matching ScheduleOffsetMs , registering and stopping:
+% Current offset found matching ScheduleOffsetMs, registering and stopping:
 insert_task_at( TaskId, ScheduleOffsetMs, _DurationFromNowMs,
 		_SchedulePlan=[ { ScheduleOffsetMs, Ids } | T ], AccPlan, TimeTable ) ->
 
@@ -1556,7 +1560,7 @@ add_timer( ScheduleOffsetMs, DurationFromNowMs, TimerTable ) ->
 -spec remove_timer( schedule_offset(), timer_table() ) -> timer_table().
 remove_timer( ScheduleOffsetMs, TimerTable ) ->
 
-	%trace_bridge:debug_fmt( "Removing timer for offset ~B.",
+	%trace_bridge:debug_fmt( "Removing timer for schedule offset #~B.",
 	%   [ ScheduleOffsetMs ] ),
 
 	{ TimerRef, ShrunkTimerTable } =

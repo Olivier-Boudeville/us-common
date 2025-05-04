@@ -13,6 +13,10 @@ doc/api-doc/
 doc/us-common-technical-manual-english.html
 doc/us-common-technical-manual-english.rst
 doc/mathjax
+doc/us-common-technical-manual-english.aux
+doc/us-common-technical-manual-english.pdf
+doc/us-common-technical-manual-english.tex
+doc/us-common-technical-manual-english.toc
 
 # For Emacs temporary files:
 *.#*

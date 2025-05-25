@@ -201,8 +201,8 @@ Parameters are:
 - ServerInit, the name of that US server
 - RegistrationName, the name under which this server shall be registered
 - RegistrationScope, the scope at which this server shall be registered
-
-It is not expected to be run as any specific user.
+- TrapExits, whether EXIT messages shall be trapped
+- MaybeUserName, the name of any user under which this server is expected to run
 """.
 -spec construct( wooper:state(), emitter_init(), option( registration_name() ),
 		option( registration_scope() ), boolean(), option( user_name() ) ) ->
@@ -220,6 +220,9 @@ construct( State, ServerInit, MaybeRegistrationName, MaybeRegistrationScope,
 	TraceState = class_TraceEmitter:construct( State,
 		?trace_categorize(ServerInit) ),
 
+	TrapExits =:= true andalso
+        trace_bridge:debug( "Will be trapping EXIT messages." ),
+
 	% Constant based on the number of milliseconds of the EPOCH, since year 0;
 	% used in order to compute the most complete offset (in UTC):
 	%
@@ -235,8 +238,8 @@ construct( State, ServerInit, MaybeRegistrationName, MaybeRegistrationScope,
 
 		{ username, text_utils:maybe_string_to_binary( MaybeUserName ) } ] ),
 
-	%trace_utils:debug_fmt( "Registering server as '~ts' for scope ~ts.",
-	%                       [ MaybeRegistrationName, MaybeRegistrationScope ] ),
+	%trace_bridge:debug_fmt( "Registering server as '~ts' for scope ~ts.",
+	%    [ MaybeRegistrationName, MaybeRegistrationScope ] ),
 
 	register_name( MaybeRegistrationName, MaybeRegistrationScope, SetState ).
 

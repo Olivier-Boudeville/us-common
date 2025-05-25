@@ -131,11 +131,11 @@ The PID of the process to which a task command will be sent whenever scheduled.
 
 
 
--doc "Outcome of a task registration.".
+-doc "The outcome of a task registration.".
 -type task_registration_outcome() ::
 
 	% The task command has been immediately processed (no identifier returned,
-    % no task entry was even created):
+    % as no task entry was even created):
     %
 	'task_done'
 
@@ -481,8 +481,8 @@ Triggers immediately (synchronously) the specified one-shot task: the specified
 command will be triggered at once, a single time, being assigned to the actuator
 process.
 
-Returns either 'task_done' if the task was done on the fly (hence is already
-triggered; then no task identifier applies), or {'task_registered', TaskId} if
+Returns either `task_done` if the task was done on the fly (hence is already
+triggered; then no task identifier applies), or `{'task_registered', TaskId}` if
 it is registered for a later trigger (then its assigned task identifier is
 returned).
 """.
@@ -504,13 +504,13 @@ Registers (synchronously) the specified one-shot task: the specified command
 will be executed once, at the specified time, being assigned to the requesting
 process (as actuator).
 
-Returns either 'task_done' if the task was done on the fly (hence is already
-triggered; then no task identifier applies), or {'task_registered', TaskId} if
+Returns either `task_done` if the task was done on the fly (hence is already
+triggered; then no task identifier applies), or `{'task_registered', TaskId}` if
 it is registered for a later trigger (then its assigned task identifier is
 returned).
 
-Note: if the deadline is specified in absolute terms (e.g. as {{2020,3,22},
-{16,1,48}}), the conversion to internal time will be done immediately (at task
+Note: if the deadline is specified in absolute terms (e.g. as `{{2020,3,22},
+{16,1,48}}`), the conversion to internal time will be done immediately (at task
 submission time), resulting in any system time change (e.g. DST) not being taken
 into account (as the respect of actual periodicities is preferred over the one
 of literal timestamps).
@@ -530,8 +530,8 @@ Registers (synchronously) the specified one-shot task: the specified command
 will be executed once, after the specified duration, being assigned to the
 requesting process (as actuator).
 
-Returns either 'task_done' if the task was done on the fly (hence is already
-triggered; then no task identifier applies), or {'task_registered', TaskId} if
+Returns either `task_done` if the task was done on the fly (hence is already
+triggered; then no task identifier applies), or `{'task_registered', TaskId}` if
 it is registered for a later trigger (then its assigned task identifier is
 returned).
 """.
@@ -552,13 +552,13 @@ Registers (synchronously) the specified one-shot task: the specified command
 will be executed once, at the specified time, as assigned to requesting and
 specified actuator process.
 
-Returns either 'task_done' if the task was done on the fly (hence is already
-triggered; then no task identifier applies), or {'task_registered', TaskId} if
+Returns either `task_done` if the task was done on the fly (hence is already
+triggered; then no task identifier applies), or `{'task_registered', TaskId}` if
 it is registered for a later trigger (then its assigned task identifier is
 returned).
 
-Note: if the deadline is specified in absolute terms (e.g. as {{2020,3,22},
-{16,1,48}}), the conversion to internal time will be done immediately (at task
+Note: if the deadline is specified in absolute terms (e.g. as `{{2020,3,22},
+{16,1,48}}`), the conversion to internal time will be done immediately (at task
 submission time), resulting in any system time change (e.g. DST) not being taken
 into account (as the respect of actual periodicities is preferred over the one
 of literal timestamps).
@@ -580,7 +580,7 @@ specified command will be executed starting immediately (in a flexible manner),
 at the specified user periodicity and indefinitely, being assigned to the
 requesting process (as actuator).
 
-Returns {'task_registered', TaskId}, where TaskId is its assigned task
+Returns `{'task_registered', TaskId}`, where TaskId is its assigned task
 identifier.
 """.
 -spec registerTask( wooper:state(), task_command(), user_periodicity() ) ->
@@ -601,9 +601,9 @@ specified command will be executed starting immediately (in a flexible manner),
 at the specified user periodicity, for the specified number of times, being
 assigned to the requesting process (as actuator).
 
-Returns either 'task_done' if the task was done on the fly (hence is already
+Returns either `task_done` if the task was done on the fly (hence is already
 triggered, in a case where no task identifier applies since it is fully
-completed), or {'task_registered', TaskId} if it is registered for a later
+completed), or `{'task_registered', TaskId}` if it is registered for a later
 trigger (then its assigned task identifier is returned).
 """.
 -spec registerTask( wooper:state(), task_command(), user_periodicity(),
@@ -624,13 +624,13 @@ specified command will be executed starting from the specified time, at the
 specified user periodicity, for the specified number of times, being assigned to
 the requesting process.
 
-Returns either 'task_done' if the task was done on the fly (hence is already
+Returns either `task_done` if the task was done on the fly (hence is already
 triggered, in a case where no task identifier applies since it is fully
-completed), or {'task_registered', TaskId} if it is registered for a later
+completed), or `{'task_registered', TaskId}` if it is registered for a later
 trigger (then its assigned task identifier is returned).
 
-Note: if the deadline is specified in absolute terms (e.g. as {{2020,3,22},
-{16,1,48}}), the conversion to internal time will be done immediately (at task
+Note: if the deadline is specified in absolute terms (e.g. as `{{2020,3,22},
+{16,1,48}}`), the conversion to internal time will be done immediately (at task
 submission time), resulting in any future system time change (e.g. DST) not
 being taken into account at this level (as the respect of actual periodicities
 is preferred over the one of literal timestamps).
@@ -655,8 +655,8 @@ the specified command will be executed starting from the specified time, at the
 specified user periodicity, for the specified number of times, being assigned to
 the requesting process.
 
-Note: if the deadline is specified in absolute terms (e.g. as {{2020,3,22},
-{16,1,48}}), the conversion to internal time will be done immediately (at task
+Note: if the deadline is specified in absolute terms (e.g. as `{{2020,3,22},
+{16,1,48}}`), the conversion to internal time will be done immediately (at task
 submission time), resulting in any future system time change (e.g. DST) not
 being taken into account at this level (as the respect of actual periodicities
 is preferred over the one of literal timestamps).
@@ -685,17 +685,16 @@ specified command will be executed starting from the specified time, at the
 specified user periodicity, for the specified number of times, being assigned to
 the specified actuator process.
 
-Returns either 'task_done' if the task was done on the fly (hence is already
+Returns either `task_done` if the task was done on the fly (hence is already
 triggered, in a case where no task identifier applies since it is fully
-completed), or {'task_registered', TaskId} if it is registered for a later
+completed), or `{'task_registered', TaskId}` if it is registered for a later
 trigger (then its assigned task identifier is returned).
 
-Note: if the deadline is specified in absolute terms (e.g. as {{2020,3,22},
-{16,1,48}}), the conversion to internal time will be done immediately (at task
+Note: if the deadline is specified in absolute terms (e.g. as `{{2020,3,22},
+{16,1,48}}`), the conversion to internal time will be done immediately (at task
 submission time), resulting in any future system time change (e.g. DST) not
 being taken into account at this level (as the respect of actual periodicities
 is preferred over the one of literal timestamps).
-
 """.
 -spec registerTask( wooper:state(), task_command(), start_time(),
 					user_periodicity(), schedule_count(), actuator_pid() ) ->
@@ -717,8 +716,8 @@ the specified command will be executed starting from the specified time, at the
 specified user periodicity, for the specified number of times, being assigned to
 the specified actuator process.
 
-Note: if the deadline is specified in absolute terms (e.g. as {{2020,3,22},
-{16,1,48}}), the conversion to internal time will be done immediately (at task
+Note: if the deadline is specified in absolute terms (e.g. as `{{2020,3,22},
+{16,1,48}}`), the conversion to internal time will be done immediately (at task
 submission time), resulting in any future system time change (e.g. DST) not
 being taken into account at this level (as the respect of actual periodicities
 is preferred over the one of literal timestamps).
@@ -1618,7 +1617,7 @@ get_current_timestamp_string( State ) ->
 
 -doc """
 Returns the internal time offset corresponding to this user-level timestamp
-(such as {{2020,3,23},{16,44,0}}).
+(such as `{{2020,3,23},{16,44,0}}`).
 """.
 -spec get_schedule_offset_for( timestamp(), wooper:state() ) ->
 									schedule_offset().
@@ -1634,7 +1633,7 @@ get_schedule_offset_for( UserTimestamp, State ) ->
 
 
 -doc """
-Returns the (approximate) user-level timestamp (e.g.  {{2020,3,23},{16,44,0}}),
+Returns the (approximate) user-level timestamp (e.g. `{{2020,3,23},{16,44,0}}`),
 in VM system time (UTC), corresponding to the specified internal time offset.
 """.
 -spec get_timestamp_for( schedule_offset(), wooper:state() ) -> timestamp().

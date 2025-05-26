@@ -165,6 +165,42 @@ This information is typically stored in a ``us-*-remote-access.config`` ETF file
 
 
 
+---
+Use
+---
+
+Relying on systemd
+==================
+
+US-Common as such is just an intermediate library, not a US service, so one cannot use it per se, at least not directly.
+
+Note though that we are not fully keen on recommending to rely on ``systemctl`` to control one's US servers: perfectly well-behaving scripts may start to dysfunction once set in a service, and ``systemctl`` will add a layer of fuzziness / complexity / uncertainty to the process for no real added value.
+
+More precisely, despite careful design, regularly a mix of ``systemctl``, ``authbind``, ``run_erl`` and ``epmd`` may manage to prevent the application to start and, more frequently, to properly stop. Or it may hang and fail with a time-out.
+
+For example, during such a stop procedure, after a client successfully triggered an application shutdown::
+
+ stop-us-main-native-build.sh[2406514]: (execution finished, interpreter halted)
+ run_erl[2405963]: Erlang closed the connection.
+ systemd[1]: us-main-as-native-build.service: Main process exited, code=exited, status=1/FAILURE
+ stop-us-main-native-build.sh[2406514]:   (stop success reported by client)
+ stop-us-main-native-build.sh[2406514]: (exiting with code 0)
+ systemd[1]: us-main-as-native-build.service: Failed with result 'exit-code'.
+ systemd[1]: Stopped Universal Server service (US-Main), as a native build.
+
+
+This application stop is thus considered here to be a failure, whereas using directly the same start/stop scripts is working beautifully.
+
+Moreover, after a stop, an EPMD server is bound to linger and, unfortunately, often to falsely believe that the prior instance is still running, thus making the next start attempts fail as well (as a node with the same node is supposed to exist - whereas no ``beam.smp`` process exists anymore).
+
+Not a huge fan either of having root shells with no ``HOME`` environment variable defined, of having logs truncated, of start/stop operations not being executed because systemd believes it is not in an appropriate state, or running previous content if forgetting to run ``systemctl daemon-reload`` at each change, etc.
+
+Anyway now our US services are well-interfaced with ``systemctl``, unfortunately at a rather high cost in terms of efforts. 
+
+.. So, our word of advice is just to use the US control scripts by themselves, and not to bother with ``systemctl`` for that.
+
+
+
 .. _`free software`:
 
 -------

@@ -220,8 +220,11 @@ construct( State, ServerInit, MaybeRegistrationName, MaybeRegistrationScope,
 	TraceState = class_TraceEmitter:construct( State,
 		?trace_categorize(ServerInit) ),
 
-	TrapExits =:= true andalso
-        trace_bridge:debug( "Will be trapping EXIT messages." ),
+    % Inconvenient (too verbose/too early: at start-up, gets printed on the
+    % console):
+    %
+	%TrapExits =:= true andalso
+    %    trace_bridge:debug( "Will be trapping EXIT messages." ),
 
 	% Constant based on the number of milliseconds of the EPOCH, since year 0;
 	% used in order to compute the most complete offset (in UTC):

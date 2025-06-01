@@ -195,7 +195,7 @@ Moreover, after a stop, an EPMD server is bound to linger and, unfortunately, of
 
 Not a huge fan either of having root shells with no ``HOME`` environment variable defined, of having logs truncated, of start/stop operations not being executed because systemd believes it is not in an appropriate state, or running previous content if forgetting to run ``systemctl daemon-reload`` at each change, etc.
 
-Anyway now our US services are well-interfaced with ``systemctl``, unfortunately at a rather high cost in terms of efforts. 
+Anyway now our US services are well-interfaced with ``systemctl``, unfortunately at a rather high cost in terms of efforts.
 
 .. So, our word of advice is just to use the US control scripts by themselves, and not to bother with ``systemctl`` for that.
 

@@ -134,12 +134,12 @@ The PID of the process to which a task command will be sent whenever scheduled.
 -doc "The outcome of a task registration.".
 -type task_registration_outcome() ::
 
-	% The task command has been immediately processed (no identifier returned,
-    % as no task entry was even created):
+	% The task command has been immediately and fully processed (no identifier
+	% returned, as no task entry was even created):
     %
 	'task_done'
 
-    % Planned whenever appropriate:
+    % Planned whenever appropriate (in the future and/or periodically):
   | { 'task_registered', task_id() }.
 
 
@@ -300,7 +300,6 @@ Schedule pairs, ordered from closest future (sooner) to most remote one (later).
 
 % Implementation notes:
 %
-%
 % On task commands:
 %
 % We preferred to limit the ability of a scheduler only to sending *messages* to
@@ -387,7 +386,7 @@ Schedule pairs, ordered from closest future (sooner) to most remote one (later).
 
 -type seconds() :: unit_utils:seconds().
 
-% No shorthand, as too ambiguous to be used here:
+% No shorthand, as too ambiguous (w.r.t. start time) to be used here:
 %-type milliseconds() :: unit_utils:milliseconds().
 
 -type timestamp() :: time_utils:timestamp().
@@ -580,8 +579,10 @@ specified command will be executed starting immediately (in a flexible manner),
 at the specified user periodicity and indefinitely, being assigned to the
 requesting process (as actuator).
 
-Returns `{'task_registered', TaskId}`, where TaskId is its assigned task
-identifier.
+Returns either `task_done` if the task was a one-shot one that was done on the
+fly (hence is already triggered, in a case where no task identifier applies
+since it is fully completed), or `{'task_registered', TaskId}` if it is
+registered for a later trigger (then its assigned task identifier is returned).
 """.
 -spec registerTask( wooper:state(), task_command(), user_periodicity() ) ->
 							request_return( task_registration_outcome() ).
@@ -601,10 +602,10 @@ specified command will be executed starting immediately (in a flexible manner),
 at the specified user periodicity, for the specified number of times, being
 assigned to the requesting process (as actuator).
 
-Returns either `task_done` if the task was done on the fly (hence is already
-triggered, in a case where no task identifier applies since it is fully
-completed), or `{'task_registered', TaskId}` if it is registered for a later
-trigger (then its assigned task identifier is returned).
+Returns either `task_done` if the task was a one-shot one that was done on the
+fly (hence is already triggered, in a case where no task identifier applies
+since it is fully completed), or `{'task_registered', TaskId}` if it is
+registered for a later trigger (then its assigned task identifier is returned).
 """.
 -spec registerTask( wooper:state(), task_command(), user_periodicity(),
 			schedule_count() ) -> request_return( task_registration_outcome() ).
@@ -624,10 +625,10 @@ specified command will be executed starting from the specified time, at the
 specified user periodicity, for the specified number of times, being assigned to
 the requesting process.
 
-Returns either `task_done` if the task was done on the fly (hence is already
-triggered, in a case where no task identifier applies since it is fully
-completed), or `{'task_registered', TaskId}` if it is registered for a later
-trigger (then its assigned task identifier is returned).
+Returns either `task_done` if the task was a one-shot one that was done on the
+fly (hence is already triggered, in a case where no task identifier applies
+since it is fully completed), or `{'task_registered', TaskId}` if it is
+registered for a later trigger (then its assigned task identifier is returned).
 
 Note: if the deadline is specified in absolute terms (e.g. as `{{2020,3,22},
 {16,1,48}}`), the conversion to internal time will be done immediately (at task
@@ -685,10 +686,10 @@ specified command will be executed starting from the specified time, at the
 specified user periodicity, for the specified number of times, being assigned to
 the specified actuator process.
 
-Returns either `task_done` if the task was done on the fly (hence is already
-triggered, in a case where no task identifier applies since it is fully
-completed), or `{'task_registered', TaskId}` if it is registered for a later
-trigger (then its assigned task identifier is returned).
+Returns either `task_done` if the task was a one-shot one that was done on the
+fly (hence is already triggered, in a case where no task identifier applies
+since it is fully completed), or `{'task_registered', TaskId}` if it is
+registered for a later trigger (then its assigned task identifier is returned).
 
 Note: if the deadline is specified in absolute terms (e.g. as `{{2020,3,22},
 {16,1,48}}`), the conversion to internal time will be done immediately (at task

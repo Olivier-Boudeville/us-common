@@ -44,22 +44,25 @@ endif
 # conditional compilation primitives (see cond_utils for their management):
 
 # Topics covered by flags:
-#  - us_common_debug_registration: regarding naming registering
-#  - us_common_debug_scheduling: regarding task scheduling
+#  - registration: regarding naming registering
+#  - scheduling: regarding task scheduling
+#  - actions: about the actions that may externally triggered on server
 #
 # Defining debug flags (at least the most verbose are by default commented-out):
 ifeq ($(ENABLE_DEBUG),true)
 	#US_COMMON_DEBUG_FLAGS += -Dus_common_debug_registration
 	#US_COMMON_DEBUG_FLAGS += -Dus_common_debug_scheduling
+	US_COMMON_DEBUG_FLAGS += -Dus_common_debug_actions
 endif
 
 # Defining check flags:
 ifeq ($(EXECUTION_TARGET),development)
 	# Does not exist: US_COMMON_CHECK_FLAGS += -Dus_common_check_scheduling
+    # Does not exist: US_COMMON_CHECK_FLAGS += -Dus_common_check_actions
 endif
 
 ERLANG_COMPILER_OPT_BASE += -Dus_common_version=\"$(US_COMMON_VERSION)\" \
-							$(US_COMMON_DEBUG_FLAGS)                      \
+							$(US_COMMON_DEBUG_FLAGS)                     \
 							$(US_COMMON_CHECK_FLAGS)
 
 

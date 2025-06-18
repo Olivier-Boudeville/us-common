@@ -192,6 +192,12 @@ the Universal Server, at the level of US-Common.
 -define( us_log_dir_key, us_log_dir ).
 
 
+% The settings of the automated actions that shall be supported by a US-Server
+% (see the us_action module):
+%
+-define( us_actions_key, action_settings ).
+
+
 -define( us_main_config_filename_key, us_main_config_filename ).
 
 -define( us_web_config_filename_key, us_web_config_filename ).
@@ -203,7 +209,8 @@ the Universal Server, at the level of US-Common.
 	?us_username_key, ?us_groupname_key,
 	?us_server_registration_name_key,
 	?us_config_server_registration_name_key,
-	?us_app_base_dir_key, ?us_log_dir_key,
+	?us_app_base_dir_key, ?us_log_dir_key, ?us_actions_key,
+
 	?us_main_config_filename_key, ?us_web_config_filename_key] ).
 
 

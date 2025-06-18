@@ -46,7 +46,7 @@ endif
 # Topics covered by flags:
 #  - registration: regarding naming registering
 #  - scheduling: regarding task scheduling
-#  - actions: about the actions that may externally triggered on server
+#  - actions: about the actions that may be externally triggered on server
 #
 # Defining debug flags (at least the most verbose are by default commented-out):
 ifeq ($(ENABLE_DEBUG),true)

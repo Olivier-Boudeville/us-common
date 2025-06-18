@@ -45,7 +45,7 @@ Class corresponding to the **task scheduler** of the US framework.
 
 -doc """
 The command corresponding to a task to execute respects the general form of a
-WOOPER oneway, i.e. OnewayName or {OnewayName, Args}, where Args is
+WOOPER oneway, i.e. `OnewayName` or `{OnewayName, Args}`, where `Args` is
 conventionally a single non-list term or a list of any arguments.
 
 We considered, yet finally did not keep, the idea of always adding as last
@@ -1701,6 +1701,7 @@ vet_start_time( _UserStartTime=asap, _State ) ->
 	0;
 
 vet_start_time( _UserStartTime=flexible, _State ) ->
+    % At least currently:
 	0;
 
 vet_start_time( StartTimeInSecs, _State ) when is_integer( StartTimeInSecs ) ->

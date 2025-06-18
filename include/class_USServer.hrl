@@ -18,3 +18,9 @@
 %
 % Author: Olivier Boudeville [olivier (dot) boudeville (at) esperide (dot) com]
 % Creation date: Wednesday, April 8, 2020.
+
+
+% The key under which automated actions are defined (use for general-purpose
+% ones, possibly also of use in US-* specific configuration files):
+%
+-define( us_common_actions_key, action_settings ).

@@ -48,7 +48,19 @@ The **mother class** of all US servers.
 -type ping_id() :: count().
 
 
--export_type([ server_pid/0, client_pid/0, ping_id/0 ]).
+-doc "A table holding US-related configuration information.".
+-type config_table() :: table( atom(), term() ).
+
+
+-export_type([ server_pid/0, client_pid/0, ping_id/0, config_table/0 ]).
+
+
+-include("class_USServer.hrl").
+
+% All known, licit (top-level) base keys for the US common configuration file:
+% (other keys are in their respective server classes)
+%
+-define( known_us_common_config_keys, [ ?us_common_actions_key ] ).
 
 
 
@@ -64,6 +76,10 @@ The **mother class** of all US servers.
 -type user_name() :: system_utils:user_name().
 
 -type emitter_init() :: class_TraceEmitter:emitter_init().
+
+%-type action_table() :: us_action:action_table().
+-type action_token() :: us_action:action_token().
+-type action_outcome() :: us_action:action_outcome().
 
 
 % Design notes:
@@ -109,7 +125,10 @@ The **mother class** of all US servers.
 	  "service" },
 
 	{ username, option( user_name() ),
-	  "the user (if any) under which this server is expected to run" } ] ).
+	  "the user (if any) under which this server is expected to run" },
+
+    { action_table, action_table(),
+      "the table recording all the actions supported by this server" } ] ).
 
 
 
@@ -239,7 +258,9 @@ construct( State, ServerInit, MaybeRegistrationName, MaybeRegistrationScope,
 		{ server_gregorian_start,
 		  MsOfEpoch + time_utils:get_system_time() },
 
-		{ username, text_utils:maybe_string_to_binary( MaybeUserName ) } ] ),
+		{ username, text_utils:maybe_string_to_binary( MaybeUserName ) },
+
+        { action_table, table:new() } ] ),
 
 	%trace_bridge:debug_fmt( "Registering server as '~ts' for scope ~ts.",
 	%    [ MaybeRegistrationName, MaybeRegistrationScope ] ),
@@ -280,6 +301,58 @@ ping( State, PingId, MonitorPid ) ->
 	MonitorPid ! { pong, [ PingId, self() ] },
 
 	wooper:const_return().
+
+
+
+-doc """
+Integrates the specified user-level action specifications (possibly read from a
+configuration file) in the specified action table, and returns it.
+""".
+-spec integrateAutomatedActions( wooper:state(), config_table() ) ->
+                                                    oneway_return().
+integrateAutomatedActions( State, ConfigTable ) ->
+
+    case table:lookup_entry( ?us_common_actions_key, ConfigTable ) of
+
+        { value, UserActSpecs } when is_list( UserActSpecs ) ->
+            RegActTable = us_action:register_action_specs( UserActSpecs,
+                ?getAttr(action_table) ),
+
+            RegState = setAttribute( State, action_table, RegActTable ),
+
+            wooper:return_state( RegState );
+
+        { value, InvalidUserActSpecs }  ->
+            ?error_fmt( "Invalid (non-list) user-level action specifications: "
+                        "~p.", [ InvalidUserActSpecs ] ),
+
+            throw( { invalid_user_action_specs, non_list,
+                     InvalidUserActSpecs } );
+
+        key_not_found ->
+            ?debug( "No automated actions defined." ),
+            wooper:const_return()
+
+    end.
+
+
+
+-doc """
+Requests this server to perform the automated action corresponding to the
+specified tokens.
+""".
+-spec performActionFromTokens( wooper:state(), [ action_token() ] ) ->
+                                    request_return( action_outcome() ).
+performActionFromTokens( State, Tokens ) ->
+
+    cond_utils:if_defined( us_common_debug_actions, trace_utils:debug_fmt(
+        "Performing action from tokens ~p", [ Tokens ] ) ),
+
+    ActState = State,
+
+    Outcome = fixme,
+
+    wooper:return_state_result( ActState, Outcome ).
 
 
 
@@ -410,5 +483,7 @@ to_string( State ) ->
 
 	end,
 
-	text_utils:format( "server named '~ts', ~ts, ~ts, ~ts",
-					   [ ?getAttr(name), TimeStr, RegStr, UserStr ] ).
+    ActStr = us_action:action_table_to_string( ?getAttr(action_table) ),
+
+	text_utils:format( "server named '~ts', ~ts, ~ts, ~ts; this server has ~ts",
+					   [ ?getAttr(name), TimeStr, RegStr, UserStr, ActStr ] ).

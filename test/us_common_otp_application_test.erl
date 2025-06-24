@@ -155,7 +155,7 @@ test_us_common_application( OrderedAppNames ) ->
 	otp_utils:start_applications( OrderedAppNames ),
 
 	USCfgSrvPid = naming_utils:wait_for_registration_of( CfgRegName,
-		naming_utils:registration_to_look_up_scope( CfgRegScope ) ),
+		naming_utils:registration_to_lookup_scope( CfgRegScope ) ),
 
 	% The top-level user process may not be aware that an OTP application fails
 	% (e.g. because its main process crashed), which is a problem for a test. So
@@ -167,7 +167,7 @@ test_us_common_application( OrderedAppNames ) ->
 	% The same (simpler - less choices) for the US-Common scheduler:
 	SchedPid = naming_utils:wait_for_registration_of(
 		?us_common_scheduler_registration_name,
-		naming_utils:registration_to_look_up_scope(
+		naming_utils:registration_to_lookup_scope(
 			?us_common_scheduler_registration_scope ) ),
 
 	erlang:link( SchedPid ),

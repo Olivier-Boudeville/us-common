@@ -60,7 +60,7 @@ The **mother class** of all US servers.
 % All known, licit (top-level) base keys for the US common configuration file:
 % (other keys are in their respective server classes)
 %
--define( known_us_common_config_keys, [ ?us_common_actions_key ] ).
+-define( known_us_common_config_keys, [ ?us_actions_key ] ).
 
 
 
@@ -214,7 +214,7 @@ construct( State, ServerInit, MaybeRegistrationName, MaybeRegistrationScope,
 
 -doc """
 Creates a server instance that is registered, traps exits if requested, and is
-expected to be run as specified user (if any).
+expected to be run as the specified user (if any).
 
 Parameters are:
 - ServerInit, the name of that US server
@@ -312,7 +312,7 @@ configuration file) in the specified action table, and returns it.
                                                     oneway_return().
 integrateAutomatedActions( State, ConfigTable ) ->
 
-    case table:lookup_entry( ?us_common_actions_key, ConfigTable ) of
+    case table:lookup_entry( ?us_actions_key, ConfigTable ) of
 
         { value, UserActSpecs } when is_list( UserActSpecs ) ->
             RegActTable = us_action:register_action_specs( UserActSpecs,
@@ -345,12 +345,12 @@ specified tokens.
                                     request_return( action_outcome() ).
 performActionFromTokens( State, Tokens ) ->
 
-    cond_utils:if_defined( us_common_debug_actions, trace_utils:debug_fmt(
+    cond_utils:if_defined( us_common_debug_actions, trace_bridge:debug_fmt(
         "Performing action from tokens ~p", [ Tokens ] ) ),
 
     ActState = State,
 
-    Outcome = fixme,
+    Outcome = { action_outcome, fixme },
 
     wooper:return_state_result( ActState, Outcome ).
 

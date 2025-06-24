@@ -612,7 +612,7 @@ registered for a later trigger (then its assigned task identifier is returned).
 registerTask( State, UserTaskCommand, UserPeriodicity, UserCount ) ->
 
 	{ RegOutcome, RegState } = register_task( UserTaskCommand,
-		_StartTime=flexible, UserPeriodicity,  UserCount,
+		_StartTime=flexible, UserPeriodicity, UserCount,
 		_UserActPid=?getSender(), State ),
 
 	wooper:return_state_result( RegState, RegOutcome ).
@@ -1348,7 +1348,7 @@ logState( State ) ->
 -spec get_main_scheduler() -> static_return( option( scheduler_pid() ) ).
 get_main_scheduler() ->
 
-	LookupScope = naming_utils:registration_to_look_up_scope(
+	LookupScope = naming_utils:registration_to_lookup_scope(
 		_RegScope=?us_common_scheduler_registration_scope ),
 
 	% Supposing here that no ongoing launch is happening (no race condition):

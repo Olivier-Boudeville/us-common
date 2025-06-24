@@ -23,4 +23,4 @@
 % The key under which automated actions are defined (use for general-purpose
 % ones, possibly also of use in US-* specific configuration files):
 %
--define( us_common_actions_key, action_settings ).
+-define( us_actions_key, action_settings ).

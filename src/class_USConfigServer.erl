@@ -513,7 +513,7 @@ clients.
 """.
 -spec get_default_settings() -> static_return( { file_name(),
 		basic_utils:atom_key(), registration_name(),
-		naming_utils:look_up_scope() } ).
+		naming_utils:lookup_scope() } ).
 get_default_settings() ->
 
 	% Possibly read from any *.config file specified (e.g. refer to the
@@ -600,7 +600,7 @@ get_default_settings() ->
 
 	wooper:return_static( { ?us_config_filename,
 		?us_config_server_registration_name_key, USCfgSrvName,
-		naming_utils:registration_to_look_up_scope( USCfgSrvScope ) } ).
+		naming_utils:registration_to_lookup_scope( USCfgSrvScope ) } ).
 
 
 
@@ -1676,10 +1676,32 @@ get_us_config_server( CreateIfNeeded, State ) ->
 -spec to_string( wooper:state() ) -> ustring().
 to_string( State ) ->
 
-	RegString = text_utils:format( "registered as '~ts' (scope: ~ts)",
+	RegStr = text_utils:format( "registered as '~ts' (scope: ~ts)",
 		[ ?getAttr(registration_name), ?default_registration_scope ] ),
 
-	MainSrvString = case ?getAttr(us_main_config_server_pid) of
+    MainCfgStr = case ?getAttr(us_main_config_filename) of
+
+        undefined ->
+            "no US-Main configuration file";
+
+        MainCfgFilename ->
+            text_utils:format( "as US-Main configuration file '~ts'",
+                               [ MainCfgFilename ] )
+
+    end,
+
+    WebCfgStr = case ?getAttr(us_web_config_filename) of
+
+        undefined ->
+            "no US-Web configuration file";
+
+        WebCfgFilename ->
+            text_utils:format( "as US-Web configuration file '~ts'",
+                               [ WebCfgFilename ] )
+
+    end,
+
+	MainSrvStr = case ?getAttr(us_main_config_server_pid) of
 
 		undefined ->
 			"no US-Main configuration server";
@@ -1690,7 +1712,7 @@ to_string( State ) ->
 
 	end,
 
-	WebSrvString = case ?getAttr(us_web_config_server_pid) of
+	WebSrvStr = case ?getAttr(us_web_config_server_pid) of
 
 		undefined ->
 			"no US-Web configuration server";
@@ -1716,9 +1738,7 @@ to_string( State ) ->
 		"the ~ts execution context, presumably on a VM "
 		"with an EPMD daemon ~ts, "
 		"using configuration directory '~ts' and log directory '~ts', "
-		"having found as US-Main configuration file '~ts' "
-		"and as US-Web one '~ts', knowing ~ts and ~ts",
-		[ RegString, ?getAttr(execution_context), EPMDStr,
+		"having found ~ts and ~ts; it currently knows ~ts and ~ts",
+		[ RegStr, ?getAttr(execution_context), EPMDStr,
 		  ?getAttr(config_base_directory), ?getAttr(log_directory),
-		  ?getAttr(us_main_config_filename), ?getAttr(us_web_config_filename),
-		  MainSrvString, WebSrvString ] ).
+		  MainCfgStr, WebCfgStr, MainSrvStr, WebSrvStr ] ).

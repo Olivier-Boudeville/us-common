@@ -60,8 +60,7 @@ For example
 - `startAlarm`
 - `{stop_room_heating, [{static, room_heater_plug, "Target device short name"}, {static, switch_off, "Device operation"}], void, "switch off the heating of my room", actOnDevice}`
 - `{start_tv, [{static, tv_plug, "Target device short name"}, {static, switch_on, "Device operation"}, {static, {next_possible_today, {19,54,0}}, "Start time"}, {static, {1,0,0,0}, "DHMS periodicity"}], action_outcome, "switch on the television each day at 19h54, starting from today", schedulePeriodicalActionOnDevice}`
-- `{switch_device, [{dynamic, string, "Device identifier"}, {dynamic, atom, "'on' or 'off'"}, {static, no_timeout}],
-    {my_action_mod, switch_device_impl}}`
+- `{switch_device, [{dynamic, string, "Device identifier"}, {dynamic, atom, "'on' or 'off'"}, {static, no_timeout}], {my_action_mod, switch_device_impl}}`
 """.
 -type user_action_spec() ::
 
@@ -186,7 +185,7 @@ The internal specification of a result.
 -doc """
 The type expected to be returned from an executed action.
 
-`action_outcome` designates the `action_outcome()` type, whose use is
+`action_outcome` designates the `action_outcome/0` type, whose use is
 recommended, for controllability.
 """.
 -type result_type() :: type() | 'action_outcome'.
@@ -224,6 +223,8 @@ dedicated (server) module.
 
 -doc """
 The actual outcome of a performed action.
+
+This is an ad hoc type defined in the context of actions.
 """.
 -type action_outcome() :: { 'success', result() }
                         | { 'error', error_report() }.
@@ -369,7 +370,7 @@ register_action_specs( _UserActSpecs=[ Spec={ ActName, ArgSpecs,
 
                                                   end,
 
-        throw( { multiple_action_definions, ActName, Spec } ),
+        throw( { multiple_action_definitions, ActName, Spec } ),
 
     ActInfo = #action_info{ arg_specs=CanonArgSpecs,
                             result_spec=CanonResSpec,
@@ -501,6 +502,14 @@ Returns an internal, canonicalised version of the specified user result
 specification of the specified action.
 """.
 -spec canonicalise_res_spec( term(), action_name() ) -> result_spec().
+% Ad hoc type for actions:
+canonicalise_res_spec( _ResSpec={ ResType=action_outcome, MaybeUserDesc },
+                       _ActName ) ->
+
+     MaybeBinDesc = text_utils:ensure_maybe_binary( MaybeUserDesc ),
+
+    { ResType, MaybeBinDesc };
+
 canonicalise_res_spec( ResSpec={ ResType, MaybeUserDesc }, ActName ) ->
 
     type_utils:is_type( ResType ) orelse

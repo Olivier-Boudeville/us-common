@@ -21,7 +21,7 @@
 
 {application, us_common,
  [{description, "US-Common, the base OTP active application on which the various Universal Service elements are built (see http://us-common.esperide.org)"},
-  {vsn, "0.1.7"},
+  {vsn, "0.1.8"},
   {registered, []},
 
   % Regarding:
@@ -36,7 +36,7 @@
   {env,[]},
 
   % Flat hierarchy in ebin here:
-  {modules, [class_USConfigServer, class_USScheduler, class_USServer, class_USTaskRing, us_common_app, us_common_config_bridge_sup, us_common_scheduler_bridge_sup, us_common_sup]},
+  {modules, [class_USConfigServer, class_USScheduler, class_USServer, class_USTaskRing, us_action, us_client, us_common_app, us_common_config_bridge_sup, us_common_scheduler_bridge_sup, us_common_sup]},
 
   {licenses, ["US-Common is licensed by its author (Olivier Boudeville) under the GNU Affero General Public License (AGPL), version 3.0 or later"]},
 

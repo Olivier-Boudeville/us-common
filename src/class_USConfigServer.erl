@@ -695,19 +695,21 @@ get_configuration_table( BinCfgDir ) ->
 
 			% Ensures as well that all top-level terms are pairs indeed:
 			try table:new_from_unique_entries(
-							file_utils:read_terms( CfgFilePath ) ) of
+					file_utils:read_etf_file( CfgFilePath ) ) of
 
 				ConfigTable ->
 					{ ok, { ConfigTable, CfgFilePath } }
 
-				catch ExClass:ExPattern ->
-					ErrorMsg = text_utils:format( "The processing of the "
-						"US-Common configuration file '~ts' failed (~p):~n ~p.",
-						[ CfgFilePath, ExClass, ExPattern ] ),
-					{ error, { { us_config_reading_failed, CfgFilePath },
+            catch ExClass:ExPattern ->
+
+				ErrorMsg = text_utils:format( "The processing of the "
+					"US-Common configuration file '~ts' failed (~p):~n ~p.",
+					[ CfgFilePath, ExClass, ExPattern ] ),
+
+				{ error, { { us_config_reading_failed, CfgFilePath },
 							   ErrorMsg } }
 
-				end;
+            end;
 
 
 		false ->
@@ -915,6 +917,11 @@ load_configuration( BinCfgDir, State ) ->
 
 		{ ok, P } ->
 			P;
+
+		{ error, P={ { us_config_reading_failed, CfgFileP }, ErrorMsg } } ->
+            ?error_fmt( "The overall US configuration file ('~ts') "
+				"could not be read: ~p.", [ CfgFileP, ErrorMsg ] ),
+			throw( P );
 
 		{ error, P={ us_config_file_not_found, CfgFileP } } ->
 			?error_fmt( "The overall US configuration file ('~ts') "
@@ -1585,7 +1592,7 @@ get_us_config_server( CreateIfNeeded, State ) ->
 
 	% Ensures as well that all top-level terms are only pairs:
 	ConfigTable = table:new_from_unique_entries(
-		file_utils:read_terms( USCfgFilePath ) ),
+		file_utils:read_etf_file( USCfgFilePath ) ),
 
 	?info_fmt( "Read US configuration ~ts",
 			   [ table:to_string( ConfigTable ) ] ),

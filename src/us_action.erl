@@ -66,7 +66,7 @@ For example
 
     % Most complete form:
     { action_name(), [ user_arg_spec() ], user_result_spec(),
-      user_description(), action_mapping() }
+      user_description(), user_action_mapping() }
 
     % No action mapping (request name is the same as action one, directly
     % implemented in the server module):
@@ -111,7 +111,7 @@ For example: `start_alarm`.
 
 -doc """
 A statically-defined actual argument (specified at action definition time),
-which will be used literally.
+which will be used literally, as specified.
 
 For example: `{14, top}`.
 """.
@@ -164,7 +164,10 @@ For example: `float`.
 
 
 -doc """
-An actual argument for an action, presumably respecting its specification.
+An actual argument for an action, presumably respecting its
+specification.
+
+It corresponds to a dynamic argument in the action specification.
 """.
 -type argument() :: any().
 
@@ -194,12 +197,12 @@ recommended, for controllability.
 -doc """
 An actual result for an action, presumably respecting its specification.
 """.
--type result() :: any().
+-type action_result() :: any().
 
 
 
 -doc """
-The description of an actual request to which an action maps.
+The user-level description of an actual request to which an action maps.
 
 No arity listed, as it is deduced from the declared action arguments.
 
@@ -211,10 +214,28 @@ is generally essential, targeting a request rather than a mere function) to let
 the possibility of gathering any set of action-related methods in a separate,
 dedicated (server) module.
 """.
--type action_mapping() :: { module_name(), request_name() }
-                          % Direct implementation in the server module implied:
-                        | request_name().
+-type user_action_mapping() ::
 
+     action_mapping()
+
+     % Direct implementation in the server module implied:
+     | request_name().
+
+
+-doc """
+The internal description of an actual request to which an action maps.
+
+No arity listed, as it is deduced from the declared action arguments.
+
+Such a request is expected to be defined and exported in the corresponding
+module.
+
+Mapping to a mere module rather than to a class (even if, as relying on a state
+is generally essential, targeting a request rather than a mere function) to let
+the possibility of gathering any set of action-related methods in a separate,
+dedicated (server) module.
+""".
+-type action_mapping() :: { module_name(), request_name() }.
 
 
 -doc "The description of an actual error.".
@@ -226,7 +247,7 @@ The actual outcome of a performed action.
 
 This is an ad hoc type defined in the context of actions.
 """.
--type action_outcome() :: { 'success', result() }
+-type action_outcome() :: { 'success', action_result() }
                         | { 'error', error_report() }.
 
 
@@ -243,8 +264,10 @@ actions.
 
 
 -doc """
-The arity (number of "actual" arguments) of an action - not counting the first,
-State one of its mapped request).
+The arity of an action is the number of its actual dynamic arguments.
+
+Therefore it takes into account neither the static arguments (if any) nor the
+first, `State` one of its mapped request.
 """.
 -type action_arity() :: arity().
 
@@ -256,7 +279,8 @@ State one of its mapped request).
 %
 -record( action_info, {
 
-    % No action_{name,arity}() as they constitute the associated key.
+    % No action_{name,arity} fields, as they already constitute the associated
+    % key.
 
     % Information regarding the (ordered) arguments of that action entry:
     arg_specs :: [ arg_spec() ],
@@ -278,7 +302,7 @@ a value of an `action_table/0`.
 
 
 
--doc "A token describing an element of call to an action.".
+-doc "A token describing a dynamic argument in a call to an action.".
 -type action_token() :: any_string().
 
 
@@ -294,21 +318,25 @@ synchronisation.
 
 -export_type([ user_description/0, description/0,
                user_action_spec/0, action_spec/0,
-               action_name/0, action_mapping/0,
+               action_name/0, user_action_mapping/0, action_mapping/0,
 
                arg_kind/0, static_argument/0,
                user_arg_spec/0, arg_spec/0, arg_name/0, arg_type/0, argument/0,
-               user_result_spec/0, result_spec/0, result/0,
+               user_result_spec/0, result_spec/0, action_result/0,
                error_report/0, action_outcome/0,
                action_table/0, action_id/0, action_arity/0, action_info/0,
                action_token/0, action_request/0 ]).
 
 
--export([ register_action_specs/2, perform_action/2, perform_action/3,
+-export([ register_action_specs/3,
+          perform_action/2, perform_action/3,
+          get_action_id/1, coerce_argument_tokens/2,
+          action_id_to_string/1,
           action_table_to_string/1, action_entry_to_string/1,
           help/1 ]).
 
 
+-export([ action_info_to_string/1 ] ).
 
 
 % Type shorthands:
@@ -321,6 +349,7 @@ synchronisation.
 
 -type type() :: type_utils:type().
 
+-type classname() :: wooper:classname().
 -type request_name() :: wooper:request_name().
 
 -type server_pid() :: class_USServer:server_pid().
@@ -331,14 +360,15 @@ synchronisation.
 Registers the specified user action specifications in the specified action
 table.
 """.
--spec register_action_specs( [ user_action_spec() ], action_table() ) ->
-                                            action_table().
-register_action_specs( _UserActSpecs=[], ActTable ) ->
+-spec register_action_specs( [ user_action_spec() ], action_table(),
+                             classname() ) ->action_table().
+register_action_specs( _UserActSpecs=[], ActTable, _SrvClassname ) ->
     ActTable;
 
 % Full spec:
 register_action_specs( _UserActSpecs=[ Spec={ ActName, ArgSpecs,
-        ResSpec, MaybeDesc, ActionMapping } | T ], ActTable ) ->
+        ResSpec, MaybeDesc, UserActionMapping } | T ], ActTable,
+        SrvClassname ) ->
 
     is_atom( ActName ) orelse begin
 
@@ -358,7 +388,8 @@ register_action_specs( _UserActSpecs=[ Spec={ ActName, ArgSpecs,
 
     ArgCount = length( CanonArgSpecs ),
 
-    check_valid_action_mapping( ActionMapping, ArgCount ),
+    ActionMapping = canonicalise_action_mapping( UserActionMapping, ArgCount,
+                                                 SrvClassname ),
 
     ActId = { ActName, ArgCount },
 
@@ -379,38 +410,42 @@ register_action_specs( _UserActSpecs=[ Spec={ ActName, ArgSpecs,
 
     NewActTable = table:add_entry( ActId, ActInfo, ActTable ),
 
-    register_action_specs( T, NewActTable );
+    register_action_specs( T, NewActTable, SrvClassname );
 
 % No action mapping:
-register_action_specs( _UserActSpecs=[
-        { ActName, ArgSpecs, ResSpec, MaybeDesc } | T ], ActTable ) ->
+register_action_specs(
+        _UserActSpecs=[ { ActName, ArgSpecs, ResSpec, MaybeDesc } | T ],
+        ActTable, SrvClassname ) ->
     register_action_specs( [ { ActName, ArgSpecs, ResSpec, MaybeDesc,
-                             _ActionMapping=ActName } | T ], ActTable );
+        _ActionMapping=ActName } | T ], ActTable, SrvClassname );
 
 % No description:
 register_action_specs( _UserActSpecs=[ { ActName, ArgSpecs, ResSpec } | T ],
-                       ActTable ) ->
-    register_action_specs( [ { ActName, ArgSpecs, ResSpec,
-                               _MaybeDesc=undefined } | T ], ActTable );
+                       ActTable, SrvClassname ) ->
+    register_action_specs(
+        [ { ActName, ArgSpecs, ResSpec, _MaybeDesc=undefined } | T ], ActTable,
+        SrvClassname );
 
 % No result type:
 register_action_specs( _UserActSpecs=[ { ActName, ArgSpecs } | T ],
-                       ActTable ) ->
+                       ActTable, SrvClassname ) ->
     register_action_specs( [ { ActName, ArgSpecs, _ResSpec=void } | T ],
-                           ActTable );
+                           ActTable, SrvClassname );
 
 % No argument spec:
-register_action_specs( _UserActSpecs=[ ActName | T ], ActTable ) ->
-    register_action_specs( [ { ActName,  _ArgSpecs=[] } | T ], ActTable );
+register_action_specs( _UserActSpecs=[ ActName | T ], ActTable,
+                       SrvClassname ) ->
+    register_action_specs( [ { ActName,  _ArgSpecs=[] } | T ], ActTable,
+                           SrvClassname );
 
-register_action_specs( Other, _ActTable ) ->
+register_action_specs( Other, _ActTable, _SrvClassname ) ->
     throw( { invalid_action_specifications, not_list, Other } ).
 
 
 
 -doc "Checks that the specified term is a valid action mapping.".
--spec check_valid_action_mapping( term(), arity() ) -> void().
-check_valid_action_mapping( AM={ ModName, ReqName }, Arity ) ->
+-spec canonicalise_action_mapping( term(), arity(), classname() ) -> void().
+canonicalise_action_mapping( AM={ ModName, ReqName }, Arity, _SrvClassname ) ->
 
     is_atom( ModName ) orelse throw( { non_atom_action_module, ModName } ),
 
@@ -429,15 +464,19 @@ check_valid_action_mapping( AM={ ModName, ReqName }, Arity ) ->
         orelse throw( { action_request_not_exported,
                         { ModName, FunName, FunArity } } );
 
-check_valid_action_mapping( ReqName, Arity ) when Arity > 0 ->
+canonicalise_action_mapping( ReqName, Arity, SrvClassname ) when Arity > 0 ->
 
     % Cannot determine here the class module to check that it defines that
     % request.
 
     wooper_method_management:is_valid_request_name( ReqName ) orelse
-        throw( { invalid_action_request_mapping, ReqName } );
+        throw( { invalid_action_request_mapping, ReqName } ),
 
-check_valid_action_mapping( ReqName, Arity ) ->
+    canonicalise_action_mapping( _AM={ SrvClassname, ReqName }, Arity,
+                                 SrvClassname );
+
+
+canonicalise_action_mapping( ReqName, Arity, _SrvClassname ) ->
     throw( { invalid_action_request_arity, Arity, ReqName } ).
 
 
@@ -550,7 +589,7 @@ perform_action( ActionName, Args, ServerPid ) ->
 
     receive
 
-        { action_outcome, Outcome } ->
+        { wooper_result, { action_outcome, Outcome } } ->
             cond_utils:if_defined( us_common_debug_actions,
                 trace_bridge:debug_fmt( "Outcome of action: ~p.",
                                         [ Outcome ] ) ),
@@ -562,6 +601,65 @@ perform_action( ActionName, Args, ServerPid ) ->
         { error, timed_out }
 
     end.
+
+
+
+% Helpers to implement actions.
+
+-doc """
+Returns the action identifier corresponding to the token-based specified
+command.
+""".
+-spec get_action_id( [ action_token() ] ) -> action_id().
+get_action_id( _Tokens=[ ActionNameBinStr | Args ] ) ->
+    ActName = text_utils:binary_to_atom( ActionNameBinStr ),
+    ActArity = length( Args ),
+    { ActName, ActArity};
+
+get_action_id( Other ) ->
+    throw( { invalid_action_tokens, Other } ).
+
+
+
+-doc """
+Tries to coerce the specified token-based arguments into the specified expected
+ones and to produce the expected final list of arguments.
+
+Throws an exception on failure.
+""".
+-spec coerce_argument_tokens( [ action_token() ], [ arg_spec() ] ) ->
+                                            [ argument() ].
+coerce_argument_tokens( ArgsTokens, ArgSpecs ) ->
+    coerce_argument_tokens( ArgsTokens, ArgSpecs, _Args=[] ).
+
+
+% (helper)
+coerce_argument_tokens( _ArgsTokens=[], _ArgSpecs=[], Args ) ->
+    lists:reverse( Args );
+
+% Insert literally, in-place, any static argument:
+coerce_argument_tokens( ArgsTokens,
+                        _ArgSpecs=[ { static, Arg, _MaybeBinDesc } | T ],
+                        Args ) ->
+    coerce_argument_tokens( ArgsTokens, T, [ Arg | Args ] );
+
+
+% Associate a dynamic argument to its type:
+coerce_argument_tokens( _ArgsTokens=[ ArgToken | TTokens ],
+        _ArgSpecs=[ { dynamic, _ArgName, ArgType, _MaybeBinDesc } | TArgSpecs ],
+        Args ) ->
+    ActualArg = type_utils:coerce_string_to_term( ArgToken, ArgType ),
+    coerce_argument_tokens( TTokens, TArgSpecs, [ ActualArg | Args ] ).
+
+
+
+%check_result( Res, ResSpec ),
+
+
+-doc "Returns a textual description of the specified action identifier.".
+-spec action_id_to_string( action_id() ) -> ustring().
+action_info_to_string( _ActionInfo={ ActName, ActArity } ) ->
+    text_utils:format( "~ts:~B", [ ActName, ActArity ] ).
 
 
 

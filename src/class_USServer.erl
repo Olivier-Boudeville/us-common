@@ -80,6 +80,10 @@ The **mother class** of all US servers.
 %-type action_table() :: us_action:action_table().
 -type action_token() :: us_action:action_token().
 -type action_outcome() :: us_action:action_outcome().
+%-type action_id() :: us_action:action_id().
+%-type action_info() :: us_action:action_info().
+%-type action_result() :: us_action:action_result().
+
 
 
 % Design notes:
@@ -316,7 +320,7 @@ integrateAutomatedActions( State, ConfigTable ) ->
 
         { value, UserActSpecs } when is_list( UserActSpecs ) ->
             RegActTable = us_action:register_action_specs( UserActSpecs,
-                ?getAttr(action_table) ),
+                ?getAttr(action_table), wooper:get_classname() ),
 
             RegState = setAttribute( State, action_table, RegActTable ),
 
@@ -345,14 +349,69 @@ specified tokens.
                                     request_return( action_outcome() ).
 performActionFromTokens( State, Tokens ) ->
 
-    cond_utils:if_defined( us_common_debug_actions, trace_bridge:debug_fmt(
-        "Performing action from tokens ~p", [ Tokens ] ) ),
+    cond_utils:if_defined( us_common_debug_actions, ?debug_fmt(
+        "Performing action from the following ~B tokens: ~p.",
+        [ length( Tokens ), Tokens ] ) ),
 
-    ActState = State,
+    ActId = us_action:get_action_id( Tokens ),
 
-    Outcome = { action_outcome, fixme },
+    ActTable = ?getAttr(action_table),
+
+    { Res, ActState } = case table:lookup_entry( _K=ActId, ActTable ) of
+
+        { value, _ActionInfo } ->
+            fixme;
+            %execute_action( ActId, ActionInfo, Tokens, State );
+
+        key_not_found ->
+            ?error_fmt( "No action ~ts found; the ones known of this server "
+                "are: ~ts",
+                [ us_action:action_id_to_string( ActId ),
+                  text_utils:strings_to_string(
+                    [ us_action:action_id_to_string( AId )
+                        || AId <- table:keys() ] ) ] ),
+            { action_not_found, State }
+
+    end,
+
+    Outcome = { action_outcome, Res },
 
     wooper:return_state_result( ActState, Outcome ).
+
+
+
+% (helper)
+%% -spec execute_action( action_id(), action_info(), [ action_token() ],
+%%                       wooper:state() ) -> { action_result(), wooper:state() }.
+%% execute_action( ActId, _ActInfo=#action_info{ arg_specs=ArgSpecs,
+%%                                               result_spec=ResSpec,
+%%                                               mapping={ ModName, ReqName } },
+%%                 _Tokens=[ _ActNameToken, ArgsTokens ], State ) ->
+
+%%     try
+
+%%         ActualArgs = us_action:coerce_argument_tokens( ArgsTokens, ArgSpecs ),
+
+%%         ?debug_fmt( "Executing now ~ts:~ts/~B, with arguments ~p.",
+%%                     [ ModName, ReqName, length( ActualArgs ), ActualArgs ] ),
+
+%%         ResP = { ExecState, Res } = executeRequestAs( State, ModName, ReqName,
+%%                                                       ActualArgs ),
+
+%%         us_action:check_result( Res, ResSpec ),
+
+%%         ResP
+
+%%     catch
+
+%%         throw:Error ->
+%%             { State, { error, Error } }
+
+%%     end.
+
+
+
+%check_result( Res, ResSpec, State ) ->
 
 
 

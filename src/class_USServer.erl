@@ -360,8 +360,8 @@ performActionFromTokens( State, Tokens ) ->
     { Res, ActState } = case table:lookup_entry( _K=ActId, ActTable ) of
 
         { value, _ActionInfo } ->
-            fixme;
             %execute_action( ActId, ActionInfo, Tokens, State );
+            throw(fixme);
 
         key_not_found ->
             ?error_fmt( "No action ~ts found; the ones known of this server "
@@ -369,7 +369,7 @@ performActionFromTokens( State, Tokens ) ->
                 [ us_action:action_id_to_string( ActId ),
                   text_utils:strings_to_string(
                     [ us_action:action_id_to_string( AId )
-                        || AId <- table:keys() ] ) ] ),
+                        || AId <- table:keys( ActTable ) ] ) ] ),
             { action_not_found, State }
 
     end,

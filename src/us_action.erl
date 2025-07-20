@@ -29,17 +29,21 @@
 -module(us_action).
 
 -moduledoc """
-Module in charge of the management of server-side automated actions, which are
-higher-level operations that a US-Server may operate on behalf of third parties
-(other servers, command-line tools, SMSs, etc.).
+Module in charge of the management of **server-side automated actions**, which
+are higher-level operations that a US-Server may operate on behalf of third
+parties (other servers, command-line tools, SMSs, etc.).
 
-An example of strings triggering an automated action: `"start_alarm"` or
-`"switch_on tv_plug"`.
+This allows the user to define their own actions, as data rather than as code,
+as of course the code of the US-Server should not be directly impacted by user
+customisation. Defining actions as data is preferred to introducing/requiring a
+plugin system for that, which would be too intrusive/overkill/complex to
+manage.
 
-An action is to be triggered thanks to `perform_action/{2,3}`
+An example of strings triggering, typically thanks to `perform_action/{2,3}`, an
+automated action: `"start_alarm"` or `"switch_on tv_plug"`.
 
-In practice it will be executed as a local (non-const) request, based on the
-`performAction/3` request inherited from `class_USServer`.
+In practice an action will be executed as a local (non-const) request, based on
+the `performAction/3` request inherited from `class_USServer`.
 """.
 
 
@@ -53,10 +57,10 @@ In practice it will be executed as a local (non-const) request, based on the
 -doc """
 The user-level specification of an action.
 
-The designated request will be executed, based on the specified arguments
-(static or dynamic).
+The designated request will be executed, based on the specified arguments, which
+are static or dynamic.
 
-For example
+For example an action can be specified thanks to:
 - `startAlarm`
 - `{stop_room_heating, [{static, room_heater_plug, "Target device short name"}, {static, switch_off, "Device operation"}], void, "switch off the heating of my room", actOnDevice}`
 - `{start_tv, [{static, tv_plug, "Target device short name"}, {static, switch_on, "Device operation"}, {static, {next_possible_today, {19,54,0}}, "Start time"}, {static, {1,0,0,0}, "DHMS periodicity"}], action_outcome, "switch on the television each day at 19h54, starting from today", schedulePeriodicalActionOnDevice}`
@@ -68,8 +72,8 @@ For example
     { action_name(), [ user_arg_spec() ], user_result_spec(),
       user_description(), user_action_mapping() }
 
-    % No action mapping (request name is the same as action one, directly
-    % implemented in the server module):
+    % No action mapping (thus the request name is the same as the action one,
+    % and it is expected to be directly implemented in the server module):
     %
   | { action_name(), [ user_arg_spec() ], user_result_spec(),
       user_description() }
@@ -77,16 +81,14 @@ For example
     % Additionally, no description:
   | { action_name(), [ user_arg_spec() ], user_result_spec() }
 
-    % Then no expected result ('void'):
+    % Thus no expected result ('void') here:
   | { action_name(), [ user_arg_spec() ] }
 
-    % Then no argument expected (and returning void):
+    % Thus no argument expected (and returning void):
   | action_name().
 
 
--doc """
-The internal specification of an action.
-""".
+-doc "The internal specification of an action.".
 -type action_spec() :: { action_name(), [ arg_spec() ], result_spec(),
                          option( description() ), action_mapping() }.
 
@@ -94,9 +96,10 @@ The internal specification of an action.
 -doc """
 The reference name of an action, used to trigger it.
 
-It usually describes with a verb as first element the action to undertake.
+It usually describes (as first element) the action to undertake, with a verb.
 
-It acts as a user-friendly identifier (and thus no duplicates are allowed).
+Together with the action arity, it acts, in the context of an `action_id/0`, as
+a user-friendly identifier (for which no duplicates are thus allowed).
 
 The `snake_case` is preferred for them.
 
@@ -110,12 +113,12 @@ For example: `start_alarm`.
 
 
 -doc """
-A statically-defined actual argument (specified at action definition time),
-which will be used literally, as specified.
+A statically-defined value of an actual argument (specified at action definition
+time), which will be used directly as specified.
 
 For example: `{14, top}`.
 """.
--type static_argument() :: term().
+-type static_value() :: term().
 
 
 -doc """
@@ -126,8 +129,8 @@ For example: `{dynamic, lengths, [float], "The rod lengths, in meters"}`.
 """.
 -type user_arg_spec() ::
 
-    { 'static', static_argument(), user_description() } % Statically defined
-  | { 'static', static_argument() } % Same with no description
+    { 'static', static_value(), user_description() } % Statically defined
+  | { 'static', static_value() } % Same with no description
 
   | { 'dynamic', arg_name(), type(), user_description() } % Set dynamically
   | { 'dynamic', arg_name(), type() } % Same with no description
@@ -136,11 +139,11 @@ For example: `{dynamic, lengths, [float], "The rod lengths, in meters"}`.
 
 
 -doc """
-The internal specification of a dynamically-supplied action argument.
+The internal specification of an action argument.
 
 For example: `{dynamic, lengths, [float], <<"The rod lengths, in meters">>}`.
 """.
--type arg_spec() :: { 'static', static_argument(), option( description() ) }
+-type arg_spec() :: { 'static', static_value(), option( description() ) }
                   | { 'dynamic', arg_name(), type(), option( description() ) }.
 
 
@@ -320,7 +323,7 @@ synchronisation.
                user_action_spec/0, action_spec/0,
                action_name/0, user_action_mapping/0, action_mapping/0,
 
-               arg_kind/0, static_argument/0,
+               arg_kind/0, static_value/0,
                user_arg_spec/0, arg_spec/0, arg_name/0, arg_type/0, argument/0,
                user_result_spec/0, result_spec/0, action_result/0,
                error_report/0, action_outcome/0,

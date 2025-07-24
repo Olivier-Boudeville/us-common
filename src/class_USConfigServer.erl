@@ -887,17 +887,25 @@ perform_setup( BinCfgDir, State ) ->
 
 	?notice_fmt( "Constructed: ~ts.", [ to_string( ReadyState ) ] ),
 
+    % We used to rename directly here the trace file; however, as it might be
+    % updated in turn by the actual US-related framework (e.g. US-Main, US-Web),
+    % specifying at the US-Common level (in the us.config) an intermediate trace
+    % file had little interest, so it was done. Yet then the default location
+    % applied (/var/log/universal-server), which required specific permissions
+    % (whereas for example tests cannot rely on them). So we disabled this
+    % intermediate renaming, as anyway US-Common is hardly autonomous.
+
 	% Done rather late on purpose, so that the existence of that file can be
 	% seen as a sign that the initialisation went well (used by
 	% start-us-web-{native-build,release}.sh).
 	%
-	NewBinTraceFilePath = file_utils:bin_join( LogDir, "us_common.traces" ),
+	%NewBinTraceFilePath = file_utils:bin_join( LogDir, "us_common.traces" ),
 
 	% Already a trace emitter:
-	?debug_fmt( "Requesting the renaming of trace file to '~ts'.",
-				[ NewBinTraceFilePath ] ),
+	%?debug_fmt( "Requesting the renaming of trace file to '~ts'.",
+	%			[ NewBinTraceFilePath ] ),
 
-	?getAttr(trace_aggregator_pid ) ! { renameTraceFile, NewBinTraceFilePath },
+	%?getAttr(trace_aggregator_pid ) ! { renameTraceFile, NewBinTraceFilePath },
 
 	ReadyState.
 

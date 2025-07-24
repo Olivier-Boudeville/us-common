@@ -23,6 +23,8 @@
 
 -moduledoc """
 The **mother class** of all US servers.
+
+It centralises states and behaviours on their behalf.
 """.
 
 

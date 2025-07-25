@@ -663,7 +663,7 @@ get_us_config_directory() ->
 
 	CfgSuffix = file_utils:join( ?app_subdir, ?us_config_filename ),
 
-	BaseMsg = text_utils:format( "Searched for the Universal Server "
+	BaseMsg = text_utils:format( "searched for the Universal Server "
 		"configuration directory, based on suffix '~ts', knowing that: ~ts~n"
 		"Configuration directory ", [ CfgSuffix,
 			text_utils:strings_to_string( [ FirstMsg, SecondMsg ] ) ] ),

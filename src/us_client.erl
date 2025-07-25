@@ -69,7 +69,7 @@ For example: `us_{main,web}` or `us_foo`, the example taken here.
 
 
 -doc """
-Setups the client.
+Setups this US client.
 
 Returns the name of the target US node, the corresponding configuration, and the
 table of remaining command-line arguments (if any).
@@ -145,11 +145,13 @@ Returns the information needed to look up the (registered) target server.
 -spec get_config_server_info( cfg_table() ) -> lookup_info().
 get_config_server_info( CfgTable ) ->
 
-	RegName = case list_table:get_value_with_default(
-			_K=us_server_registration_name, _Def=undefined, CfgTable ) of
+    Key = us_server_registration_name,
+
+	RegName = case list_table:get_value_with_default( Key, _Def=undefined,
+                                                      CfgTable ) of
 
 		undefined ->
-			throw( { no_us_server_registration_name_entry, CfgTable } );
+			throw( { lacking_configuration_entry, Key, CfgTable } );
 
 		RgName when is_atom( RgName ) ->
 			RgName;

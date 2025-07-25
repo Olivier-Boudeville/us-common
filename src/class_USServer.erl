@@ -65,6 +65,10 @@ It centralises states and behaviours on their behalf.
 -define( known_us_common_config_keys, [ ?us_actions_key ] ).
 
 
+% For the action_info record:
+-include("us_action.hrl").
+
+
 
 % Type shorthands:
 
@@ -82,9 +86,8 @@ It centralises states and behaviours on their behalf.
 %-type action_table() :: us_action:action_table().
 -type action_token() :: us_action:action_token().
 -type action_outcome() :: us_action:action_outcome().
-%-type action_id() :: us_action:action_id().
-%-type action_info() :: us_action:action_info().
-%-type action_result() :: us_action:action_result().
+-type action_info() :: us_action:action_info().
+-type action_result() :: us_action:action_result().
 
 
 
@@ -321,8 +324,12 @@ integrateAutomatedActions( State, ConfigTable ) ->
     case table:lookup_entry( ?us_actions_key, ConfigTable ) of
 
         { value, UserActSpecs } when is_list( UserActSpecs ) ->
+
+            ?debug_fmt( "Integrating the following user action specs: ~p.",
+                        [ UserActSpecs ] ),
+
             RegActTable = us_action:register_action_specs( UserActSpecs,
-                ?getAttr(action_table), wooper:get_classname() ),
+                ?getAttr(action_table), wooper:get_classname( State ) ),
 
             RegState = setAttribute( State, action_table, RegActTable ),
 
@@ -361,9 +368,8 @@ performActionFromTokens( State, Tokens ) ->
 
     { Res, ActState } = case table:lookup_entry( _K=ActId, ActTable ) of
 
-        { value, _ActionInfo } ->
-            fixme;
-            %execute_action( ActId, ActionInfo, Tokens, State );
+        { value, ActionInfo } ->
+            execute_action( ActionInfo, Tokens, State );
 
         key_not_found ->
             ?error_fmt( "No action ~ts found; the ones known of this server "
@@ -371,8 +377,8 @@ performActionFromTokens( State, Tokens ) ->
                 [ us_action:action_id_to_string( ActId ),
                   text_utils:strings_to_string(
                     [ us_action:action_id_to_string( AId )
-                        || AId <- table:keys() ] ) ] ),
-            { action_not_found, State }
+                        || AId <- table:keys( ActTable ) ] ) ] ),
+            { { error, action_not_found }, State }
 
     end,
 
@@ -382,38 +388,81 @@ performActionFromTokens( State, Tokens ) ->
 
 
 
+% The caller is expected to have ensured that the correct number of argument
+% tokens has been provided.
+%
 % (helper)
-%% -spec execute_action( action_id(), action_info(), [ action_token() ],
-%%                       wooper:state() ) -> { action_result(), wooper:state() }.
-%% execute_action( ActId, _ActInfo=#action_info{ arg_specs=ArgSpecs,
-%%                                               result_spec=ResSpec,
-%%                                               mapping={ ModName, ReqName } },
-%%                 _Tokens=[ _ActNameToken, ArgsTokens ], State ) ->
+-spec execute_action( action_info(), [ action_token() ], wooper:state() ) ->
+                                            { action_result(), wooper:state() }.
+% No lookup information, hence action implemented locally:
+execute_action( ActInfo=#action_info{ impl_server_lookup_info=undefined,
+                                       arg_specs=ArgSpecs,
+                                       result_spec=ResSpec,
+                                       mapping={ ModName, ReqName } },
+                Tokens, State ) ->
 
-%%     try
+    ?debug_fmt( "Executing locally ~ts, based on ~w.",
+                [ us_action:action_info_to_string( ActInfo ), Tokens ] ),
 
-%%         ActualArgs = us_action:coerce_argument_tokens( ArgsTokens, ArgSpecs ),
+    try
 
-%%         ?debug_fmt( "Executing now ~ts:~ts/~B, with arguments ~p.",
-%%                     [ ModName, ReqName, length( ActualArgs ), ActualArgs ] ),
+        ArgsTokens = tl( Tokens ),
 
-%%         ResP = { ExecState, Res } = executeRequestAs( State, ModName, ReqName,
-%%                                                       ActualArgs ),
+        ActualArgs = us_action:coerce_argument_tokens( ArgsTokens, ArgSpecs ),
 
-%%         us_action:check_result( Res, ResSpec ),
+        ?debug_fmt( "Executing now ~ts:~ts/~B, with arguments ~p.",
+                    [ ModName, ReqName, length( ActualArgs ), ActualArgs ] ),
 
-%%         ResP
+        { ExecState, Res } = executeRequestAs( State, ModName, ReqName,
+                                               ActualArgs ),
+        us_action:check_result( Res, ResSpec ),
 
-%%     catch
+        { Res, ExecState }
 
-%%         throw:Error ->
-%%             { State, { error, Error } }
+    catch
 
-%%     end.
+        throw:Error ->
+            { { error, Error }, State }
 
+    end;
 
+% Action implemented by another server, forwarding it:
+execute_action( ActInfo=#action_info{
+                    impl_server_lookup_info=ImplSrvLookupInfo },
+                Tokens, State ) ->
 
-%check_result( Res, ResSpec, State ) ->
+    case naming_utils:get_maybe_registered_pid_for(
+            ImplSrvLookupInfo ) of
+
+        undefined ->
+            ?error_fmt( "Failed to resolve the ~ts for ~ts.",
+                [ naming_utils:lookup_info_to_string( ImplSrvLookupInfo ),
+                  us_action:action_info_to_string( ActInfo ) ] ),
+
+            %throw( { impl_server_lookup_info_lookup_failed, ImplSrvLookupInfo,
+            %         ActInfo } );
+            { { error, implementation_server_not_found }, State };
+
+        SrvPid ->
+
+            cond_utils:if_defined( us_common_debug_actions,
+                ?debug_fmt( "Forwarding to ~w (~ts) ~ts.", [ SrvPid,
+                    naming_utils:lookup_info_to_string( ImplSrvLookupInfo ),
+                    us_action:action_info_to_string( ActInfo ) ] ) ),
+
+            SrvPid ! { performActionFromTokens, [ Tokens ] },
+            receive
+
+                { wooper_result, _ActOutcome={ action_outcome, Res } } ->
+                    cond_utils:if_defined( us_common_debug_actions,
+                       ?debug_fmt( "Received and forwarding action result ~w.",
+                                   [ Res ] ) ),
+
+                    { Res, State }
+
+            end
+
+    end.
 
 
 
@@ -539,8 +588,7 @@ to_string( State ) ->
 			"not expected to run as a specific user";
 
 		BinUsrName ->
-			text_utils:format( "expected to run as user '~ts'",
-							   [ BinUsrName ] )
+			text_utils:format( "expected to run as user '~ts'", [ BinUsrName ] )
 
 	end,
 

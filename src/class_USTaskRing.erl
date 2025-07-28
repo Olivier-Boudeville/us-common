@@ -22,8 +22,8 @@
 -module(class_USTaskRing).
 
 -moduledoc """
-Class implementing a <b>task ring</b>, in order to schedule evenly and
-synchronously a set of tasks.
+Class implementing a **task ring**, in order to schedule evenly and
+synchronously a set of tasks, as a series (i.e. sequentially).
 """.
 
 
@@ -41,7 +41,7 @@ synchronously a set of tasks.
 %  - evenly: if having N tasks at periodicity P, a new task will be scheduled
 % every P/N
 %
-% A key property is that all registered tasks will be serialized (no
+% A key property is that all registered tasks will be serialised (no
 % overlapping happening), and uniformly.
 %
 % A typical use-case is having a resource (e.g. a tool for web analysis) used by
@@ -73,29 +73,6 @@ synchronously a set of tasks.
 -type ring_pid() :: pid().
 
 -export_type([ task_sync_command/0, ring_pid/0 ]).
-
-
-
-% Type shorthands:
-
--type ustring() :: text_utils:ustring().
-
--type user_periodicity() :: class_USScheduler:user_periodicity().
-
--type ms_duration() :: time_utils:ms_duration().
-
-
--type periodicity() :: ms_duration().
-
--type actuator_pid() :: class_USScheduler:actuator_pid() .
-
--type schedule_count() :: class_USScheduler:schedule_count().
-
--type scheduler_pid() :: class_USScheduler:scheduler_pid().
-
--type task_id() :: class_USScheduler:task_id().
-
--type actuator_ring() :: ring_utils:ring( actuator_pid() ).
 
 
 % To silence unused shorthands:
@@ -132,6 +109,9 @@ synchronously a set of tasks.
 	  "the task identifier of that ring as set by its scheduler" } ] ).
 
 
+% Implementation notes:
+%
+% At least currently, this server is not registered in the naming service.
 
 
 % Used by the trace_categorize/1 macro to use the right emitter:
@@ -146,10 +126,33 @@ synchronously a set of tasks.
 
 
 
+% Type shorthands:
+
+-type ustring() :: text_utils:ustring().
+
+-type user_periodicity() :: class_USScheduler:user_periodicity().
+
+-type ms_duration() :: time_utils:ms_duration().
+
+
+-type periodicity() :: ms_duration().
+
+-type actuator_pid() :: class_USScheduler:actuator_pid() .
+
+-type schedule_count() :: class_USScheduler:schedule_count().
+
+-type scheduler_pid() :: class_USScheduler:scheduler_pid().
+
+-type task_id() :: class_USScheduler:task_id().
+
+-type actuator_ring() :: ring_utils:ring( actuator_pid() ).
+
+
+
 -doc """
-Creates a task ring for specified actuators, so that they are (immediately, yet
-flexibly) triggered with the specified request (a synchronous task command) at
-the specified overall periodicity, for the specified number of times, by the
+Creates a task ring for the specified actuators, so that they are (immediately,
+yet flexibly) triggered with the specified request (a synchronous task command)
+at the specified overall periodicity, for the specified number of times, by the
 specified scheduler.
 """.
 -spec construct( wooper:state(), ustring(), [ actuator_pid() ],
@@ -244,9 +247,9 @@ destruct( State ) ->
 
 -doc """
 Requires this ring to trigger its next task (typically triggered itself by a
-scheduler, as a class_USScheduler:task_command()).
+scheduler, as a `class_USScheduler:task_command/0`).
 
-Expects this task, triggered synchronously, to call back notifyTaskDone/2.
+Expects this task, triggered synchronously, to call back `notifyTaskDone/2`.
 """.
 -spec triggerNextTask( wooper:state() ) -> oneway_return().
 triggerNextTask( State ) ->

@@ -1344,26 +1344,23 @@ logState( State ) ->
 % Static section.
 
 
--doc "Returns the main US scheduler (if any).".
--spec get_main_scheduler() -> static_return( option( scheduler_pid() ) ).
-get_main_scheduler() ->
+-doc """
+Returns the PID of the current, supposedly already-launched, main US scheduler,
+waiting if needed.
 
-	LookupScope = naming_utils:registration_to_lookup_scope(
-		_RegScope=?us_common_scheduler_registration_scope ),
+It is better to obtain the PID of a server each time from the naming service
+rather than to resolve and store its PID once for all, as, for an increased
+robustness, servers may be restarted (hence any stored PID may not reference a
+live process anymore).
+""".
+-spec get_server_pid () -> static_return( scheduler_pid() ).
+get_server_pid() ->
 
-	% Supposing here that no ongoing launch is happening (no race condition):
-	%case naming_utils:wait_for_registration_of( _RegName=?registration_name,
-	%                                            LookupScope ) of
-	case naming_utils:is_registered(
-			_RegName=?us_common_scheduler_registration_name, LookupScope ) of
+	SchedPid = class_USServer:resolve_server_pid(
+        _RegName=?us_common_scheduler_registration_name,
+        _RegScope=?us_common_scheduler_registration_scope ),
 
-		not_registered ->
-			wooper:return_static( undefined );
-
-		SchedPid ->
-			wooper:return_static( SchedPid )
-
-	end.
+	wooper:return_static( SchedPid ).
 
 
 

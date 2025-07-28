@@ -80,6 +80,12 @@ the Universal Server, at the level of US-Common.
 % look-up logic.
 
 
+
+% The class-specific attributes:
+%
+% (now, for a better robustness, servers are resolved on the fly, their PIDs are
+% not to be stored anymore)
+%
 -define( class_attributes, [
 
 	{ config_base_directory, bin_directory_path(),
@@ -130,12 +136,6 @@ the Universal Server, at the level of US-Common.
 
 	{ us_groupname, system_utils:group_name(),
 	  "the group that shall be common to all US-related users" },
-
-	{ us_main_config_server_pid, option( server_pid() ),
-	  "the PID of the US-Main configuration server (if any)" },
-
-	{ us_web_config_server_pid, option( server_pid() ),
-	  "the PID of the US-Web configuration server (if any)" },
 
 	% Cannot easily be obtained otherwise:
 	{ registration_name, registration_name(),
@@ -358,33 +358,14 @@ destruct( State ) ->
 Notifies this server about the specified US-Main configuration server, and
 requests related information from it.
 """.
--spec getUSMainRuntimeSettings( wooper:state() ) -> request_return(
+-spec getUSMainRuntimeSettings( wooper:state() ) -> const_request_return(
 		{ bin_directory_path(), execution_context(),
 		  option( bin_file_path() ) } ).
 getUSMainRuntimeSettings( State ) ->
 
-	USMainConfigServerPid = ?getSender(),
+    % Storing with 'USMainConfigServerPid = ?getSender()' is not desirable.
 
-	RegState = case ?getAttr(us_main_config_server_pid) of
-
-		undefined ->
-			?info_fmt( "Registering US-Main configuration server ~w.",
-					   [ USMainConfigServerPid ] ),
-			setAttribute( State, us_main_config_server_pid,
-						  USMainConfigServerPid );
-
-		USMainConfigServerPid ->
-			State;
-
-		OtherPid ->
-			?error_fmt( "Notified of US-Main configuration server ~w; "
-				"ignored, as already knowing a different one, ~w.",
-				[ USMainConfigServerPid, OtherPid ] ),
-			State
-
-	end,
-
-	wooper:return_state_result( RegState, { ?getAttr(config_base_directory),
+	wooper:const_return_result( { ?getAttr(config_base_directory),
 		?getAttr(execution_context), ?getAttr(us_main_config_filename) } ).
 
 
@@ -393,33 +374,11 @@ getUSMainRuntimeSettings( State ) ->
 Notifies this server about the specified US-Web configuration server, and
 requests web-related information from it.
 """.
--spec getUSWebRuntimeSettings( wooper:state() ) -> request_return(
+-spec getUSWebRuntimeSettings( wooper:state() ) -> const_request_return(
 		{ bin_directory_path(), execution_context(),
 		  option( bin_file_path() ) } ).
 getUSWebRuntimeSettings( State ) ->
-
-	USWebConfigServerPid = ?getSender(),
-
-	RegState = case ?getAttr(us_web_config_server_pid) of
-
-		undefined ->
-			?info_fmt( "Registering US-Web configuration server ~w.",
-					   [ USWebConfigServerPid ] ),
-			setAttribute( State, us_web_config_server_pid,
-						  USWebConfigServerPid );
-
-		USWebConfigServerPid ->
-			State;
-
-		OtherPid ->
-			?error_fmt( "Notified of US-Web configuration server ~w; "
-				"ignored, as already knowing a different one, ~w.",
-				[ USWebConfigServerPid, OtherPid ] ),
-			State
-
-	end,
-
-	wooper:return_state_result( RegState, { ?getAttr(config_base_directory),
+	wooper:const_return_result( { ?getAttr(config_base_directory),
 		?getAttr(execution_context), ?getAttr(us_web_config_filename) } ).
 
 
@@ -488,6 +447,27 @@ notifyEPMDPort( State, EPMDPort, _Origin=explicit_set, AppModName,
 % Static section.
 
 
+-doc """
+Returns the PID of the current, supposedly already-launched, US configuration
+server, waiting (up to a few seconds, as all US servers are bound to be launched
+mostly simultaneously) if needed.
+
+It is better to obtain the PID of a server each time from the naming service
+rather than to resolve and store its PID once for all, as, for an increased
+robustness, servers may be restarted (hence any stored PID may not reference a
+live process anymore).
+""".
+-spec get_server_pid () -> static_return( config_server_pid() ).
+get_server_pid() ->
+
+	CfgPid = class_USServer:resolve_server_pid(
+        _RegName=?default_us_config_reg_name,
+        _RegScope=?default_registration_scope ),
+
+	wooper:return_static( CfgPid ).
+
+
+
 % Version-related static methods.
 
 
@@ -525,7 +505,7 @@ get_default_settings() ->
 	Application = us_common,
 
 	USCfgSrvName = case application:get_env( Application,
-						us_config_server_registration_name ) of
+			us_config_server_registration_name ) of
 
 		undefined ->
 			CfgRegName = ?default_us_config_reg_name,
@@ -855,10 +835,7 @@ perform_setup( BinCfgDir, State ) ->
 
 	LoadState = load_configuration( BinCfgDir, State ),
 
-	ReadyState = setAttributes( LoadState, [
-		{ config_base_directory, BinCfgDir },
-		{ us_main_config_server_pid, undefined },
-		{ us_web_config_server_pid, undefined } ] ),
+	ReadyState = setAttribute( LoadState, config_base_directory, BinCfgDir ),
 
 	% Enforce security in all cases ("chmod 700"); if it fails here, the
 	% combined path/user configuration must be incorrect; however this server
@@ -1716,27 +1693,6 @@ to_string( State ) ->
 
     end,
 
-	MainSrvStr = case ?getAttr(us_main_config_server_pid) of
-
-		undefined ->
-			"no US-Main configuration server";
-
-		MainSrvPid ->
-			text_utils:format( "US-Main configuration server ~w",
-							   [ MainSrvPid ] )
-
-	end,
-
-	WebSrvStr = case ?getAttr(us_web_config_server_pid) of
-
-		undefined ->
-			"no US-Web configuration server";
-
-		WebSrvPid ->
-			text_utils:format( "US-Web configuration server ~w", [ WebSrvPid ] )
-
-	end,
-
 	EPMDStr = case ?getAttr(epmd_port) of
 
 		undefined ->
@@ -1753,7 +1709,7 @@ to_string( State ) ->
 		"the ~ts execution context, presumably on a VM "
 		"with an EPMD daemon ~ts, "
 		"using configuration directory '~ts' and log directory '~ts', "
-		"having found ~ts and ~ts; it currently knows ~ts and ~ts",
+		"having found ~ts and ~ts",
 		[ RegStr, ?getAttr(execution_context), EPMDStr,
 		  ?getAttr(config_base_directory), ?getAttr(log_directory),
-		  MainCfgStr, WebCfgStr, MainSrvStr, WebSrvStr ] ).
+		  MainCfgStr, WebCfgStr ] ).

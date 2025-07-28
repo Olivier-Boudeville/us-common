@@ -78,12 +78,16 @@ It centralises states and behaviours on their behalf.
 
 -type registration_name() :: naming_utils:registration_name().
 -type registration_scope() :: naming_utils:registration_scope().
+-type lookup_info() :: naming_utils:lookup_info().
 
 -type user_name() :: system_utils:user_name().
 
+-type concurrent_result( R ) :: wooper:concurrent_result( R ).
+
 -type emitter_init() :: class_TraceEmitter:emitter_init().
 
-%-type action_table() :: us_action:action_table().
+-type user_action_spec() :: us_action:user_action_spec().
+-type action_table() :: us_action:action_table().
 -type action_token() :: us_action:action_token().
 -type action_outcome() :: us_action:action_outcome().
 -type action_info() :: us_action:action_info().
@@ -315,7 +319,7 @@ ping( State, PingId, MonitorPid ) ->
 
 -doc """
 Integrates the specified user-level action specifications (possibly read from a
-configuration file) in the specified action table, and returns it.
+configuration file) in the internal action table of this server.
 """.
 -spec integrateAutomatedActions( wooper:state(), config_table() ) ->
                                                     oneway_return().
@@ -328,12 +332,10 @@ integrateAutomatedActions( State, ConfigTable ) ->
             ?debug_fmt( "Integrating the following user action specs: ~p.",
                         [ UserActSpecs ] ),
 
-            RegActTable = us_action:register_action_specs( UserActSpecs,
-                ?getAttr(action_table), wooper:get_classname( State ) ),
+            AddState = addAutomatedActions( State, UserActSpecs ),
 
-            RegState = setAttribute( State, action_table, RegActTable ),
+            wooper:return_state( AddState );
 
-            wooper:return_state( RegState );
 
         { value, InvalidUserActSpecs }  ->
             ?error_fmt( "Invalid (non-list) user-level action specifications: "
@@ -342,11 +344,52 @@ integrateAutomatedActions( State, ConfigTable ) ->
             throw( { invalid_user_action_specs, non_list,
                      InvalidUserActSpecs } );
 
+
         key_not_found ->
             ?debug( "No automated actions defined." ),
             wooper:const_return()
 
     end.
+
+
+
+-doc """
+Adds the specified user-level action to the internal action table of this
+server.
+""".
+-spec addAutomatedAction( wooper:state(), user_action_spec() ) ->
+                                                oneway_return().
+addAutomatedAction( State, UserActSpec ) ->
+    wooper:return_state( addAutomatedActions( State, [ UserActSpec ] ) ).
+
+
+
+-doc """
+Adds the specified user-level actions to the internal action table of this
+server.
+""".
+-spec addAutomatedActions( wooper:state(), [ user_action_spec() ] ) ->
+                                                oneway_return().
+addAutomatedActions( State, UserActSpecs ) ->
+
+    RegActTable = us_action:register_action_specs( UserActSpecs,
+        ?getAttr(action_table), wooper:get_classname( State ) ),
+
+    RegState = setAttribute( State, action_table, RegActTable ),
+
+    wooper:return_state( RegState ).
+
+
+
+-doc """
+A concurrent request to return the automated actions known of this server.
+""".
+-spec getAutomatedActions( wooper:state() ) ->
+                const_request_return( concurrent_result( action_table() ) ).
+getAutomatedActions( State ) ->
+    ActTable = ?getAttr(action_table),
+    ConcurrentRes = wooper:forge_concurrent_result( ActTable ),
+    wooper:const_return_result( ConcurrentRes ).
 
 
 
@@ -487,6 +530,74 @@ onWOOPERExitReceived( State, CrashPid, ExitType ) ->
 				  "from ~w:~n  ~p", [ self(), CrashPid, ExitType ] ),
 
 	wooper:const_return().
+
+
+
+% Static section.
+
+
+-doc """
+Resolves the PID of the specified server, based on the specified naming
+information, with some waiting if needed.
+
+Centralised here on behalf of the implementation (notably of their
+`get_server_pid/0` static method) of all US servers, for example to be able to
+define any relevant time-out duration once.
+""".
+-spec resolve_server_pid( registration_name(), registration_scope() ) ->
+                                static_return( server_pid() ).
+resolve_server_pid( RegName, RegScope ) ->
+
+    % Relying on the default time-out currently:
+    SrvPid = naming_utils:wait_for_registration_of( RegName,
+		naming_utils:registration_to_lookup_scope( RegScope ) ),
+
+	%trace_bridge:debug_fmt( "Resolved the US server ~ts as ~w, "
+	%   "(name: '~ts', registration scope: ~ts).",
+	%   [ ?MODULE, SrvPid, RegName, CfgLookupScope ] ),
+
+	wooper:return_static( SrvPid ).
+
+
+
+
+-doc """
+Returns the naming lookup information of this server.
+
+Meant to be possibly defined by each actual US server, albeit generally
+`get_server_pid/0` is sufficient.
+""".
+-spec get_lookup_info() -> static_return( lookup_info() ).
+get_lookup_info() ->
+
+    %wooper:return_static( { ?foo_server_registration_name,
+    %   ?foo_server_registration_scope } ).
+
+    throw( not_implemented ).
+
+
+
+-doc """
+Returns the PID of the current server, possibly waiting for it.
+
+It is better to obtain it each time from the naming service rather than to
+resolve and store its PID once for all, as, for an increased robustness, servers
+may be restarted (hence any former PID may not reference a live process
+anymore).
+
+Meant to be defined by each actual US server.
+""".
+-spec get_server_pid() -> static_return( server_pid() ).
+get_server_pid() ->
+
+	%SrvPid = class_USServer:resolve_server_pid(
+    %   _RegName=?foo_server_registration_name,
+    %   _RegScope=?foo_server_registration_scope ),
+
+	%wooper:return_static( SrvPid ).
+
+    throw( not_implemented ).
+
 
 
 

@@ -52,12 +52,12 @@ inherited from `class_USServer`.
 
 
 -doc """
-The user-level specification of an action.
+The user-level specification of an automated action.
 
-The designated request will be executed, based on the specified arguments
-(static or dynamic).
+The designated request will be executed based on the specified arguments (static
+or dynamic).
 
-For example:
+Examples of such specs:
 
 - `startAlarm`
 
@@ -211,11 +211,44 @@ its specification.
 -type action_raw_result() :: any().
 
 
+-doc "The description of an actual error regarding action execution.".
+-type failure_report() :: ustring()
+                      | 'implementation_server_not_found'
+                      | 'action_not_found'
+                      | 'timed_out'
+                      | any(). % Typically if an exception is thrown.
+
+
+
 -doc """
 An actual result for an action, presumably respecting its specification.
 """.
--type action_result() :: { 'success', action_raw_result() }
-                       | { 'error', error_report() }.
+-type action_result() :: action_result( any() ).
+
+
+-doc """
+An actual result for an action, presumably respecting its specification.
+""".
+-type action_result( T ) :: { 'success', T }
+                          | { 'failure', failure_report() }.
+
+
+-doc """
+The actual outcome of a performed action.
+
+This is an ad hoc type defined in the context of actions, tagged in order to
+facilitate, on the caller side, the matching of answers to asynchronous calls.
+""".
+-type action_outcome() :: action_outcome( any() ).
+
+
+-doc """
+The actual outcome of a performed action.
+
+This is an ad hoc type defined in the context of actions, tagged in order to
+facilitate, on the caller side, the matching of answers to asynchronous calls.
+""".
+-type action_outcome( T ) :: { action_outcome, action_result( T ) }.
 
 
 
@@ -254,23 +287,6 @@ the possibility of gathering any set of action-related methods in a separate,
 dedicated (server) module.
 """.
 -type action_mapping() :: { module_name(), request_name() }.
-
-
--doc "The description of an actual error regarding action execution.".
--type error_report() :: ustring()
-                      | 'implementation_server_not_found'
-                      | 'action_not_found'
-                      | 'timed_out'
-                      | any(). % Typically if an exception is thrown.
-
-
--doc """
-The actual outcome of a performed action.
-
-This is an ad hoc type defined in the context of actions, tagged in order to
-facilitate, on the caller side, the matching of answers to asynchronous calls.
-""".
--type action_outcome() :: { action_outcome, action_result() }.
 
 
 
@@ -326,15 +342,17 @@ synchronisation.
 
                arg_kind/0, static_argument/0,
                user_arg_spec/0, arg_spec/0, arg_name/0, arg_type/0, argument/0,
-               user_result_spec/0, result_spec/0, action_result/0,
-               error_report/0, action_outcome/0,
+               user_result_spec/0, result_spec/0, action_raw_result/0,
+               action_result/0, action_result/1,
+               failure_report/0,
+               action_outcome/0, action_outcome/1,
                action_table/0, action_id/0, action_arity/0, action_info/0,
                action_token/0, action_request/0 ]).
 
 
 -export([ register_action_specs/3,
           perform_action/2, perform_action/3,
-          get_action_id/1, coerce_argument_tokens/2,
+          get_action_id/1, coerce_argument_tokens/2, check_result/2,
           action_id_to_string/1,
           action_table_to_string/1, action_info_to_string/1,
           help/1 ]).
@@ -359,6 +377,7 @@ synchronisation.
 
 % No request name allowed to be 'undefined'.
 -type request_name() :: wooper:request_name().
+-type request_result() :: wooper:request_result().
 
 -type server_pid() :: class_USServer:server_pid().
 
@@ -568,10 +587,10 @@ canonicalise_res_spec( _ResSpec={ ResType=action_outcome, MaybeUserDesc },
 
     { ResType, MaybeBinDesc };
 
-canonicalise_res_spec( ResSpec={ ResType, MaybeUserDesc }, ActName ) ->
+canonicalise_res_spec( _ResSpec={ ResType, MaybeUserDesc }, ActName ) ->
 
     type_utils:is_type( ResType ) orelse
-        throw( { invalid_result_type, ResType, ResSpec, ActName } ),
+        throw( { invalid_result_type, ResType, MaybeUserDesc, ActName } ),
 
      MaybeBinDesc = text_utils:ensure_maybe_binary( MaybeUserDesc ),
 
@@ -680,14 +699,25 @@ coerce_argument_tokens( _ArgsTokens=[ ArgToken | TTokens ],
 
 
 
-%-doc """
-%Checks that the specified result matches the specified specification.
-%""".
-%-spec check_result( Res, ResSpec ) ->
-%check_result( Res, ResSpec ) ->
-%
-%check_result( Other, _ResSpec ) ->
-%    throw( { invalid_action_result,
+-doc """
+Checks that the specified request result matches the specified action result
+specification.
+""".
+-spec check_result( request_result(), result_spec() ) -> void().
+% Outcome sent back, no available type to further check:
+check_result( _Res={ action_outcome, _ActualRes={ OutcomeTag, _OutcomeRes } },
+              _ResSpec={ _Type=action_outcome, _MaybeBinDesc } )
+                    when OutcomeTag =:= success orelse OutcomeTag =:= failure ->
+    ok;
+
+check_result( Res, _ResSpec={ _Type=action_outcome, MaybeBinDesc } ) ->
+    throw( { invalid_action_outcome, Res, MaybeBinDesc } );
+
+% Here we have a type to check against:
+check_result( Res, _ResSpec={ CtxtType, MaybeBinDesc } ) ->
+    type_utils:is_of_type( Res, CtxtType ) orelse
+        throw( { invalid_action_result_type, Res, CtxtType, MaybeBinDesc } ).
+
 
 
 -doc "Returns a textual description of the specified action identifier.".

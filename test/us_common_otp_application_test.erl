@@ -22,7 +22,7 @@
 -module(us_common_otp_application_test).
 
 -moduledoc """
-Testing of **US-Common as an OTP active application**>, directly from within its
+Testing of **US-Common as an OTP active application**, directly from within its
 code base (hence without needing to create a separate, mock-up test OTP release
 for that).
 """.
@@ -54,7 +54,12 @@ for that).
 
 
 
--doc "Returns US-level configuration information.".
+
+-doc """
+Returns US-level configuration information.
+
+Used by tests in child libraries (e.g. US-Web).
+""".
 -spec get_us_information() -> { bin_directory_path(), file_path(),
 			us_config_table(), registration_name(), registration_scope() }.
 get_us_information() ->
@@ -141,9 +146,6 @@ test_us_common_application( OrderedAppNames ) ->
 	%
 	false = erlang:process_flag( trap_exit, true ),
 
-	{ _BinCfgDir, _CfgFilePath, _ConfigTable, CfgRegName, CfgRegScope } =
-		get_us_information(),
-
 	% No ?test_start/?test_stop here, as we start/stop Traces through
 	% OTP-related operations.
 	%
@@ -154,8 +156,7 @@ test_us_common_application( OrderedAppNames ) ->
 	%
 	otp_utils:start_applications( OrderedAppNames ),
 
-	USCfgSrvPid = naming_utils:wait_for_registration_of( CfgRegName,
-		naming_utils:registration_to_lookup_scope( CfgRegScope ) ),
+	USCfgSrvPid = class_USConfigServer:get_server_pid(),
 
 	% The top-level user process may not be aware that an OTP application fails
 	% (e.g. because its main process crashed), which is a problem for a test. So
@@ -165,12 +166,9 @@ test_us_common_application( OrderedAppNames ) ->
 	erlang:link( USCfgSrvPid ),
 
 	% The same (simpler - less choices) for the US-Common scheduler:
-	SchedPid = naming_utils:wait_for_registration_of(
-		?us_common_scheduler_registration_name,
-		naming_utils:registration_to_lookup_scope(
-			?us_common_scheduler_registration_scope ) ),
+	SchedPid = class_USScheduler:get_server_pid(),
 
-	erlang:link( SchedPid ),
+	erlang:link( class_USScheduler:get_server_pid() ),
 
 
 	% If not in batch mode, this renaming will trigger the launch of the trace
@@ -199,7 +197,7 @@ test_us_common_application( OrderedAppNames ) ->
 
 	receive
 
-		{'EXIT', USCfgSrvPid, normal } ->
+		{ 'EXIT', USCfgSrvPid, normal } ->
 			ok
 
 	end,
@@ -210,7 +208,7 @@ test_us_common_application( OrderedAppNames ) ->
 
 	receive
 
-		{'EXIT', SchedPid, normal } ->
+		{ 'EXIT', SchedPid, normal } ->
 			ok
 
 	end,

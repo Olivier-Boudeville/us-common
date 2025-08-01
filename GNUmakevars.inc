@@ -55,13 +55,22 @@ ifeq ($(ENABLE_DEBUG),true)
 	US_COMMON_DEBUG_FLAGS += -Dus_common_debug_actions
 endif
 
+
 # Defining check flags:
 ifeq ($(EXECUTION_TARGET),development)
 	# Does not exist: US_COMMON_CHECK_FLAGS += -Dus_common_check_scheduling
     # Does not exist: US_COMMON_CHECK_FLAGS += -Dus_common_check_actions
 endif
 
+
+# Each US application shall define it for itself:
+ifndef US_APP_VERSION
+	US_APP_VERSION := not_set
+endif
+
+
 ERLANG_COMPILER_OPT_BASE += -Dus_common_version=\"$(US_COMMON_VERSION)\" \
+                            -Dus_app_version=\"$(US_APP_VERSION)\"       \
 							$(US_COMMON_DEBUG_FLAGS)                     \
 							$(US_COMMON_CHECK_FLAGS)
 

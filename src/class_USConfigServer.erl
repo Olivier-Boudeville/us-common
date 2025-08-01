@@ -281,61 +281,59 @@ construct( State ) ->
 	erlang:process_flag( trap_exit, true ),
 
 	% First the direct mother classes, then this class-specific actions:
-	TraceState = class_USServer:construct( State,
-		?trace_categorize("Configuration main server") ),
+	SrvState = class_USServer:construct( State,
+		?trace_categorize("Common configuration Server") ),
 
-	% Allows functions provided by lower-level libraries called directly from
-	% this instance process to plug to the same (trace aggregator) bridge, with
-	% the same settings:
-	%
-	class_TraceEmitter:register_bridge( TraceState ),
-
-
-	?send_info_fmt( TraceState, "Creating the overall US configuration server, "
+	?send_info_fmt( SrvState, "Creating the overall US configuration server, "
 					"on node '~ts'.", [ node() ] ),
 
 	BinCfgDir = case get_us_config_directory() of
 
 		{ undefined, CfgMsg } ->
-			?send_error_fmt( TraceState, "Unable to determine the US "
+			?send_error_fmt( SrvState, "Unable to determine the US "
 							 "configuration directory; ~ts", [ CfgMsg ] ),
 			throw( us_configuration_directory_not_found );
 
 		{ BinFoundCfgDir, CfgMsg } ->
-			?send_notice( TraceState, CfgMsg ),
+			?send_notice( SrvState, CfgMsg ),
 			BinFoundCfgDir
 
 	end,
 
 	% Final trace sent by:
-	perform_setup( BinCfgDir, TraceState ).
+	perform_setup( BinCfgDir, SrvState ).
 
 
 
 -doc """
-Constructs the US configuration server, using specified configuration directory.
+Constructs the US configuration server, using the specified configuration
+directory.
 
 Useful for example to create auxiliary universal servers or perform tests.
 
-Note: must be kept in line with the next constructor.
+Note: must be kept in line with the previous constructor.
 """.
 -spec construct( wooper:state(), directory_path() ) -> wooper:state().
 construct( State, ConfigDir ) when is_list( ConfigDir ) ->
 
-	ServerName = text_utils:format( "Configuration Server from ~ts",
+	% Wanting a better control by resisting to exit messages being received:
+	erlang:process_flag( trap_exit, true ),
+
+	ServerName = text_utils:format( "Configuration server from ~ts",
 		[ file_utils:get_last_path_element( ConfigDir ) ] ),
 
 	% First the direct mother classes, then this class-specific actions:
-	TraceState = class_USServer:construct( State,
-										   ?trace_categorize(ServerName) ),
+	SrvState = class_USServer:construct( State,
+                                         ?trace_categorize(ServerName) ),
 
-	?send_info_fmt( TraceState, "Creating a  US configuration server, "
-		"using the '~ts' configuration directory for that.", [ ConfigDir ] ),
+	?send_info_fmt( SrvState, "Creating a US configuration server, "
+		"using the '~ts' configuration directory for that, "
+        "on node '~ts'.", [ ConfigDir, node() ] ),
 
 	BinCfgDir = text_utils:string_to_binary( ConfigDir ),
 
 	% Final trace sent by:
-	perform_setup( BinCfgDir, TraceState ).
+	perform_setup( BinCfgDir, SrvState ).
 
 
 
@@ -643,9 +641,9 @@ get_us_config_directory() ->
 
 	CfgSuffix = file_utils:join( ?app_subdir, ?us_config_filename ),
 
-	BaseMsg = text_utils:format( "searched for the Universal Server "
-		"configuration directory, based on suffix '~ts', knowing that: ~ts~n"
-		"Configuration directory ", [ CfgSuffix,
+	BaseMsg = text_utils:format( "Searched for the Universal Server "
+		"configuration directory, based on the '~ts' suffix, "
+        "knowing that: ~ts~nConfiguration directory ", [ CfgSuffix,
 			text_utils:strings_to_string( [ FirstMsg, SecondMsg ] ) ] ),
 
 	ResPair = find_file_in( AllBasePaths, CfgSuffix, BaseMsg, _Msgs=[] ),

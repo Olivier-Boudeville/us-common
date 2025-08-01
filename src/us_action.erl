@@ -273,6 +273,7 @@ dedicated (server) module.
   | request_name().
 
 
+
 -doc """
 The internal description of an actual request to which an action maps.
 
@@ -350,7 +351,7 @@ synchronisation.
                action_token/0, action_request/0 ]).
 
 
--export([ register_action_specs/3,
+-export([ register_action_specs/3, merge_action_table/2,
           perform_action/2, perform_action/3,
           get_action_id/1, coerce_argument_tokens/2, check_result/2,
           action_id_to_string/1,
@@ -471,6 +472,35 @@ register_action_specs( _UserActSpecs=[ ActName | T ], ActTable,
 
 register_action_specs( Other, _ActTable, _SrvClassname ) ->
     throw( { invalid_action_specifications, not_list, Other } ).
+
+
+
+-doc """
+Registers the specified action table in the specified master one.
+
+Any collision in terms of action identifiers is an error.
+""".
+-spec merge_action_table( action_table(), action_table() ) -> action_table().
+merge_action_table( AddActTable, MasterActTable ) ->
+    % Clearer than a fold:
+   merge_action_entries( table:enumerate( AddActTable ), MasterActTable ).
+
+
+% (helper)
+merge_action_entries( _ActEntries=[], ActTable ) ->
+    ActTable;
+
+merge_action_entries( _ActEntries=[ { ActId, ActInfo } | T ], ActTable ) ->
+    case table:lookup_entry( ActId, ActTable ) of
+
+        key_not_found ->
+            NewActTable = table:add_entry( _K=ActId, ActInfo, ActTable ),
+            merge_action_entries( T, NewActTable );
+
+        { value, V } ->
+            throw( { colliding_actions, ActId, V, ActInfo } )
+
+    end.
 
 
 
@@ -729,7 +759,7 @@ action_id_to_string( _ActionInfo={ ActName, ActArity } ) ->
 
 -doc "Returns a textual description of the specified action information.".
 -spec action_info_to_string( action_info() ) -> ustring().
-action_info_to_string( #action_info{ impl_server_lookup_info=ImplSrvLookupInfo,
+action_info_to_string( #action_info{ server_lookup_info=SrvLookupInfo,
                                      action_name=ActName,
                                      arg_specs=ArgSpecs,
                                      result_spec=ResultSpec,
@@ -739,10 +769,10 @@ action_info_to_string( #action_info{ impl_server_lookup_info=ImplSrvLookupInfo,
         "mapped to ~ts",
         [ ActName, length( ArgSpecs ), args_to_string( ArgSpecs ),
           result_spec_to_string( ResultSpec ),
-          get_impl_string( ImplSrvLookupInfo ),
+          get_impl_string( SrvLookupInfo ),
           mapping_to_string( Mapping, length( ArgSpecs ) ) ] );
 
-action_info_to_string( #action_info{ impl_server_lookup_info=ImplSrvLookupInfo,
+action_info_to_string( #action_info{ server_lookup_info=SrvLookupInfo,
                                      action_name=ActName,
                                      arg_specs=ArgSpecs,
                                      result_spec=ResultSpec,
@@ -750,9 +780,8 @@ action_info_to_string( #action_info{ impl_server_lookup_info=ImplSrvLookupInfo,
                                      description=BinDescStr } ) ->
     text_utils:format( "action ~ts/~B, described as '~ts', ~ts, returning ~ts, "
         "~ts, mapped to ~ts",
-        [ ActName, length( ArgSpecs ), BinDescStr,
-          args_to_string( ArgSpecs ), result_spec_to_string( ResultSpec ),
-          get_impl_string( ImplSrvLookupInfo ),
+        [ ActName, length( ArgSpecs ), BinDescStr, args_to_string( ArgSpecs ),
+          result_spec_to_string( ResultSpec ), get_impl_string( SrvLookupInfo ),
           mapping_to_string( Mapping, length( ArgSpecs ) ) ] ).
 
 

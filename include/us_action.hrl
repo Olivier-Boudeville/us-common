@@ -31,7 +31,7 @@
     % Any naming-related lookup information for the server implementing that
     % action ('undefined' if directly implemented by this server):
     %
-    impl_server_lookup_info = 'undefined'
+    server_lookup_info = 'undefined'
         :: option( naming_utils:lookup_info() ),
 
     % The name of that action:

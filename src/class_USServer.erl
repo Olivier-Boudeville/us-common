@@ -518,7 +518,7 @@ execute_action( ActInfo=#action_info{ server_lookup_info=undefined,
         ?debug_fmt( "Executing now ~ts:~ts/~B, with arguments ~p.",
                     [ ModName, ReqName, length( ActualArgs ), ActualArgs ] ),
 
-        { ExecState, Res } = executeRequestAs( State, ModName, ReqName,
+        { ExecState, Res } = executeRequestAs( ModName, State, ReqName,
                                                ActualArgs ),
         us_action:check_result( Res, ResSpec ),
 

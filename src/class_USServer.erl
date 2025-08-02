@@ -639,9 +639,9 @@ get_lookup_info() ->
 
 
 -doc "Returns any naming lookup information of this server.".
--spec getLookupInfo( wooper:state() ) ->
+-spec getLookupInformation( wooper:state() ) ->
                                 const_request_return( option( lookup_info() ) ).
-getLookupInfo( State ) ->
+getLookupInformation( State ) ->
 
     MaybeLI = case ?getAttr(registration_name) of
 

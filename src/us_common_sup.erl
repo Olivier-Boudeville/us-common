@@ -82,7 +82,7 @@ init( Args=[] ) ->
 
 	ExecTarget = class_USConfigServer:get_execution_target(),
 
-	trace_bridge:debug_fmt( "Initializing the US-Common root supervisor "
+	trace_bridge:debug_fmt( "Initialising the US-Common root supervisor "
 		"(args: ~p; execution target: ~ts).", [ Args, ExecTarget ] ),
 
 	% We always create a US configuration server and a scheduler that are

@@ -92,7 +92,7 @@ start_link/1 being executed.
 						| 'ignore' | { 'error', Error :: term() }.
 init( _Args=[] ) ->
 
-	trace_bridge:info( "Initializing the US-Common supervisor bridge for "
+	trace_bridge:info( "Initialising the US-Common supervisor bridge for "
 					   "the US main scheduler." ),
 
 	SchedServerPid = class_USScheduler:new_link( "US-Common Scheduler",

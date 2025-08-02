@@ -484,6 +484,23 @@ get_us_common_version_string() ->
 	wooper:return_static( ?us_common_version ).
 
 
+% For a given us_xxx, these two static methods can just be copied verbatim in
+% the class_USxxxCentralServer.erl:
+
+% -doc "Returns the version of the US application being used.".
+% -spec get_us_app_version() -> static_return( three_digit_version() ).
+% get_us_app_version() ->
+%  wooper:return_static(
+%      basic_utils:parse_version( get_us_app_version_string() ) ).
+
+
+% -doc "Returns the version of the US application being used, as a string.".
+% -spec get_us_app_version_string() -> static_return( ustring() ).
+% get_us_app_version_string() ->
+%  % As defined (uniquely) in GNUmakevars.inc:
+%  wooper:return_static( ?us_app_version ).
+
+
 
 -doc """
 Returns the main default settings regarding the US configuration server, for its

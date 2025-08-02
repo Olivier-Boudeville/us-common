@@ -1,6 +1,6 @@
 % Copyright (C) 2025-2025 Olivier Boudeville
 %
-% This file belongs to the US-Main project, a part of the Universal Server
+% This file belongs to the US-Common project, a part of the Universal Server
 % framework.
 %
 % This program is free software: you can redistribute it and/or modify it under
@@ -56,6 +56,7 @@ comprises.
 % this US application (named 'xxx' in examples).
 
 
+
 % The class-specific attributes:
 %
 % (now, for a better robustness, servers are resolved on the fly, their PIDs are
@@ -97,7 +98,7 @@ comprises.
       "the number of any ongoing asynchronous operations that are currently "
       "still taking place (typically notifications that are waited for); used "
       "so that this instance remains a (never-blocking) server, to avoid the "
-      "deadlocks bound to happen with the other US-Main servers if it sent "
+      "deadlocks bound to happen with the other US servers if it sent "
       "(blocking) requests to them" }
 
     % (action_table and all inherited for class_USServer)
@@ -110,7 +111,7 @@ comprises.
 
 
 % Exported helpers:
--export([ get_execution_target/0 ]).
+-export([ get_execution_target/0, to_string/1 ]).
 
 
 -doc """
@@ -122,6 +123,11 @@ It is `<<"xxx">>` in the examples, and in practice could be `<<"main">>`,
 See also `app_name/O` (and note the different type).
 """.
 -type app_short_name() :: bin_string().
+
+
+-doc "Any short name for an US application.".
+-type any_app_short_name() :: bin_string().
+
 
 
 -doc """
@@ -138,7 +144,7 @@ In our conventions:
 -type app_name() :: ustring().
 
 
--export_type([ app_short_name/0, app_name/0 ]).
+-export_type([ app_short_name/0, any_app_short_name/0, app_name/0 ]).
 
 
 
@@ -158,11 +164,9 @@ In our conventions:
 % Type shorthands:
 
 %-type execution_context() :: basic_utils:execution_context().
--type three_digit_version() :: basic_utils:three_digit_version().
 
 -type ustring() :: text_utils:ustring().
 -type bin_string() :: text_utils:bin_string().
--type any_string() :: text_utils:any_string().
 
 
 -type directory_path() :: file_utils:directory_path().
@@ -185,6 +189,9 @@ In our conventions:
 -type action_table() :: us_action:action_table().
 
 
+-type emitter_init() :: class_TraceEmitter:emitter_init().
+
+
 -type server_pid() :: class_USServer:server_pid().
 -type config_table() :: class_USServer:config_table().
 
@@ -199,15 +206,12 @@ Constructs a US central server.
 
 `AppRunContext` tells how the US application is being run.
 """.
--spec construct( wooper:state(), any_string(), application_run_context() ) ->
-                                                    wooper:state().
-construct( State, USAppShortName, AppRunContext ) ->
-
-	TraceCateg = ?trace_categorize("Central server"),
+-spec construct( wooper:state(), any_app_short_name(), emitter_init(),
+                 application_run_context() ) -> wooper:state().
+construct( State, USAppShortName, ServerInit, AppRunContext ) ->
 
 	% First the direct mother classes, then this class-specific actions:
-
-	SrvState = class_USServer:construct( State, TraceCateg, _TrapExits=true ),
+	SrvState = class_USServer:construct( State, ServerInit, _TrapExits=true ),
 
 	?send_info_fmt( SrvState, "Creating a US central server, running ~ts.",
 		[ otp_utils:application_run_context_to_string( AppRunContext ) ] ),
@@ -272,7 +276,8 @@ finaliseTraceSetup( State ) ->
 
 	file_utils:create_directory_if_not_existing( LogDirBin, create_parents ),
 
-    TraceFilename = text_utils:format( "us_~ts.traces", [ ?getAttr(us_name) ] ),
+    TraceFilename = text_utils:format( "us_~ts.traces",
+                                       [ ?getAttr(app_short_name) ] ),
 
 	NewBinTraceFilePath = file_utils:bin_join( LogDirBin, TraceFilename ),
 
@@ -366,10 +371,12 @@ manageAutomatedActions( State, ConfigTable, SrvClassnames ) ->
 
     UserResSpec = { ResType, "Help contents" },
 
-    HelpUserActSpec = { _ActName=help, _UserArgSpec=[], UserResSpec,
-                        _UserDesc="help about the US-Main supported actions" },
+    HelpDesc = text_utils:format( "help about the ~ts supported actions",
+        [ get_us_app_name( ?getAttr(app_short_name) ) ] ),
 
-    HelpState = executeOneway( IntegState, addAutomatedAction,
+    HelpUserActSpec = { _ActName=help, _UserArgSpec=[], UserResSpec, HelpDesc },
+
+    HelpState = executeOneway( IntegState, addAutomatedActionSpec,
                                HelpUserActSpec ),
 
     % Not applicable anymore, now that asynchronous:
@@ -412,6 +419,9 @@ onAutomatedActionsNotified( State, AddActTable ) ->
 
     WaitedCount = ?getAttr(waited_operations),
 
+    ?debug_fmt( "Notified of a ~ts (whereas was waiting for ~B operations).",
+        [ us_action:action_table_to_string( AddActTable ), WaitedCount ] ),
+
     NewMaybeWaitedCount = case WaitedCount of
 
         undefined ->
@@ -427,11 +437,11 @@ onAutomatedActionsNotified( State, AddActTable ) ->
 
     end,
 
-    ?debug_fmt( "Notified of an ~ts, whereas was waiting for ~B operations.",
-        [ us_action:action_table_to_string( AddActTable ), WaitedCount ] ),
-
     MergedActTable = us_action:merge_action_table( AddActTable,
                                                    ?getAttr(action_table) ),
+
+    WaitedCount =:= 1 andalso ?debug_fmt( "Now all actions are known, relying "
+        "on an ~ts", [ us_action:action_table_to_string( MergedActTable ) ] ),
 
     ActState = setAttributes( State, [
         { action_table, MergedActTable },
@@ -457,22 +467,16 @@ help( State ) ->
 % Static section.
 
 
-% Version-related static methods.
+-doc """
+Returns the name of the US application that corresponds, according to our
+conventions, to the specified application short name.
 
-
--doc "Returns the version of the US application being used.".
--spec get_us_app_version() -> static_return( three_digit_version() ).
-get_us_app_version() ->
-	wooper:return_static(
-		basic_utils:parse_version( get_us_app_version_string() ) ).
-
-
--doc "Returns the version of the US application being used, as a string.".
--spec get_us_app_version_string() -> static_return( ustring() ).
-get_us_app_version_string() ->
-	% As defined (uniquely) in GNUmakevars.inc:
-	wooper:return_static( ?us_app_version ).
-
+For example, for the `"main"` short name, returns `"US-Main"`.
+""".
+-spec get_us_app_name( any_app_short_name() ) -> static_return( ustring() ).
+get_us_app_name( ShortName ) ->
+    wooper:return_static( text_utils:format( "US-~ts",
+        [ text_utils:uppercase_initial_letter( ShortName ) ] ) ).
 
 
 
@@ -788,7 +792,7 @@ manageAppBaseDirectories( State, ConfigTable, BaseDirKey, BaseDirEnvVarName ) ->
 	%
 	%TargetMod = ?MODULE,
 	%TargetMod = us_xxx_app,
-	TargetMod = text_utils:atom_format( "~ts_sup", [ AppShortName ] ),
+	TargetMod = text_utils:atom_format( "us_~ts_sup", [ AppShortName ] ),
 
 	ConfBinDir = file_utils:bin_join(
 		otp_utils:get_priv_root( TargetMod, _BeSilent=true ), "conf" ),

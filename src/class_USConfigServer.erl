@@ -222,7 +222,7 @@ the Universal Server, at the level of US-Common.
 
 % Exported helpers:
 -export([ get_us_config_server/1, get_us_config_server/2,
-		  get_execution_target/0 ]).
+          get_us_config_registration_info/2, get_execution_target/0 ]).
 
 
 % Used by tests:
@@ -260,6 +260,7 @@ the Universal Server, at the level of US-Common.
 
 -type registration_name() :: naming_utils:registration_name().
 -type registration_scope() :: naming_utils:registration_scope().
+-type lookup_scope() :: naming_utils:lookup_scope().
 
 -type tcp_port() :: net_utils:tcp_port().
 %-type tcp_port_range() :: net_utils:tcp_port_range().
@@ -446,7 +447,7 @@ notifyEPMDPort( State, EPMDPort, _Origin=explicit_set, AppModName,
 
 
 -doc """
-Returns the PID of the current, supposedly already-launched, default US
+Returns the PID of the current, supposedly already-launched, **default** US
 configuration server, waiting (up to a few seconds, as all US servers are bound
 to be launched mostly simultaneously) if needed.
 
@@ -458,9 +459,18 @@ live process anymore).
 -spec get_server_pid () -> static_return( config_server_pid() ).
 get_server_pid() ->
 
-	CfgPid = class_USServer:resolve_server_pid(
-        _RegName=?default_us_config_reg_name,
-        _RegScope=?default_registration_scope ),
+    % Incorrect, as for example the registration name may have been overidden in
+    % the configuration file:
+    %
+	%CfgPid = class_USServer:resolve_server_pid(
+    %    _RegName=?default_us_config_reg_name,
+    %    _RegScope=?default_registration_scope ),
+
+   { _USCfgFilename, _USCfgRegNameKey, USCfgRegSrvName, USCfgRegLookupScope } =
+        get_default_settings(),
+
+    CfgPid = naming_utils:get_registered_pid_for( USCfgRegSrvName,
+                                                  USCfgRegLookupScope ),
 
 	wooper:return_static( CfgPid ).
 
@@ -1534,7 +1544,7 @@ manage_us_web_config( ConfigTable, State ) ->
 -doc """
 Returns the PID of the US configuration server, creating it if ever necessary.
 
-Centralised here on behalf of clients (e.g. US-Main, US-Web, etc.).
+Centralised here on behalf of clients (e.g. US-{Main,Web,..}).
 
 This is an helper function, not a static method, as a trace emitter state shall
 be specified as parameter, so that traces can be sent in all cases needed.
@@ -1549,13 +1559,33 @@ get_us_config_server( State ) ->
 Returns the PID of the US configuration server, creating it if ever necessary
 and if enabled.
 
-Centralised here on behalf of clients (e.g. US-Main, US-Web, etc.).
+Centralised here on behalf of clients (e.g. US-{Main,Web,...}).
 
 This is an helper function, not a static method, as a trace emitter state shall
 be specified as parameter, so that traces can be sent in all cases needed.
 """.
 -spec get_us_config_server( boolean(), wooper:state() ) -> config_server_pid().
 get_us_config_server( CreateIfNeeded, State ) ->
+
+    { _CfgSrvRegName, _CfgSrvLookupScope, CfgSrvPid } =
+        get_us_config_registration_info( CreateIfNeeded, State ),
+
+    CfgSrvPid.
+
+
+
+-doc """
+Returns the registration information of the US configuration server (including
+its PID), creating it if ever necessary and if enabled.
+
+Centralised here on behalf of clients (e.g. US-{Main,Web,...}).
+
+This is an helper function, not a static method, as a trace emitter state shall
+be specified as parameter, so that traces can be sent in all cases needed.
+""".
+-spec get_us_config_registration_info( boolean(), wooper:state() ) ->
+    { registration_name(), lookup_scope(), config_server_pid() }.
+get_us_config_registration_info( CreateIfNeeded, State ) ->
 
 	% Same logic as the overall US configuration server itself, notably to
 	% obtain the same registration name to locate its instance:
@@ -1574,26 +1604,26 @@ get_us_config_server( CreateIfNeeded, State ) ->
 	end,
 
 	% Static settings regarding the overall US configuration server:
-	{ USCfgFilename, USCfgRegNameKey, USCfgDefRegName, USCfgRegScope } =
+	{ CfgFilename, CfgRegNameKey, CfgDefRegName, CfgSrvLookupScope } =
 		get_default_settings(),
 
-	USCfgFilePath = file_utils:join( BinCfgDir, USCfgFilename ),
+	CfgFilePath = file_utils:join( BinCfgDir, CfgFilename ),
 
 	% Should, by design, never happen:
-	file_utils:is_existing_file_or_link( USCfgFilePath ) orelse
+	file_utils:is_existing_file_or_link( CfgFilePath ) orelse
 		begin
 			?error_fmt( "The overall US configuration file ('~ts') "
-						"could not be found.", [ USCfgFilePath ] ),
+						"could not be found.", [ CfgFilePath ] ),
 			% Must have disappeared then:
-			throw( { us_config_file_not_found, USCfgFilePath } )
+			throw( { us_config_file_not_found, CfgFilePath } )
 		end,
 
 	?info_fmt( "Reading the Universal Server configuration from '~ts'.",
-			   [ USCfgFilePath ] ),
+			   [ CfgFilePath ] ),
 
 	% Ensures as well that all top-level terms are only pairs:
 	ConfigTable = table:new_from_unique_entries(
-		file_utils:read_etf_file( USCfgFilePath ) ),
+		file_utils:read_etf_file( CfgFilePath ) ),
 
 	?info_fmt( "Read US configuration ~ts",
 			   [ table:to_string( ConfigTable ) ] ),
@@ -1604,13 +1634,13 @@ get_us_config_server( CreateIfNeeded, State ) ->
 	%
 	% (important side-effects, such as updating the VM cookie)
 
-	USCfgRegName = case table:lookup_entry( USCfgRegNameKey, ConfigTable ) of
+	CfgSrvRegName = case table:lookup_entry( CfgRegNameKey, ConfigTable ) of
 
 		key_not_found ->
 			?info_fmt( "No user-configured registration name to locate the "
 				"overall US configuration server, using default name '~ts'.",
-				[ USCfgDefRegName ] ),
-			USCfgDefRegName;
+				[ CfgDefRegName ] ),
+			CfgDefRegName;
 
 		{ value, UserRegName } when is_atom( UserRegName ) ->
 			?info_fmt( "To locate the overall US configuration server, will "
@@ -1623,29 +1653,33 @@ get_us_config_server( CreateIfNeeded, State ) ->
 				"locate the overall US configuration server: '~p'.",
 				[ InvalidRegName ] ),
 			throw( { invalid_us_config_server_registration_name, InvalidRegName,
-					 USCfgRegNameKey } )
+					 CfgRegNameKey } )
 
 	end,
 
 	% Now we are able to look it up; either the overall US configuration server
 	% already exists, or it shall be created:
 	%
-	case naming_utils:is_registered( USCfgRegName, USCfgRegScope ) of
+	CfgSrvPid = case naming_utils:is_registered( CfgSrvRegName,
+                                                 CfgSrvLookupScope ) of
 
 		not_registered ->
 
 			% Second try, if ever there were concurrent start-ups:
 			timer:sleep( 500 ),
 
-			case naming_utils:is_registered( USCfgRegName, USCfgRegScope ) of
+			case naming_utils:is_registered( CfgSrvRegName,
+                                             CfgSrvLookupScope ) of
 
 				not_registered ->
 					case CreateIfNeeded of
 
 						true ->
-							?info_fmt( "There is no ~ts registration of '~ts'; "
+							?info_fmt( "The ~ts lookup registration for '~ts' "
+                                "did not point to a live instance; "
 								"creating thus a new overall US configuration "
-								"server.", [ USCfgRegScope, USCfgRegName ] ),
+								"server.",
+                                [ CfgSrvLookupScope, CfgSrvRegName ] ),
 
 							% Not linked to have an uniform semantics:
 							class_USConfigServer:new();
@@ -1653,19 +1687,20 @@ get_us_config_server( CreateIfNeeded, State ) ->
 						false ->
 							?error_fmt( "Unable to find an expected US "
 								"configuration server (registration name: "
-								"'~ts', scope: ~ts), and on-needed creation "
-								"disabled.",
-								[ USCfgRegName, USCfgRegScope ] ),
+								"'~ts', lookup scope: ~ts), and on-needed "
+                                "creation disabled.",
+								[ CfgSrvRegName, CfgSrvLookupScope ] ),
+
 							throw( { us_configuration_server_not_found,
-									 USCfgRegName, USCfgRegScope } )
+									 CfgSrvRegName, CfgSrvLookupScope } )
 
 					end;
 
 				DelayedCfgPid ->
 					?info_fmt( "Found (after some delay) an already running "
 						"overall US configuration server, using it: "
-						"~ts registration look-up for '~ts' returned ~w.",
-						[ USCfgRegScope, USCfgRegName, DelayedCfgPid ] ),
+						"~ts registration lookup for '~ts' returned ~w.",
+						[ CfgSrvLookupScope, CfgSrvRegName, DelayedCfgPid ] ),
 					DelayedCfgPid
 
 				end;
@@ -1673,10 +1708,12 @@ get_us_config_server( CreateIfNeeded, State ) ->
 		CfgPid ->
 			?info_fmt( "Found an already running overall US configuration "
 				"server, using it: ~ts registration look-up for '~ts' "
-				"returned ~w.", [ USCfgRegScope, USCfgRegName, CfgPid ] ),
+				"returned ~w.", [ CfgSrvLookupScope, CfgSrvRegName, CfgPid ] ),
 			CfgPid
 
-	end.
+	end,
+
+    { CfgSrvRegName, CfgSrvLookupScope, CfgSrvPid }.
 
 
 

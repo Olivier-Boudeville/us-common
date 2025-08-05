@@ -67,6 +67,9 @@ comprises.
     { app_short_name, app_short_name(), "the short name of this US application "
       "(for example `xxx`, as a binary string)" },
 
+    { us_config_lookup_info, option( lookup_info() ),
+      "the information sufficient to look up the US configuration server" },
+
 	{ execution_context, option( execution_context() ),
 	  "tells whether this server is to run in development or production mode" },
 
@@ -191,10 +194,10 @@ In our conventions:
 
 -type emitter_init() :: class_TraceEmitter:emitter_init().
 
-
 -type server_pid() :: class_USServer:server_pid().
 -type config_table() :: class_USServer:config_table().
 
+-type config_server_pid() :: class_USConfigServer:config_server_pid().
 
 % No way of centralising here start_link/1 and init/1 (e.g. they require
 % ?MODULE). At least for consistency, terminate/2 not centralised here either.
@@ -225,6 +228,7 @@ construct( State, USAppShortName, ServerInit, AppRunContext ) ->
 
 	SetState = setAttributes( SrvState, [
         { app_short_name, text_utils:ensure_binary( USAppShortName ) },
+        { us_config_lookup_info, undefined },
         { execution_context, undefined },
         { app_run_context, AppRunContext },
         { config_base_directory, undefined },
@@ -234,7 +238,8 @@ construct( State, USAppShortName, ServerInit, AppRunContext ) ->
         { log_directory, undefined },
         { waited_operations, undefined } ] ),
 
-	?send_info_fmt( SetState, "Constructed: ~ts.", [ to_string( SetState ) ] ),
+    % Better disabled, as a mother class:
+	%?send_info_fmt( SetState, "Constructed: ~ts.", [ to_string( SetState ) ] ),
 
     % Log directory not known yet (possibly application-specific), too early for
     % finaliseTraceSetup/1.
@@ -492,8 +497,9 @@ a per-US application basis, as it may be convenient to share one's `us.config`
 between multiple applications (e.g. `US-xxx` and `US-yyy`).
 """.
 -spec manageEPMDPort( wooper:state(), config_table(), config_key(),
-                      epmd_port() ) -> const_oneway_return().
-manageEPMDPort( State, ConfigTable, EPMDPortKey, DefaultEPMDPort ) ->
+    epmd_port(), config_server_pid() ) -> const_oneway_return().
+manageEPMDPort( State, ConfigTable, EPMDPortKey, DefaultEPMDPort,
+                CfgSrvPid ) ->
 
 	% No simple, integrated way of checking the actual port currently in use:
 	{ Port, Origin } = case table:lookup_entry( EPMDPortKey, ConfigTable ) of
@@ -502,7 +508,6 @@ manageEPMDPort( State, ConfigTable, EPMDPortKey, DefaultEPMDPort ) ->
 			% No application EPMD port defined, so its default will apply unless
 			% a port was explicitly set at the US-level:
 			%
-
 			?info_fmt( "No EPMD TCP port configured for US application, "
 				"proposing its default one, ~B.", [ DefaultEPMDPort  ] ),
 
@@ -527,8 +532,7 @@ manageEPMDPort( State, ConfigTable, EPMDPortKey, DefaultEPMDPort ) ->
 	end,
 
 	% For correct information; available by design:
-    class_USConfigServer:get_server_pid() !
-		{ notifyEPMDPort, [ Port, Origin, ?MODULE, self() ] },
+    CfgSrvPid ! { notifyEPMDPort, [ Port, Origin, ?MODULE, self() ] },
 
     wooper:const_return().
 
@@ -547,7 +551,7 @@ manageRegistrations( State, _ConfigTable, DefRegName, DefRegScope ) ->
 
 	naming_utils:register_as( CfgRegName, CfgRegScope ),
 
-	?info_fmt( "Registered this US application configuration server as '~ts' "
+	?info_fmt( "Registered this US application central server as '~ts' "
                "(scope: ~ts).", [ CfgRegName, CfgRegScope ] ),
 
 	RegState = setAttributes( State, [

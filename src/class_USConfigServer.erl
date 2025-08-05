@@ -446,9 +446,9 @@ notifyEPMDPort( State, EPMDPort, _Origin=explicit_set, AppModName,
 
 
 -doc """
-Returns the PID of the current, supposedly already-launched, US configuration
-server, waiting (up to a few seconds, as all US servers are bound to be launched
-mostly simultaneously) if needed.
+Returns the PID of the current, supposedly already-launched, default US
+configuration server, waiting (up to a few seconds, as all US servers are bound
+to be launched mostly simultaneously) if needed.
 
 It is better to obtain the PID of a server each time from the naming service
 rather than to resolve and store its PID once for all, as, for an increased
@@ -463,6 +463,7 @@ get_server_pid() ->
         _RegScope=?default_registration_scope ),
 
 	wooper:return_static( CfgPid ).
+
 
 
 

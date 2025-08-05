@@ -74,7 +74,6 @@ get_us_information() ->
 	BinCfgDir = case class_USConfigServer:get_us_config_directory() of
 
 		{ undefined, CfgDirMsg } ->
-
 			trace_bridge:error_fmt( "Test is unable to determine the US "
 				"configuration directory; ~ts", [ CfgDirMsg ] ),
 
@@ -85,7 +84,7 @@ get_us_information() ->
 			trace_bridge:info( CfgDirMsg ),
 			BinFoundCfgDir
 
-	end,
+    end,
 
 	{ ConfigTable, CfgFilePath } = case
 			class_USConfigServer:get_configuration_table( BinCfgDir ) of
@@ -156,7 +155,12 @@ test_us_common_application( OrderedAppNames ) ->
 	%
 	otp_utils:start_applications( OrderedAppNames ),
 
-	USCfgSrvPid = class_USConfigServer:get_server_pid(),
+    { _BinCfgDir, _CfgFilePath, _ConfigTable, CfgRegName, CfgRegScope } =
+        get_us_information(),
+
+	USCfgSrvPid = naming_utils:wait_for_registration_of( CfgRegName,
+        naming_utils:registration_to_lookup_scope( CfgRegScope ) ),
+
 
 	% The top-level user process may not be aware that an OTP application fails
 	% (e.g. because its main process crashed), which is a problem for a test. So

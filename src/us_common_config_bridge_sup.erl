@@ -88,7 +88,7 @@ start_link/0 being executed.
 						| 'ignore' | { 'error', Error :: term() }.
 init( _Args=[] ) ->
 
-	trace_bridge:info( "Initializing the US-Common supervisor bridge for "
+	trace_bridge:info( "Initialising the US-Common supervisor bridge for "
 					   "the US configuration server." ),
 
 	% Registration name and all details set through the US configuration file:

@@ -23,6 +23,8 @@
 
 -moduledoc """
 The **mother class** of all US servers.
+
+It centralises states and behaviours on their behalf.
 """.
 
 
@@ -47,9 +49,8 @@ The **mother class** of all US servers.
 
 -type ping_id() :: count().
 
-
 -doc "A table holding US-related configuration information.".
--type config_table() :: table( atom(), term() ).
+-type config_table() :: app_facilities:config_table().
 
 
 -export_type([ server_pid/0, client_pid/0, ping_id/0, config_table/0 ]).
@@ -63,6 +64,10 @@ The **mother class** of all US servers.
 -define( known_us_common_config_keys, [ ?us_actions_key ] ).
 
 
+% For the action_info record:
+-include("us_action.hrl").
+
+
 
 % Type shorthands:
 
@@ -72,17 +77,20 @@ The **mother class** of all US servers.
 
 -type registration_name() :: naming_utils:registration_name().
 -type registration_scope() :: naming_utils:registration_scope().
+-type lookup_info() :: naming_utils:lookup_info().
 
 -type user_name() :: system_utils:user_name().
 
+-type concurrent_result( R ) :: wooper:concurrent_result( R ).
+
 -type emitter_init() :: class_TraceEmitter:emitter_init().
 
-%-type action_table() :: us_action:action_table().
+-type user_action_spec() :: us_action:user_action_spec().
+-type action_table() :: us_action:action_table().
 -type action_token() :: us_action:action_token().
 -type action_outcome() :: us_action:action_outcome().
-%-type action_id() :: us_action:action_id().
-%-type action_info() :: us_action:action_info().
-%-type action_result() :: us_action:action_result().
+-type action_info() :: us_action:action_info().
+-type action_result() :: us_action:action_result().
 
 
 
@@ -241,7 +249,14 @@ construct( State, ServerInit, MaybeRegistrationName, MaybeRegistrationScope,
 
 	% First the direct mother classes:
 	TraceState = class_TraceEmitter:construct( State,
-		?trace_categorize(ServerInit) ),
+                                               ?trace_categorize(ServerInit) ),
+
+    % Enable all US servers to rely on a trace bridge, notably if using
+    % dependencies that can optionally rely on Ceylan-Traces, or for their local
+    % functions that do not have a relevant TraceEmitter state available in
+    % order to send their traces:
+    %
+    class_TraceEmitter:register_bridge( TraceState ),
 
     % Inconvenient (too verbose/too early: at start-up, gets printed on the
     % console):
@@ -296,6 +311,8 @@ Pings this server.
 Any server must be able to answer to (asynchronous) ping requests from a
 monitoring server.
 
+Not to be mixed up with the `ping` direct WOOPER message.
+
 (const oneway, not request, as meant to be asynchronous)
 """.
 -spec ping( wooper:state(), ping_id(), pid() ) -> const_oneway_return().
@@ -309,22 +326,24 @@ ping( State, PingId, MonitorPid ) ->
 
 
 -doc """
-Integrates the specified user-level action specifications (possibly read from a
-configuration file) in the specified action table, and returns it.
+Integrates the actions in the specified table (possibly read from a
+configuration file) in the internal action table of this server.
 """.
--spec integrateAutomatedActions( wooper:state(), config_table() ) ->
-                                                    oneway_return().
-integrateAutomatedActions( State, ConfigTable ) ->
+-spec addConfiguredAutomatedActions( wooper:state(), config_table() ) ->
+                                                        oneway_return().
+addConfiguredAutomatedActions( State, ConfigTable ) ->
 
     case table:lookup_entry( ?us_actions_key, ConfigTable ) of
 
         { value, UserActSpecs } when is_list( UserActSpecs ) ->
-            RegActTable = us_action:register_action_specs( UserActSpecs,
-                ?getAttr(action_table), wooper:get_classname() ),
 
-            RegState = setAttribute( State, action_table, RegActTable ),
+            ?debug_fmt( "Integrating the following user action specs: ~p.",
+                        [ UserActSpecs ] ),
 
-            wooper:return_state( RegState );
+            AddState = addAutomatedActionSpecs( State, UserActSpecs ),
+
+            wooper:return_state( AddState );
+
 
         { value, InvalidUserActSpecs }  ->
             ?error_fmt( "Invalid (non-list) user-level action specifications: "
@@ -333,11 +352,106 @@ integrateAutomatedActions( State, ConfigTable ) ->
             throw( { invalid_user_action_specs, non_list,
                      InvalidUserActSpecs } );
 
+
         key_not_found ->
             ?debug( "No automated actions defined." ),
             wooper:const_return()
 
     end.
+
+
+
+-doc """
+Adds the specified user-level action to the internal action table of this
+server.
+""".
+-spec addAutomatedActionSpec( wooper:state(), user_action_spec() ) ->
+                                                oneway_return().
+addAutomatedActionSpec( State, UserActSpec ) ->
+
+    AddState = wooper:executeOneway( State, addAutomatedActionSpecs,
+                                     [ [ UserActSpec ] ] ),
+
+    wooper:return_state( AddState ).
+
+
+
+-doc """
+Adds the specified user-level actions to the internal action table of this
+server.
+""".
+-spec addAutomatedActionSpecs( wooper:state(), [ user_action_spec() ] ) ->
+                                                    oneway_return().
+addAutomatedActionSpecs( State, UserActSpecs ) ->
+
+    RegActTable = us_action:register_action_specs( UserActSpecs,
+        ?getAttr(action_table), wooper:get_classname( State ) ),
+
+    RegState = setAttribute( State, action_table, RegActTable ),
+
+    wooper:return_state( RegState ).
+
+
+
+-doc """
+A concurrent request to return the automated actions known of this server.
+""".
+-spec getAutomatedActions( wooper:state() ) ->
+                const_request_return( concurrent_result( action_table() ) ).
+getAutomatedActions( State ) ->
+    ActTable = ?getAttr(action_table),
+    ConcurrentRes = wooper:forge_concurrent_result( ActTable ),
+
+    ?debug_fmt( "Returning ~ts",
+                [ us_action:action_table_to_string( ActTable ) ] ),
+
+    wooper:const_return_result( ConcurrentRes ).
+
+
+
+-doc """
+Registers the additional actions in the specified table in our internal one.
+""".
+-spec registerAutomatedActions( wooper:state(), action_table() ) ->
+                                            oneway_return().
+registerAutomatedActions( State, AddActTable ) ->
+    MergedActTable = us_action:merge_action_table( AddActTable,
+                                                   ?getAttr(action_table) ),
+    MergedState = setAttribute( State, action_table, MergedActTable ),
+
+    wooper:return_state( MergedState ).
+
+
+
+-doc """
+Tells that this server should notify - thanks to the sending of an
+`onAutomatedActionsNotified/3` oneway call - the specified instance (generally
+the one of the caller) of the automated actions that it supports.
+
+This asynchronous form has for purpose to avoid the deadlocks that
+`getAutomatedActions/1` would induce.
+""".
+-spec notifyAutomatedActions( wooper:state(), instance_pid() ) ->
+                                                    const_oneway_return().
+notifyAutomatedActions( State, InstToNotifyPid ) ->
+
+    OurLookupInfo = executeConstRequest( State, getLookupInformation ),
+
+    OurLookupInfo =:= undefined andalso throw( no_lookup_info ),
+
+    % The local actions shall here bear a relevant, absolute lookup info:
+    ToSendActTable = table:map_on_values(
+        fun( AI=#action_info{ server_lookup_info=undefined } ) ->
+            AI#action_info{ server_lookup_info=OurLookupInfo };
+
+           ( AI ) ->
+            AI
+        end,
+        ?getAttr(action_table) ),
+
+    InstToNotifyPid ! { onAutomatedActionsNotified, [ ToSendActTable ] },
+
+    wooper:const_return().
 
 
 
@@ -359,9 +473,8 @@ performActionFromTokens( State, Tokens ) ->
 
     { Res, ActState } = case table:lookup_entry( _K=ActId, ActTable ) of
 
-        { value, _ActionInfo } ->
-            %execute_action( ActId, ActionInfo, Tokens, State );
-            throw(fixme);
+        { value, ActionInfo } ->
+            execute_action( ActionInfo, Tokens, State );
 
         key_not_found ->
             ?error_fmt( "No action ~ts found; the ones known of this server "
@@ -370,7 +483,7 @@ performActionFromTokens( State, Tokens ) ->
                   text_utils:strings_to_string(
                     [ us_action:action_id_to_string( AId )
                         || AId <- table:keys( ActTable ) ] ) ] ),
-            { action_not_found, State }
+            { { error, action_not_found }, State }
 
     end,
 
@@ -380,38 +493,80 @@ performActionFromTokens( State, Tokens ) ->
 
 
 
+% The caller is expected to have ensured that the correct number of argument
+% tokens has been provided.
+%
 % (helper)
-%% -spec execute_action( action_id(), action_info(), [ action_token() ],
-%%                       wooper:state() ) -> { action_result(), wooper:state() }.
-%% execute_action( ActId, _ActInfo=#action_info{ arg_specs=ArgSpecs,
-%%                                               result_spec=ResSpec,
-%%                                               mapping={ ModName, ReqName } },
-%%                 _Tokens=[ _ActNameToken, ArgsTokens ], State ) ->
+-spec execute_action( action_info(), [ action_token() ], wooper:state() ) ->
+                                            { action_result(), wooper:state() }.
+% No lookup information, hence action implemented locally:
+execute_action( ActInfo=#action_info{ server_lookup_info=undefined,
+                                      arg_specs=ArgSpecs,
+                                      result_spec=ResSpec,
+                                      mapping={ ModName, ReqName } },
+                Tokens, State ) ->
 
-%%     try
+    ?debug_fmt( "Executing locally ~ts, based on ~w.",
+                [ us_action:action_info_to_string( ActInfo ), Tokens ] ),
 
-%%         ActualArgs = us_action:coerce_argument_tokens( ArgsTokens, ArgSpecs ),
+    try
 
-%%         ?debug_fmt( "Executing now ~ts:~ts/~B, with arguments ~p.",
-%%                     [ ModName, ReqName, length( ActualArgs ), ActualArgs ] ),
+        ArgsTokens = tl( Tokens ),
 
-%%         ResP = { ExecState, Res } = executeRequestAs( State, ModName, ReqName,
-%%                                                       ActualArgs ),
+        ActualArgs = us_action:coerce_argument_tokens( ArgsTokens, ArgSpecs ),
 
-%%         us_action:check_result( Res, ResSpec ),
+        ?debug_fmt( "Executing now ~ts:~ts/~B, with arguments ~p.",
+                    [ ModName, ReqName, length( ActualArgs ), ActualArgs ] ),
 
-%%         ResP
+        { ExecState, Res } = executeRequestAs( ModName, State, ReqName,
+                                               ActualArgs ),
+        us_action:check_result( Res, ResSpec ),
 
-%%     catch
+        { Res, ExecState }
 
-%%         throw:Error ->
-%%             { State, { error, Error } }
+    catch
 
-%%     end.
+        throw:Error ->
+            { { error, Error }, State }
 
+    end;
 
+% Action implemented by another server, forwarding it:
+execute_action( ActInfo=#action_info{ server_lookup_info=ImplSrvLookupInfo },
+                Tokens, State ) ->
 
-%check_result( Res, ResSpec, State ) ->
+    case naming_utils:get_maybe_registered_pid_for(
+            ImplSrvLookupInfo ) of
+
+        undefined ->
+            ?error_fmt( "Failed to resolve the ~ts for ~ts.",
+                [ naming_utils:lookup_info_to_string( ImplSrvLookupInfo ),
+                  us_action:action_info_to_string( ActInfo ) ] ),
+
+            %throw( { impl_server_lookup_info_lookup_failed, ImplSrvLookupInfo,
+            %         ActInfo } );
+            { { error, implementation_server_not_found }, State };
+
+        SrvPid ->
+
+            cond_utils:if_defined( us_common_debug_actions,
+                ?debug_fmt( "Forwarding to ~w (~ts) ~ts.", [ SrvPid,
+                    naming_utils:lookup_info_to_string( ImplSrvLookupInfo ),
+                    us_action:action_info_to_string( ActInfo ) ] ) ),
+
+            SrvPid ! { performActionFromTokens, [ Tokens ] },
+            receive
+
+                { wooper_result, _ActOutcome={ action_outcome, Res } } ->
+                    cond_utils:if_defined( us_common_debug_actions,
+                       ?debug_fmt( "Received and forwarding action result ~w.",
+                                   [ Res ] ) ),
+
+                    { Res, State }
+
+            end
+
+    end.
 
 
 
@@ -436,6 +591,95 @@ onWOOPERExitReceived( State, CrashPid, ExitType ) ->
 				  "from ~w:~n  ~p", [ self(), CrashPid, ExitType ] ),
 
 	wooper:const_return().
+
+
+
+% Static section.
+
+
+-doc """
+Resolves the PID of the specified server, based on the specified naming
+information, with some waiting if needed.
+
+Centralised here on behalf of the implementation (notably of their
+`get_server_pid/0` static method) of all US servers, for example to be able to
+define any relevant time-out duration once.
+""".
+-spec resolve_server_pid( registration_name(), registration_scope() ) ->
+                                static_return( server_pid() ).
+resolve_server_pid( RegName, RegScope ) ->
+
+	trace_bridge:debug_fmt( "Resolving the US server registered as name '~ts' "
+                            "for scope ~ts.", [ RegName, RegScope ] ),
+
+    % Relying on the default time-out currently:
+    SrvPid = naming_utils:wait_for_registration_of( RegName,
+		naming_utils:registration_to_lookup_scope( RegScope ) ),
+
+	trace_bridge:debug_fmt( "Resolved as ~w.", [ SrvPid ] ),
+
+	wooper:return_static( SrvPid ).
+
+
+
+-doc """
+Returns the naming lookup information of this server.
+
+Meant to be possibly defined by each actual US server, albeit generally
+`get_server_pid/0` is sufficient.
+""".
+-spec get_lookup_info() -> static_return( lookup_info() ).
+get_lookup_info() ->
+
+    %wooper:return_static( { ?foo_server_registration_name,
+    %   ?foo_server_registration_scope } ).
+
+    throw( not_implemented ).
+
+
+
+-doc "Returns any naming lookup information of this server.".
+-spec getLookupInformation( wooper:state() ) ->
+                                const_request_return( option( lookup_info() ) ).
+getLookupInformation( State ) ->
+
+    MaybeLI = case ?getAttr(registration_name) of
+
+        undefined ->
+            undefined;
+
+        RegName ->
+            LookupScope = naming_utils:registration_to_lookup_scope(
+                ?getAttr(registration_scope) ),
+            { RegName, LookupScope }
+
+    end,
+
+    wooper:const_return_result( MaybeLI ).
+
+
+
+-doc """
+Returns the PID of the current server, possibly waiting for it.
+
+It is better to obtain it each time from the naming service rather than to
+resolve and store its PID once for all, as, for an increased robustness, servers
+may be restarted (hence any former PID may not reference a live process
+anymore).
+
+Meant to be defined by each actual US server.
+""".
+-spec get_server_pid() -> static_return( server_pid() ).
+get_server_pid() ->
+
+	%SrvPid = class_USServer:resolve_server_pid(
+    %   _RegName=?foo_server_registration_name,
+    %   _RegScope=?foo_server_registration_scope ),
+
+	%wooper:return_static( SrvPid ).
+
+    throw( not_implemented ).
+
 
 
 
@@ -537,8 +781,7 @@ to_string( State ) ->
 			"not expected to run as a specific user";
 
 		BinUsrName ->
-			text_utils:format( "expected to run as user '~ts'",
-							   [ BinUsrName ] )
+			text_utils:format( "expected to run as user '~ts'", [ BinUsrName ] )
 
 	end,
 

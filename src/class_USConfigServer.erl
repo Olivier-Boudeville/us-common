@@ -80,6 +80,12 @@ the Universal Server, at the level of US-Common.
 % look-up logic.
 
 
+
+% The class-specific attributes:
+%
+% (now, for a better robustness, servers are resolved on the fly, their PIDs are
+% not to be stored anymore)
+%
 -define( class_attributes, [
 
 	{ config_base_directory, bin_directory_path(),
@@ -130,12 +136,6 @@ the Universal Server, at the level of US-Common.
 
 	{ us_groupname, system_utils:group_name(),
 	  "the group that shall be common to all US-related users" },
-
-	{ us_main_config_server_pid, option( server_pid() ),
-	  "the PID of the US-Main configuration server (if any)" },
-
-	{ us_web_config_server_pid, option( server_pid() ),
-	  "the PID of the US-Web configuration server (if any)" },
 
 	% Cannot easily be obtained otherwise:
 	{ registration_name, registration_name(),
@@ -281,61 +281,59 @@ construct( State ) ->
 	erlang:process_flag( trap_exit, true ),
 
 	% First the direct mother classes, then this class-specific actions:
-	TraceState = class_USServer:construct( State,
-		?trace_categorize("Configuration main server") ),
+	SrvState = class_USServer:construct( State,
+		?trace_categorize("Common configuration Server") ),
 
-	% Allows functions provided by lower-level libraries called directly from
-	% this instance process to plug to the same (trace aggregator) bridge, with
-	% the same settings:
-	%
-	class_TraceEmitter:register_bridge( TraceState ),
-
-
-	?send_info_fmt( TraceState, "Creating the overall US configuration server, "
+	?send_info_fmt( SrvState, "Creating the overall US configuration server, "
 					"on node '~ts'.", [ node() ] ),
 
 	BinCfgDir = case get_us_config_directory() of
 
 		{ undefined, CfgMsg } ->
-			?send_error_fmt( TraceState, "Unable to determine the US "
+			?send_error_fmt( SrvState, "Unable to determine the US "
 							 "configuration directory; ~ts", [ CfgMsg ] ),
 			throw( us_configuration_directory_not_found );
 
 		{ BinFoundCfgDir, CfgMsg } ->
-			?send_notice( TraceState, CfgMsg ),
+			?send_notice( SrvState, CfgMsg ),
 			BinFoundCfgDir
 
 	end,
 
 	% Final trace sent by:
-	perform_setup( BinCfgDir, TraceState ).
+	perform_setup( BinCfgDir, SrvState ).
 
 
 
 -doc """
-Constructs the US configuration server, using specified configuration directory.
+Constructs the US configuration server, using the specified configuration
+directory.
 
 Useful for example to create auxiliary universal servers or perform tests.
 
-Note: must be kept in line with the next constructor.
+Note: must be kept in line with the previous constructor.
 """.
 -spec construct( wooper:state(), directory_path() ) -> wooper:state().
 construct( State, ConfigDir ) when is_list( ConfigDir ) ->
 
-	ServerName = text_utils:format( "Configuration Server from ~ts",
+	% Wanting a better control by resisting to exit messages being received:
+	erlang:process_flag( trap_exit, true ),
+
+	ServerName = text_utils:format( "Configuration server from ~ts",
 		[ file_utils:get_last_path_element( ConfigDir ) ] ),
 
 	% First the direct mother classes, then this class-specific actions:
-	TraceState = class_USServer:construct( State,
-										   ?trace_categorize(ServerName) ),
+	SrvState = class_USServer:construct( State,
+                                         ?trace_categorize(ServerName) ),
 
-	?send_info_fmt( TraceState, "Creating a  US configuration server, "
-		"using the '~ts' configuration directory for that.", [ ConfigDir ] ),
+	?send_info_fmt( SrvState, "Creating a US configuration server, "
+		"using the '~ts' configuration directory for that, "
+        "on node '~ts'.", [ ConfigDir, node() ] ),
 
 	BinCfgDir = text_utils:string_to_binary( ConfigDir ),
 
 	% Final trace sent by:
-	perform_setup( BinCfgDir, TraceState ).
+	perform_setup( BinCfgDir, SrvState ).
 
 
 
@@ -358,33 +356,14 @@ destruct( State ) ->
 Notifies this server about the specified US-Main configuration server, and
 requests related information from it.
 """.
--spec getUSMainRuntimeSettings( wooper:state() ) -> request_return(
+-spec getUSMainRuntimeSettings( wooper:state() ) -> const_request_return(
 		{ bin_directory_path(), execution_context(),
 		  option( bin_file_path() ) } ).
 getUSMainRuntimeSettings( State ) ->
 
-	USMainConfigServerPid = ?getSender(),
+    % Storing with 'USMainConfigServerPid = ?getSender()' is not desirable.
 
-	RegState = case ?getAttr(us_main_config_server_pid) of
-
-		undefined ->
-			?info_fmt( "Registering US-Main configuration server ~w.",
-					   [ USMainConfigServerPid ] ),
-			setAttribute( State, us_main_config_server_pid,
-						  USMainConfigServerPid );
-
-		USMainConfigServerPid ->
-			State;
-
-		OtherPid ->
-			?error_fmt( "Notified of US-Main configuration server ~w; "
-				"ignored, as already knowing a different one, ~w.",
-				[ USMainConfigServerPid, OtherPid ] ),
-			State
-
-	end,
-
-	wooper:return_state_result( RegState, { ?getAttr(config_base_directory),
+	wooper:const_return_result( { ?getAttr(config_base_directory),
 		?getAttr(execution_context), ?getAttr(us_main_config_filename) } ).
 
 
@@ -393,33 +372,11 @@ getUSMainRuntimeSettings( State ) ->
 Notifies this server about the specified US-Web configuration server, and
 requests web-related information from it.
 """.
--spec getUSWebRuntimeSettings( wooper:state() ) -> request_return(
+-spec getUSWebRuntimeSettings( wooper:state() ) -> const_request_return(
 		{ bin_directory_path(), execution_context(),
 		  option( bin_file_path() ) } ).
 getUSWebRuntimeSettings( State ) ->
-
-	USWebConfigServerPid = ?getSender(),
-
-	RegState = case ?getAttr(us_web_config_server_pid) of
-
-		undefined ->
-			?info_fmt( "Registering US-Web configuration server ~w.",
-					   [ USWebConfigServerPid ] ),
-			setAttribute( State, us_web_config_server_pid,
-						  USWebConfigServerPid );
-
-		USWebConfigServerPid ->
-			State;
-
-		OtherPid ->
-			?error_fmt( "Notified of US-Web configuration server ~w; "
-				"ignored, as already knowing a different one, ~w.",
-				[ USWebConfigServerPid, OtherPid ] ),
-			State
-
-	end,
-
-	wooper:return_state_result( RegState, { ?getAttr(config_base_directory),
+	wooper:const_return_result( { ?getAttr(config_base_directory),
 		?getAttr(execution_context), ?getAttr(us_web_config_filename) } ).
 
 
@@ -488,6 +445,28 @@ notifyEPMDPort( State, EPMDPort, _Origin=explicit_set, AppModName,
 % Static section.
 
 
+-doc """
+Returns the PID of the current, supposedly already-launched, default US
+configuration server, waiting (up to a few seconds, as all US servers are bound
+to be launched mostly simultaneously) if needed.
+
+It is better to obtain the PID of a server each time from the naming service
+rather than to resolve and store its PID once for all, as, for an increased
+robustness, servers may be restarted (hence any stored PID may not reference a
+live process anymore).
+""".
+-spec get_server_pid () -> static_return( config_server_pid() ).
+get_server_pid() ->
+
+	CfgPid = class_USServer:resolve_server_pid(
+        _RegName=?default_us_config_reg_name,
+        _RegScope=?default_registration_scope ),
+
+	wooper:return_static( CfgPid ).
+
+
+
+
 % Version-related static methods.
 
 
@@ -504,6 +483,23 @@ get_us_common_version() ->
 get_us_common_version_string() ->
 	% As defined (uniquely) in GNUmakevars.inc:
 	wooper:return_static( ?us_common_version ).
+
+
+% For a given us_xxx, these two static methods can just be copied verbatim in
+% the class_USxxxCentralServer.erl:
+
+% -doc "Returns the version of the US application being used.".
+% -spec get_us_app_version() -> static_return( three_digit_version() ).
+% get_us_app_version() ->
+%  wooper:return_static(
+%      basic_utils:parse_version( get_us_app_version_string() ) ).
+
+
+% -doc "Returns the version of the US application being used, as a string.".
+% -spec get_us_app_version_string() -> static_return( ustring() ).
+% get_us_app_version_string() ->
+%  % As defined (uniquely) in GNUmakevars.inc:
+%  wooper:return_static( ?us_app_version ).
 
 
 
@@ -525,7 +521,7 @@ get_default_settings() ->
 	Application = us_common,
 
 	USCfgSrvName = case application:get_env( Application,
-						us_config_server_registration_name ) of
+			us_config_server_registration_name ) of
 
 		undefined ->
 			CfgRegName = ?default_us_config_reg_name,
@@ -664,8 +660,8 @@ get_us_config_directory() ->
 	CfgSuffix = file_utils:join( ?app_subdir, ?us_config_filename ),
 
 	BaseMsg = text_utils:format( "Searched for the Universal Server "
-		"configuration directory, based on suffix '~ts', knowing that: ~ts~n"
-		"Configuration directory ", [ CfgSuffix,
+		"configuration directory, based on the '~ts' suffix, "
+        "knowing that: ~ts~nConfiguration directory ", [ CfgSuffix,
 			text_utils:strings_to_string( [ FirstMsg, SecondMsg ] ) ] ),
 
 	ResPair = find_file_in( AllBasePaths, CfgSuffix, BaseMsg, _Msgs=[] ),
@@ -855,10 +851,7 @@ perform_setup( BinCfgDir, State ) ->
 
 	LoadState = load_configuration( BinCfgDir, State ),
 
-	ReadyState = setAttributes( LoadState, [
-		{ config_base_directory, BinCfgDir },
-		{ us_main_config_server_pid, undefined },
-		{ us_web_config_server_pid, undefined } ] ),
+	ReadyState = setAttribute( LoadState, config_base_directory, BinCfgDir ),
 
 	% Enforce security in all cases ("chmod 700"); if it fails here, the
 	% combined path/user configuration must be incorrect; however this server
@@ -887,17 +880,25 @@ perform_setup( BinCfgDir, State ) ->
 
 	?notice_fmt( "Constructed: ~ts.", [ to_string( ReadyState ) ] ),
 
+    % We used to rename directly here the trace file; however, as it might be
+    % updated in turn by the actual US-related framework (e.g. US-Main, US-Web),
+    % specifying at the US-Common level (in the us.config) an intermediate trace
+    % file had little interest, so it was done. Yet then the default location
+    % applied (/var/log/universal-server), which required specific permissions
+    % (whereas for example tests cannot rely on them). So we disabled this
+    % intermediate renaming, as anyway US-Common is hardly autonomous.
+
 	% Done rather late on purpose, so that the existence of that file can be
 	% seen as a sign that the initialisation went well (used by
 	% start-us-web-{native-build,release}.sh).
 	%
-	NewBinTraceFilePath = file_utils:bin_join( LogDir, "us_common.traces" ),
+	%NewBinTraceFilePath = file_utils:bin_join( LogDir, "us_common.traces" ),
 
 	% Already a trace emitter:
-	?debug_fmt( "Requesting the renaming of trace file to '~ts'.",
-				[ NewBinTraceFilePath ] ),
+	%?debug_fmt( "Requesting the renaming of trace file to '~ts'.",
+	%			[ NewBinTraceFilePath ] ),
 
-	?getAttr(trace_aggregator_pid ) ! { renameTraceFile, NewBinTraceFilePath },
+	%?getAttr(trace_aggregator_pid ) ! { renameTraceFile, NewBinTraceFilePath },
 
 	ReadyState.
 
@@ -1708,27 +1709,6 @@ to_string( State ) ->
 
     end,
 
-	MainSrvStr = case ?getAttr(us_main_config_server_pid) of
-
-		undefined ->
-			"no US-Main configuration server";
-
-		MainSrvPid ->
-			text_utils:format( "US-Main configuration server ~w",
-							   [ MainSrvPid ] )
-
-	end,
-
-	WebSrvStr = case ?getAttr(us_web_config_server_pid) of
-
-		undefined ->
-			"no US-Web configuration server";
-
-		WebSrvPid ->
-			text_utils:format( "US-Web configuration server ~w", [ WebSrvPid ] )
-
-	end,
-
 	EPMDStr = case ?getAttr(epmd_port) of
 
 		undefined ->
@@ -1745,7 +1725,7 @@ to_string( State ) ->
 		"the ~ts execution context, presumably on a VM "
 		"with an EPMD daemon ~ts, "
 		"using configuration directory '~ts' and log directory '~ts', "
-		"having found ~ts and ~ts; it currently knows ~ts and ~ts",
+		"having found ~ts and ~ts",
 		[ RegStr, ?getAttr(execution_context), EPMDStr,
 		  ?getAttr(config_base_directory), ?getAttr(log_directory),
-		  MainCfgStr, WebCfgStr, MainSrvStr, WebSrvStr ] ).
+		  MainCfgStr, WebCfgStr ] ).

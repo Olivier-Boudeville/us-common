@@ -782,7 +782,7 @@ manageAppBaseDirectories( State, ConfigTable, BaseDirKey, BaseDirEnvVarName ) ->
 
 	end,
 
-	% The internal US-Main directory (see the conf_directory attribute) used to
+	% The internal US-xxx directory (see the conf_directory attribute) used to
 	% be derived from the app base one (as a 'conf' subdirectory thereof), yet
 	% because of that it was not included in releases. So instead this 'conf'
 	% directory is a subdirectory of 'priv':
@@ -804,10 +804,10 @@ manageAppBaseDirectories( State, ConfigTable, BaseDirKey, BaseDirEnvVarName ) ->
     wooper:return_state( SetState ).
 
 
+
 -doc "Tries to guess the US-Main application directory.".
 -spec guess_app_dir( application_run_context(), app_name(),
                      env_variable_name(), wooper:state() ) -> directory_path().
-
 guess_app_dir( AppRunContext, USAppStrWithUnderscore, BaseDirEnvVarName,
                State ) ->
 
@@ -1007,10 +1007,42 @@ manageLogDirectory( State, ConfigTable, LogDirKey, DefaultLogDir ) ->
 -doc "Returns a textual description of this central server.".
 -spec to_string( wooper:state() ) -> ustring().
 to_string( State ) ->
-	text_utils:format( "US-~ts central ~ts; it is running ~ts, "
-		"running in the ~ts execution context, "
-		"relying on the '~ts' configuration directory",
-		[ ?getAttr(app_short_name), class_USServer:to_string( State ),
+
+    NameStr = class_USCentralServer:get_us_app_name( ?getAttr(app_short_name) ),
+
+    ExecStr = case ?getAttr(execution_context) of
+
+        undefined ->
+            "an unknown";
+
+        ExecContext ->
+            text_utils:format( "the '~ts'", [ ExecContext ] )
+
+    end,
+
+    ConfDirStr = case ?getAttr(config_base_directory) of
+
+        undefined ->
+            "an unknown";
+
+        ConfBaseDir ->
+            text_utils:format( "the '~ts' ", [ ConfBaseDir ] )
+
+    end,
+
+    LogDirStr = case ?getAttr(log_directory) of
+
+        undefined ->
+            "an unknown";
+
+        LogDir ->
+            text_utils:format( "the '~ts' ", [ LogDir ] )
+
+    end,
+
+	text_utils:format( "~ts central ~ts; it is running ~ts, "
+		"running in ~ts execution context, "
+		"relying on ~ts configuration directory and on ~ts log directory",
+		[ NameStr, class_USServer:to_string( State ),
 		  otp_utils:application_run_context_to_string(
-			?getAttr(app_run_context) ), ?getAttr(execution_context),
-		  ?getAttr(config_base_directory) ] ).
+			?getAttr(app_run_context) ), ExecStr, ConfDirStr, LogDirStr ] ).

@@ -449,7 +449,8 @@ notifyAutomatedActions( State, InstToNotifyPid ) ->
         end,
         ?getAttr(action_table) ),
 
-    InstToNotifyPid ! { onAutomatedActionsNotified, [ ToSendActTable ] },
+    InstToNotifyPid !
+        { onAutomatedActionsNotified, [ ToSendActTable, self() ] },
 
     wooper:const_return().
 
@@ -609,14 +610,16 @@ define any relevant time-out duration once.
                                 static_return( server_pid() ).
 resolve_server_pid( RegName, RegScope ) ->
 
-	trace_bridge:debug_fmt( "Resolving the US server registered as name '~ts' "
-                            "for scope ~ts.", [ RegName, RegScope ] ),
+    cond_utils:if_defined( us_common_debug_registration,
+        trace_bridge:debug_fmt( "Resolving the US server registered as "
+            "name '~ts' for scope ~ts.", [ RegName, RegScope ] ) ),
 
     % Relying on the default time-out currently:
     SrvPid = naming_utils:wait_for_registration_of( RegName,
 		naming_utils:registration_to_lookup_scope( RegScope ) ),
 
-	trace_bridge:debug_fmt( "Resolved as ~w.", [ SrvPid ] ),
+    cond_utils:if_defined( us_common_debug_registration,
+        trace_bridge:debug_fmt( "Resolved as ~w.", [ SrvPid ] ) ),
 
 	wooper:return_static( SrvPid ).
 

@@ -25,7 +25,7 @@
 -moduledoc """
 Module implementing the **OTP supervisor bridge for the US-Common main
 scheduler**, so that this server is attached to the US-Common supervision tree,
-through the US-Common root supervisor, defined in the us_common_sup module.
+through the US-Common root supervisor, defined in the `us_common_sup` module.
 """.
 
 
@@ -69,7 +69,7 @@ through the US-Common root supervisor, defined in the us_common_sup module.
 Starts and links a US-Common supervision bridge to the US scheduler.
 
 Note: typically spawned as a supervised child of the US-Common root supervisor
-(see us_common_sup:init/1), hence generally triggered by the application
+(see `us_common_sup:init/1`), hence generally triggered by the application
 initialisation.
 """.
 -spec start_link() -> term().
@@ -86,7 +86,7 @@ start_link() ->
 
 -doc """
 Callback to initialise this supervisor bridge, typically in answer to
-start_link/1 being executed.
+`start_link/1` being executed.
 """.
 -spec init( list() ) -> { 'ok', pid(), State :: term() }
 						| 'ignore' | { 'error', Error :: term() }.
@@ -95,7 +95,7 @@ init( _Args=[] ) ->
 	trace_bridge:info( "Initialising the US-Common supervisor bridge for "
 					   "the US main scheduler." ),
 
-	SchedServerPid = class_USScheduler:new_link( "US-Common Scheduler",
+	SchedServerPid = class_USScheduler:new_link( "US-Common scheduler",
 		?us_common_scheduler_registration_name,
 		?us_common_scheduler_registration_scope ),
 

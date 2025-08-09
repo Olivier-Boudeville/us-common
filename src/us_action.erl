@@ -258,6 +258,23 @@ facilitate, on the caller side, the matching of answers to asynchronous calls.
 
 
 -doc """
+The internal description of an actual request to which an action maps.
+
+No arity listed, as it is deduced from the declared action arguments.
+
+Such a request is expected to be defined and exported in the corresponding
+module.
+
+Mapping to a mere module rather than to a class (even if, as relying on a state
+is generally essential, targeting a request rather than a mere function) to let
+the possibility of gathering any set of action-related methods in a separate,
+dedicated (server) module.
+""".
+-type action_mapping() :: { module_name(), request_name() }.
+
+
+
+-doc """
 The user-level description of an actual request to which an action maps.
 
 No arity listed, as it is deduced from the declared action arguments.
@@ -276,23 +293,6 @@ dedicated (server) module.
 
     % Direct implementation in the server module implied:
   | request_name().
-
-
-
--doc """
-The internal description of an actual request to which an action maps.
-
-No arity listed, as it is deduced from the declared action arguments.
-
-Such a request is expected to be defined and exported in the corresponding
-module.
-
-Mapping to a mere module rather than to a class (even if, as relying on a state
-is generally essential, targeting a request rather than a mere function) to let
-the possibility of gathering any set of action-related methods in a separate,
-dedicated (server) module.
-""".
--type action_mapping() :: { module_name(), request_name() }.
 
 
 
@@ -391,7 +391,7 @@ synchronisation.
 
 -doc """
 Registers the specified user action specifications in the specified action
-table.
+table, based on the specified classname of that server.
 """.
 -spec register_action_specs( [ user_action_spec() ], action_table(),
                              classname() ) -> action_table().
@@ -853,9 +853,17 @@ arg_spec_to_string( { ArgName, ArgType, BinDescStr } ) ->
 
 -doc "Returns a textual description of the specified result specification.".
 -spec result_spec_to_string( result_spec() ) -> ustring().
+result_spec_to_string(
+        _ResSpec={ action_outcome, _MaybeDescBinStr=undefined } ) ->
+    "action outcome";
+
 result_spec_to_string( _ResSpec={ ResCtxtType, _MaybeDescBinStr=undefined } ) ->
     text_utils:format( "type ~ts",
                        [ type_utils:type_to_string( ResCtxtType ) ] );
+
+result_spec_to_string( _ResSpec={ action_outcome, DescBinStr } ) ->
+    text_utils:format( "action outcome, described as '~ts'",
+                       [ DescBinStr ] );
 
 result_spec_to_string( _ResSpec={ ResCtxtType, DescBinStr } ) ->
     text_utils:format( "type ~ts, described as '~ts'",

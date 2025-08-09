@@ -418,14 +418,16 @@ Records the actions sent back by the specified US server.
 
 Typically triggered by a prior `notifyAutomatedActions/2` oneway call.
 """.
--spec onAutomatedActionsNotified( wooper:state(), action_table() ) ->
-                                                    oneway_return().
-onAutomatedActionsNotified( State, AddActTable ) ->
+-spec onAutomatedActionsNotified( wooper:state(), action_table(),
+                                  server_pid() ) -> oneway_return().
+onAutomatedActionsNotified( State, AddActTable, ServerPid ) ->
 
     WaitedCount = ?getAttr(waited_operations),
 
-    ?debug_fmt( "Notified of a ~ts (whereas was waiting for ~B operations).",
-        [ us_action:action_table_to_string( AddActTable ), WaitedCount ] ),
+    ?debug_fmt( "Notified from US server ~w that ~ts "
+        "(whereas was waiting for ~B server(s)).",
+        [ ServerPid, us_action:action_table_to_string( AddActTable ),
+          WaitedCount ] ),
 
     NewMaybeWaitedCount = case WaitedCount of
 
@@ -433,7 +435,7 @@ onAutomatedActionsNotified( State, AddActTable ) ->
             throw( { unsollicited_action_table, AddActTable } );
 
         1 ->
-            ?debug( "All action tables received." ),
+            ?debug( "All automated action tables received from US servers." ),
             % No extra operation to be done for the moment.
             undefined;
 
@@ -445,8 +447,9 @@ onAutomatedActionsNotified( State, AddActTable ) ->
     MergedActTable = us_action:merge_action_table( AddActTable,
                                                    ?getAttr(action_table) ),
 
-    WaitedCount =:= 1 andalso ?debug_fmt( "Now all actions are known, relying "
-        "on an ~ts", [ us_action:action_table_to_string( MergedActTable ) ] ),
+    WaitedCount =:= 1 andalso ?debug_fmt( "Now that all automated actions are "
+        "known: relying on an overall ~ts",
+        [ us_action:action_table_to_string( MergedActTable ) ] ),
 
     ActState = setAttributes( State, [
         { action_table, MergedActTable },
@@ -1044,9 +1047,9 @@ to_string( State ) ->
 
     end,
 
-	text_utils:format( "~ts central ~ts; it is running ~ts, "
-		"running in ~ts execution context, "
-		"relying on ~ts configuration directory and on ~ts log directory",
+	text_utils:format( "~ts central ~ts.~nThis central server is running ~ts, "
+		"in ~ts execution context, relying on ~ts configuration directory "
+        "and on ~ts log directory",
 		[ NameStr, class_USServer:to_string( State ),
 		  otp_utils:application_run_context_to_string(
 			?getAttr(app_run_context) ), ExecStr, ConfDirStr, LogDirStr ] ).

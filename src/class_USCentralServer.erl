@@ -372,9 +372,9 @@ manageAutomatedActions( State, ConfigTable, SrvClassnames ) ->
     IntegState = executeOneway( WaitState, addConfiguredAutomatedActions,
                                 [ ConfigTable ] ),
 
-    ResType = { tuple, [ {atom,success}, {string,[]} ] },
+    ResTextType = "{'success', string()}",
 
-    UserResSpec = { ResType, "Help contents" },
+    UserResSpec = { ResTextType, "Help contents" },
 
     HelpDesc = text_utils:format( "help about the ~ts supported actions",
         [ get_us_app_name( ?getAttr(app_short_name) ) ] ),

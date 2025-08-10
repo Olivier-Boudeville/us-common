@@ -337,8 +337,9 @@ addConfiguredAutomatedActions( State, ConfigTable ) ->
 
         { value, UserActSpecs } when is_list( UserActSpecs ) ->
 
-            ?debug_fmt( "Integrating the following user action specs: ~p.",
-                        [ UserActSpecs ] ),
+            cond_utils:if_defined( us_common_debug_actions, ?debug_fmt(
+                "Integrating the following user action specs: ~p.",
+                [ UserActSpecs ] ) ),
 
             AddState = addAutomatedActionSpecs( State, UserActSpecs ),
 
@@ -402,8 +403,8 @@ getAutomatedActions( State ) ->
     ActTable = ?getAttr(action_table),
     ConcurrentRes = wooper:forge_concurrent_result( ActTable ),
 
-    ?debug_fmt( "Returning ~ts",
-                [ us_action:action_table_to_string( ActTable ) ] ),
+    cond_utils:if_defined( us_common_debug_actions, ?debug_fmt( "Returning ~ts",
+        [ us_action:action_table_to_string( ActTable ) ] ) ),
 
     wooper:const_return_result( ConcurrentRes ).
 
@@ -453,7 +454,6 @@ notifyAutomatedActions( State, InstToNotifyPid ) ->
         { onAutomatedActionsNotified, [ ToSendActTable, self() ] },
 
     wooper:const_return().
-
 
 
 -doc """

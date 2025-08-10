@@ -66,16 +66,16 @@ Examples of such specs:
 - `startAlarm`
 
 - `{stop_room_heating, [{static, room_heater_plug, "Target device short name"},
-  {static, switch_off, "Device operation"}], void, "switch off the heating of my
-  room", actOnDevice}`
+  {static, switch_off, "Device operation"}], "void()", "switch off the heating
+  of my room", actOnDevice}`
 
 - `{start_tv, [{static, tv_plug, "Target device short name"}, {static,
   switch_on, "Device operation"}, {static, {next_possible_today, {19,54,0}},
-  "Start time"}, {static, {1,0,0,0}, "DHMS periodicity"}], action_outcome,
+  "Start time"}, {static, {1,0,0,0}, "DHMS periodicity"}], "action_outcome()",
   "switch on the television each day at 19h54, starting from today",
   schedulePeriodicalActionOnDevice}`
 
-- `{switch_device, [{dynamic, string, "Device identifier"}, {dynamic, atom,
+- `{switch_device, [{dynamic, string, "Device identifier"}, {dynamic, "atom()",
   "'on' or 'off'"}, {static, no_timeout}], {my_action_mod, switch_device_impl}}`
 """.
 -type user_action_spec() ::
@@ -139,7 +139,7 @@ For example: `{14, top}`.
 The user-level specification of an action argument, either statically-defined
 (i.e. at action definition time) or dynamically-supplied (i.e. at call time).
 
-For example: `{dynamic, lengths, {list, {float,[]}}, "The rod lengths, in
+For example: `{dynamic, lengths, "[float()]", "The rod lengths, in
 meters"}`.
 """.
 -type user_arg_spec() ::
@@ -147,8 +147,10 @@ meters"}`.
     { 'static', static_value(), user_description() } % Statically defined
   | { 'static', static_value() } % Same with no description
 
-  | { 'dynamic', arg_name(), type(), user_description() } % Set dynamically
-  | { 'dynamic', arg_name(), type() } % Same with no description
+  | { 'dynamic', arg_name(), text_type(),
+      user_description() } % Set dynamically
+
+  | { 'dynamic', arg_name(), text_type() } % Same with no description
   | { 'dynamic', arg_name() }. % 'string' type implied
 
 
@@ -156,10 +158,12 @@ meters"}`.
 -doc """
 The internal specification of an action argument.
 
-For example: `{dynamic, lengths, [float], <<"The rod lengths, in meters">>}`.
+For example: `{dynamic, lengths, {list, {float,[]}}, <<"The rod lengths, in
+meters">>}`.
 """.
 -type arg_spec() :: { 'static', static_value(), option( description() ) }
-                  | { 'dynamic', arg_name(), type(), option( description() ) }.
+                  | { 'dynamic', arg_name(), contextual_type(),
+                      option( description() ) }.
 
 
 -doc """
@@ -170,14 +174,6 @@ The `snake_case` is preferred for them.
 For example: `target_actuator`.
 """.
 -type arg_name() :: atom().
-
-
--doc """
-Describes the type of an argument of an action.
-
-For example: `float`.
-""".
--type arg_type() :: type().
 
 
 
@@ -191,22 +187,12 @@ It corresponds to a dynamic argument in the action specification.
 
 
 -doc "The user-level specification of a result.".
--type user_result_spec() :: { result_type(), option( user_description() ) }.
+-type user_result_spec() :: { text_type(), option( user_description() ) }.
 
 
 -doc "The internal specification of a result.".
--type result_spec() :: { result_type(), option( description() ) }.
+-type result_spec() :: { contextual_type(), option( description() ) }.
 
-
--doc """
-The type expected to be returned from an executed action.
-
-`action_outcome` designates the `action_outcome/0` type, whose use is
-recommended, for controllability. It has not been made mandatory so that any
-request can be called, even if it was not specifically crafted to respect the
-US-action conventions.
-""".
--type result_type() :: type() | 'action_outcome'.
 
 
 -doc """
@@ -234,15 +220,16 @@ An actual result for an action, presumably respecting its specification.
 -doc """
 An actual result for an action, presumably respecting its specification.
 """.
--type action_result( T ) :: { 'success', T }
-                          | { 'failure', failure_report() }.
+-type action_result( TSuccess ) :: { 'success', TSuccess }
+                                 | { 'failure', failure_report() }.
 
 
 -doc """
 The actual outcome of a performed action.
 
-This is an ad hoc type defined in the context of actions, tagged in order to
-facilitate, on the caller side, the matching of answers to asynchronous calls.
+This is an ad hoc type defined in the context of actions, based on an actual
+result that is tagged in order to facilitate, on the caller side, the matching
+of answers to asynchronous calls.
 """.
 -type action_outcome() :: action_outcome( any() ).
 
@@ -253,7 +240,8 @@ The actual outcome of a performed action.
 This is an ad hoc type defined in the context of actions, tagged in order to
 facilitate, on the caller side, the matching of answers to asynchronous calls.
 """.
--type action_outcome( T ) :: { action_outcome, action_result( T ) }.
+-type action_outcome( TSuccess ) ::
+    { 'action_outcome', action_result( TSuccess ) }.
 
 
 
@@ -347,7 +335,7 @@ synchronisation.
                action_name/0, user_action_mapping/0, action_mapping/0,
 
                arg_kind/0, static_value/0,
-               user_arg_spec/0, arg_spec/0, arg_name/0, arg_type/0, argument/0,
+               user_arg_spec/0, arg_spec/0, arg_name/0, argument/0,
                user_result_spec/0, result_spec/0, action_raw_result/0,
                action_result/0, action_result/1,
                failure_report/0,
@@ -364,8 +352,10 @@ synchronisation.
           help/1 ]).
 
 
-% Local type:
--type type() :: type_utils:contextual_type().
+% Local types:
+
+-type text_type() :: type_utils:text_type().
+-type contextual_type() :: type_utils:contextual_type().
 
 
 % Type shorthands:
@@ -511,7 +501,7 @@ merge_action_entries( _ActEntries=[ { ActId, ActInfo } | T ], ActTable ) ->
 
 -doc "Checks that the specified term is a valid action mapping.".
 -spec canonicalise_action_mapping( term(), arity(), classname() ) -> void().
-canonicalise_action_mapping( AM={ ModName, ReqName }, Arity, _SrvClassname ) ->
+canonicalise_action_mapping( AM={ ModName, ReqName }, Arity, SrvClassname ) ->
 
     is_atom( ModName ) orelse throw( { non_atom_action_module, ModName } ),
 
@@ -526,12 +516,19 @@ canonicalise_action_mapping( AM={ ModName, ReqName }, Arity, _SrvClassname ) ->
     % For the State:
     FunArity = Arity+1,
 
-    meta_utils:is_function_exported( ModName, FunName, FunArity )
-        orelse throw( { action_request_not_exported,
-                        { ModName, FunName, FunArity } } ),
+    meta_utils:is_function_exported( ModName, FunName, FunArity ) orelse
+        begin
+
+            trace_bridge:error_fmt( "No ~ts/~B function is exported from the "
+                "~ts module (regarding a ~ts server).",
+                [ FunName, FunArity, ModName, SrvClassname ] ),
+
+            throw( { action_request_not_exported,
+                     { ModName, FunName, FunArity } } )
+
+        end,
 
     AM;
-
 
 canonicalise_action_mapping( _ReqName=undefined, _Arity, _SrvClassname ) ->
     throw( no_action_mapping_set );
@@ -571,6 +568,7 @@ canonicalise_arg_specs( Other, ActName ) ->
 Returns an internal, canonicalised version of the specified user argument
 specification of the specified action.
 """.
+% term() expected to be user_action_spec():
 -spec canonicalise_arg_spec( term(), action_name() ) -> arg_spec().
 
 % Full static arg spec:
@@ -584,25 +582,38 @@ canonicalise_arg_spec( _ArgSpec={ static, Arg }, _ActName ) ->
     { static, Arg, _MaybeBinDesc=undefined };
 
 % Full dynamic arg spec:
-canonicalise_arg_spec( ArgSpec={ dynamic, ArgName, ArgType, MaybeUserDesc },
+canonicalise_arg_spec( ArgSpec={ dynamic, ArgName, ArgTypeStr, MaybeUserDesc },
                        ActName ) ->
 
     is_atom( ArgName ) orelse
         throw( { invalid_argument_name, ArgName, ArgSpec, ActName } ),
 
-    type_utils:is_type( ArgType ) orelse
-        throw( { invalid_argument_type, ArgType, ArgSpec, ActName } ),
+    ArgCtxtType = case type_utils:parse_type( ArgTypeStr ) of
+
+        { ok, ContextualType } ->
+            ContextualType;
+
+        { error, TaggedErrInfo } ->
+            trace_bridge:error_fmt( "Invalid type in action argument spec: ~ts "
+                "(argument spec: ~p, action name: ~p).",
+                [ type_utils:interpret_parse_type_error( TaggedErrInfo ),
+                  ArgSpec, ActName ] ),
+            throw( { invalid_argument_type, ArgTypeStr, TaggedErrInfo,
+                     ArgSpec, ActName } )
+
+    end,
 
     MaybeBinDesc = text_utils:ensure_maybe_binary( MaybeUserDesc ),
 
-    { dynamic, ArgName, ArgType, MaybeBinDesc };
+    { dynamic, ArgName, ArgCtxtType, MaybeBinDesc };
 
-canonicalise_arg_spec( _ArgSpec={ dynamic, ArgName, ArgType }, ActName ) ->
-    canonicalise_arg_spec( { dynamic, ArgName, ArgType,
+canonicalise_arg_spec( _ArgSpec={ dynamic, ArgName, ArgTypeStr }, ActName ) ->
+    canonicalise_arg_spec( { dynamic, ArgName, ArgTypeStr,
                              _MaybeUserDesc=undefined }, ActName );
 
 canonicalise_arg_spec( _ArgSpec={ dynamic, ArgName }, ActName ) ->
-    canonicalise_arg_spec( { dynamic, ArgName, _ArgType=string }, ActName );
+    canonicalise_arg_spec( { dynamic, ArgName, _ArgTypeStr="string()" },
+                           ActName );
 
 canonicalise_arg_spec( Other, ActName ) ->
     throw( { invalid_argument_spec, Other, ActName } ).
@@ -613,26 +624,31 @@ canonicalise_arg_spec( Other, ActName ) ->
 Returns an internal, canonicalised version of the specified user result
 specification of the specified action.
 """.
+% term() expected to be user_result_spec():
 -spec canonicalise_res_spec( term(), action_name() ) -> result_spec().
-% Ad hoc type for actions:
-canonicalise_res_spec( _ResSpec={ ResType=action_outcome, MaybeUserDesc },
-                       _ActName ) ->
+canonicalise_res_spec( ResSpec={ ResTypeStr, MaybeUserDesc }, ActName ) ->
 
-     MaybeBinDesc = text_utils:ensure_maybe_binary( MaybeUserDesc ),
+    ResCtxtType = case type_utils:parse_type( ResTypeStr ) of
 
-    { ResType, MaybeBinDesc };
+        { ok, ContextualType } ->
+            ContextualType;
 
-canonicalise_res_spec( _ResSpec={ ResType, MaybeUserDesc }, ActName ) ->
+        { error, TaggedErrInfo } ->
+            trace_bridge:error_fmt( "Invalid type in action result spec: ~ts "
+                "(result spec: ~p, action name: ~p).",
+                [ type_utils:interpret_parse_type_error( TaggedErrInfo ),
+                  ResSpec, ActName ] ),
+            throw( { invalid_argument_type, ResTypeStr, TaggedErrInfo,
+                     ResSpec, ActName } )
 
-    type_utils:is_type( ResType ) orelse
-        throw( { invalid_result_type, ResType, MaybeUserDesc, ActName } ),
+    end,
 
-     MaybeBinDesc = text_utils:ensure_maybe_binary( MaybeUserDesc ),
+    MaybeBinDesc = text_utils:ensure_maybe_binary( MaybeUserDesc ),
 
-    { ResType, MaybeBinDesc };
+    { ResCtxtType, MaybeBinDesc };
 
-canonicalise_res_spec( _ResSpec=ResType, ActName ) ->
-    canonicalise_res_spec( { ResType, _MaybeUserDesc=undefined }, ActName ).
+canonicalise_res_spec( _ResSpec=ResTypeStr, ActName ) ->
+    canonicalise_res_spec( { ResTypeStr, _MaybeUserDesc=undefined }, ActName ).
 
 
 

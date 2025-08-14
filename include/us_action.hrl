@@ -28,8 +28,8 @@
 %
 -record( action_info, {
 
-    % Any naming-related lookup information for the server implementing that
-    % action ('undefined' if directly implemented by this server):
+    % Any naming-related lookup information for the server actually implementing
+    % that action ('undefined' if directly implemented by this server):
     %
     server_lookup_info = 'undefined'
         :: option( naming_utils:lookup_info() ),

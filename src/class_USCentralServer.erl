@@ -403,11 +403,12 @@ manageAutomatedActions( State, ConfigTable, SrvClassnames ) ->
 
     ActState = HelpState,
 
-    cond_utils:if_defined( us_common_debug_actions, ?debug_fmt(
+    cond_utils:if_defined( us_common_debug_actions,
+        class_USServer:send_action_trace_fmt( debug,
         "Whereas waiting for the notifications of ~B servers, "
         "starting with an ~ts",
         [ SrvCount, us_action:action_table_to_string(
-            getAttribute( ActState, action_table ) ) ] ) ),
+            getAttribute( ActState, action_table ) ) ], ActState ) ),
 
     wooper:return_state( ActState ).
 
@@ -424,10 +425,12 @@ onAutomatedActionsNotified( State, AddActTable, ServerPid ) ->
 
     WaitedCount = ?getAttr(waited_operations),
 
-    ?debug_fmt( "Notified from US server ~w that ~ts "
-        "(whereas was waiting for ~B server(s)).",
-        [ ServerPid, us_action:action_table_to_string( AddActTable ),
-          WaitedCount ] ),
+    cond_utils:if_defined( us_common_debug_actions,
+        class_USServer:send_action_trace_fmt( debug,
+            "Notified from US server ~w that ~ts "
+            "(whereas was waiting for ~B server(s)).",
+            [ ServerPid, us_action:action_table_to_string( AddActTable ),
+              WaitedCount ], State ) ),
 
     NewMaybeWaitedCount = case WaitedCount of
 
@@ -435,7 +438,10 @@ onAutomatedActionsNotified( State, AddActTable, ServerPid ) ->
             throw( { unsollicited_action_table, AddActTable } );
 
         1 ->
-            ?debug( "All automated action tables received from US servers." ),
+            cond_utils:if_defined( us_common_debug_actions,
+                class_USServer:send_action_trace( debug,
+                    "All automated action tables received from US servers.",
+                    State ) ),
             % No extra operation to be done for the moment.
             undefined;
 
@@ -447,9 +453,9 @@ onAutomatedActionsNotified( State, AddActTable, ServerPid ) ->
     MergedActTable = us_action:merge_action_table( AddActTable,
                                                    ?getAttr(action_table) ),
 
-    WaitedCount =:= 1 andalso ?debug_fmt( "Now that all automated actions are "
-        "known: relying on an overall ~ts",
-        [ us_action:action_table_to_string( MergedActTable ) ] ),
+    WaitedCount =:= 1 andalso class_USServer:send_action_trace_fmt( debug,
+        "Now that all automated actions are known: relying on a total of ~ts",
+        [ us_action:action_table_to_string( MergedActTable ) ], State ),
 
     ActState = setAttributes( State, [
         { action_table, MergedActTable },
@@ -464,11 +470,10 @@ onAutomatedActionsNotified( State, AddActTable, ServerPid ) ->
                     const_request_return( action_result( ustring() ) ).
 help( State ) ->
 
-    HelpText = text_utils:format(
-        "The following actions are supported by the US-~ts application:",
-        [ ?getAttr(us_name) ] ),
+    HelpStr = us_action:action_info_to_help_string( ?getAttr(action_table),
+        get_us_app_name( ?getAttr(app_short_name) ) ),
 
-    wooper:const_return_result( { success, HelpText } ).
+    wooper:const_return_result( { success, HelpStr } ).
 
 
 

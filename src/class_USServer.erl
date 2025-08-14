@@ -36,7 +36,9 @@ It centralises states and behaviours on their behalf.
 
 
 % Exported helpers:
--export([ register_name/3, unregister_name/1, to_string/1 ]).
+-export([ register_name/3, unregister_name/1,
+          send_action_trace/3, send_action_trace_fmt/4,
+          to_string/1 ]).
 
 
 -doc "The PID of a US server.".
@@ -74,6 +76,8 @@ It centralises states and behaviours on their behalf.
 -type count() :: basic_utils:count().
 
 -type ustring() :: text_utils:ustring().
+-type trace_format() :: text_utils:trace_format().
+-type trace_values() :: text_utils:trace_values().
 
 -type registration_name() :: naming_utils:registration_name().
 -type registration_scope() :: naming_utils:registration_scope().
@@ -81,9 +85,14 @@ It centralises states and behaviours on their behalf.
 
 -type user_name() :: system_utils:user_name().
 
+-type trace_severity() :: trace_utils:trace_severity().
+-type trace_message() :: trace_utils: trace_message().
+
 -type concurrent_result( R ) :: wooper:concurrent_result( R ).
 
 -type emitter_init() :: class_TraceEmitter:emitter_init().
+
+
 
 -type user_action_spec() :: us_action:user_action_spec().
 -type action_table() :: us_action:action_table().
@@ -337,9 +346,9 @@ addConfiguredAutomatedActions( State, ConfigTable ) ->
 
         { value, UserActSpecs } when is_list( UserActSpecs ) ->
 
-            cond_utils:if_defined( us_common_debug_actions, ?debug_fmt(
+            send_action_trace_fmt( debug,
                 "Integrating the following user action specs: ~p.",
-                [ UserActSpecs ] ) ),
+                [ UserActSpecs ], State ),
 
             AddState = addAutomatedActionSpecs( State, UserActSpecs ),
 
@@ -347,15 +356,16 @@ addConfiguredAutomatedActions( State, ConfigTable ) ->
 
 
         { value, InvalidUserActSpecs }  ->
-            ?error_fmt( "Invalid (non-list) user-level action specifications: "
-                        "~p.", [ InvalidUserActSpecs ] ),
+            send_action_trace_fmt( error,
+                "Invalid (non-list) user-level action specifications: ~p.",
+                [ InvalidUserActSpecs ], State ),
 
             throw( { invalid_user_action_specs, non_list,
                      InvalidUserActSpecs } );
 
 
         key_not_found ->
-            ?debug( "No automated actions defined." ),
+            send_action_trace( debug, "No automated actions defined.", State ),
             wooper:const_return()
 
     end.
@@ -403,8 +413,9 @@ getAutomatedActions( State ) ->
     ActTable = ?getAttr(action_table),
     ConcurrentRes = wooper:forge_concurrent_result( ActTable ),
 
-    cond_utils:if_defined( us_common_debug_actions, ?debug_fmt( "Returning ~ts",
-        [ us_action:action_table_to_string( ActTable ) ] ) ),
+    cond_utils:if_defined( us_common_debug_actions, send_action_trace_fmt(
+        debug, "Returning ~ts",
+        [ us_action:action_table_to_string( ActTable ) ], State ) ),
 
     wooper:const_return_result( ConcurrentRes ).
 
@@ -456,6 +467,7 @@ notifyAutomatedActions( State, InstToNotifyPid ) ->
     wooper:const_return().
 
 
+
 -doc """
 Requests this server to perform the automated action corresponding to the
 specified tokens.
@@ -464,9 +476,9 @@ specified tokens.
                                     request_return( action_outcome() ).
 performActionFromTokens( State, Tokens ) ->
 
-    cond_utils:if_defined( us_common_debug_actions, ?debug_fmt(
+    send_action_trace_fmt( debug,
         "Performing action from the following ~B tokens: ~p.",
-        [ length( Tokens ), Tokens ] ) ),
+        [ length( Tokens ), Tokens ], State ),
 
     ActId = us_action:get_action_id( Tokens ),
 
@@ -478,12 +490,12 @@ performActionFromTokens( State, Tokens ) ->
             execute_action( ActionInfo, Tokens, State );
 
         key_not_found ->
-            ?error_fmt( "No action ~ts found; the ones known of this server "
-                "are: ~ts",
+            send_action_trace_fmt( error,
+                "No action ~ts found; the ones known of this server are: ~ts",
                 [ us_action:action_id_to_string( ActId ),
                   text_utils:strings_to_string(
                     [ us_action:action_id_to_string( AId )
-                        || AId <- table:keys( ActTable ) ] ) ] ),
+                        || AId <- table:keys( ActTable ) ] ) ], State ),
             { { error, action_not_found }, State }
 
     end,
@@ -507,8 +519,9 @@ execute_action( ActInfo=#action_info{ server_lookup_info=undefined,
                                       mapping={ ModName, ReqName } },
                 Tokens, State ) ->
 
-    ?debug_fmt( "Executing locally ~ts, based on ~w.",
-                [ us_action:action_info_to_string( ActInfo ), Tokens ] ),
+    cond_utils:if_defined( us_common_debug_actions, send_action_trace_fmt(
+        debug, "Executing locally ~ts, based on ~w.",
+        [ us_action:action_info_to_string( ActInfo ), Tokens ], State ) ),
 
     try
 
@@ -516,18 +529,29 @@ execute_action( ActInfo=#action_info{ server_lookup_info=undefined,
 
         ActualArgs = us_action:coerce_argument_tokens( ArgsTokens, ArgSpecs ),
 
-        ?debug_fmt( "Executing now ~ts:~ts/~B, with arguments ~p.",
-                    [ ModName, ReqName, length( ActualArgs ), ActualArgs ] ),
+        cond_utils:if_defined( us_common_debug_actions, send_action_trace_fmt(
+            debug, "Executing now ~ts:~ts/~B, with arguments ~p.",
+            [ ModName, ReqName, length( ActualArgs ), ActualArgs ], State ) ),
 
         { ExecState, Res } = executeRequestAs( ModName, State, ReqName,
                                                ActualArgs ),
         us_action:check_result( Res, ResSpec ),
+
+        send_action_trace_fmt( debug,
+            "Executed ~ts:~ts/~B with arguments ~p, returned:~n ~p",
+            [ ModName, ReqName, length( ActualArgs ), ActualArgs, Res ],
+            ExecState ),
 
         { Res, ExecState }
 
     catch
 
         throw:Error ->
+            ArgTokens = tl( Tokens ),
+            send_action_trace_fmt( error, "Execution of ~ts:~ts/~B "
+                "with argument tokens ~p failed: ~p",
+                [ ModName, ReqName, length( ArgTokens ), ArgTokens, Error ],
+                State ),
             { { error, Error }, State }
 
     end;
@@ -540,9 +564,9 @@ execute_action( ActInfo=#action_info{ server_lookup_info=ImplSrvLookupInfo },
             ImplSrvLookupInfo ) of
 
         undefined ->
-            ?error_fmt( "Failed to resolve the ~ts for ~ts.",
+            send_action_trace_fmt( error, "Failed to resolve the ~ts for ~ts.",
                 [ naming_utils:lookup_info_to_string( ImplSrvLookupInfo ),
-                  us_action:action_info_to_string( ActInfo ) ] ),
+                  us_action:action_info_to_string( ActInfo ) ], State ),
 
             %throw( { impl_server_lookup_info_lookup_failed, ImplSrvLookupInfo,
             %         ActInfo } );
@@ -551,17 +575,20 @@ execute_action( ActInfo=#action_info{ server_lookup_info=ImplSrvLookupInfo },
         SrvPid ->
 
             cond_utils:if_defined( us_common_debug_actions,
-                ?debug_fmt( "Forwarding to ~w (~ts) ~ts.", [ SrvPid,
-                    naming_utils:lookup_info_to_string( ImplSrvLookupInfo ),
-                    us_action:action_info_to_string( ActInfo ) ] ) ),
+                send_action_trace_fmt( debug, "Forwarding to ~w (~ts) ~ts.",
+                    [ SrvPid,
+                      naming_utils:lookup_info_to_string( ImplSrvLookupInfo ),
+                      us_action:action_info_to_string( ActInfo ) ], State ) ),
 
             SrvPid ! { performActionFromTokens, [ Tokens ] },
             receive
 
                 { wooper_result, _ActOutcome={ action_outcome, Res } } ->
+
                     cond_utils:if_defined( us_common_debug_actions,
-                       ?debug_fmt( "Received and forwarding action result ~w.",
-                                   [ Res ] ) ),
+                       send_action_trace_fmt( debug,
+                           "Received and forwarding action result ~w.", [ Res ],
+                           State ) ),
 
                     { Res, State }
 
@@ -751,6 +778,23 @@ unregister_name( State ) ->
 			State
 
 	end.
+
+
+
+-doc "Sends a trace categorised as belonging to the automated actions.".
+-spec send_action_trace( trace_severity(), trace_message(), wooper:state() ) ->
+                                                    void().
+send_action_trace( TraceSeverity, TraceMsg, State ) ->
+    class_TraceEmitter:send_named_emitter( TraceSeverity, State, TraceMsg,
+                                           _EmitterName="Automated actions" ).
+
+
+-doc "Sends a trace categorised as belonging to the automated actions.".
+-spec send_action_trace_fmt( trace_severity(), trace_format(), trace_values(),
+                             wooper:state() ) -> void().
+send_action_trace_fmt( TraceSeverity, TraceFormat, TraceValues, State ) ->
+	TraceMsg = text_utils:format( TraceFormat, TraceValues ),
+    send_action_trace( TraceSeverity, TraceMsg, State ).
 
 
 

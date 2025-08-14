@@ -161,9 +161,17 @@ The internal specification of an action argument.
 For example: `{dynamic, lengths, {list, {float,[]}}, <<"The rod lengths, in
 meters">>}`.
 """.
--type arg_spec() :: { 'static', static_value(), option( description() ) }
-                  | { 'dynamic', arg_name(), contextual_type(),
-                      option( description() ) }.
+-type arg_spec() :: static_arg_spec() | dynamic_arg_spec().
+
+
+-doc "The internal specification of a static action argument.".
+-type static_arg_spec() ::
+    { 'static', static_value(), option( description() ) }.
+
+
+-doc "The internal specification of a dynamic action argument.".
+-type dynamic_arg_spec() ::
+    { 'dynamic', arg_name(), contextual_type(), option( description() ) }.
 
 
 -doc """
@@ -256,7 +264,7 @@ module.
 Mapping to a mere module rather than to a class (even if, as relying on a state
 is generally essential, targeting a request rather than a mere function) to let
 the possibility of gathering any set of action-related methods in a separate,
-dedicated (server) module.
+dedicated (server) module (if ever this was relevant/useful).
 """.
 -type action_mapping() :: { module_name(), request_name() }.
 
@@ -335,7 +343,9 @@ synchronisation.
                action_name/0, user_action_mapping/0, action_mapping/0,
 
                arg_kind/0, static_value/0,
-               user_arg_spec/0, arg_spec/0, arg_name/0, argument/0,
+               user_arg_spec/0,
+               arg_spec/0, static_arg_spec/0, dynamic_arg_spec/0,
+               arg_name/0, argument/0,
                user_result_spec/0, result_spec/0, action_raw_result/0,
                action_result/0, action_result/1,
                failure_report/0,
@@ -349,7 +359,7 @@ synchronisation.
           get_action_id/1, coerce_argument_tokens/2, check_result/2,
           action_id_to_string/1,
           action_table_to_string/1, action_info_to_string/1,
-          help/1 ]).
+          action_info_to_help_string/1, action_info_to_help_string/2 ]).
 
 
 % Local types:
@@ -432,7 +442,8 @@ register_action_specs( _UserActSpecs=[ Spec={ ActName, ArgSpecs,
                             mapping=ActionMapping,
                             description=MaybeBinDesc },
 
-   cond_utils:if_defined( us_common_debug_actions, trace_bridge:debug_fmt(
+    % Not in the best trace categorisation:
+    cond_utils:if_defined( us_common_debug_actions, trace_bridge:debug_fmt(
         "Registering ~ts.", [ action_info_to_string( ActInfo ) ] ) ),
 
     NewActTable = table:add_entry( ActId, ActInfo, ActTable ),
@@ -516,6 +527,12 @@ canonicalise_action_mapping( AM={ ModName, ReqName }, Arity, SrvClassname ) ->
     % For the State:
     FunArity = Arity+1,
 
+
+    % Both tests are needed, as the method can be directly implemented by the
+    % server class (the corresponding function may not be exported, thanks to
+    % inheritance) or by the delegating module
+
+
     meta_utils:is_function_exported( ModName, FunName, FunArity ) orelse
         begin
 
@@ -570,16 +587,16 @@ specification of the specified action.
 """.
 % term() expected to be user_action_spec():
 -spec canonicalise_arg_spec( term(), action_name() ) -> arg_spec().
-
 % Full static arg spec:
-canonicalise_arg_spec( _ArgSpec={ static, Arg, MaybeUserDesc }, _ActName ) ->
+canonicalise_arg_spec( _ArgSpec={ static, ArgValue, MaybeUserDesc },
+                       _ActName ) ->
     MaybeBinDesc = text_utils:ensure_maybe_binary( MaybeUserDesc ),
-    { static, Arg, MaybeBinDesc };
+    { static, ArgValue, MaybeBinDesc };
 
 
 % No description static arg spec:
-canonicalise_arg_spec( _ArgSpec={ static, Arg }, _ActName ) ->
-    { static, Arg, _MaybeBinDesc=undefined };
+canonicalise_arg_spec( _ArgSpec={ static, ArgValue }, _ActName ) ->
+    { static, ArgValue, _MaybeBinDesc=undefined };
 
 % Full dynamic arg spec:
 canonicalise_arg_spec( ArgSpec={ dynamic, ArgName, ArgTypeStr, MaybeUserDesc },
@@ -786,7 +803,7 @@ action_info_to_string( #action_info{ server_lookup_info=SrvLookupInfo,
                                      result_spec=ResultSpec,
                                      mapping=Mapping,
                                      description=undefined } ) ->
-    text_utils:format( "action ~ts/~B, ~ts, returning ~ts, ~ts, "
+    text_utils:format( "action ~ts/~B, ~ts and returning ~ts, ~ts, "
         "mapped to ~ts",
         [ ActName, length( ArgSpecs ), args_to_string( ArgSpecs ),
           result_spec_to_string( ResultSpec ),
@@ -799,8 +816,8 @@ action_info_to_string( #action_info{ server_lookup_info=SrvLookupInfo,
                                      result_spec=ResultSpec,
                                      mapping=Mapping,
                                      description=BinDescStr } ) ->
-    text_utils:format( "action ~ts/~B, described as '~ts', ~ts, returning ~ts, "
-        "~ts, mapped to ~ts",
+    text_utils:format( "action ~ts/~B, described as '~ts', ~ts "
+        "and returning ~ts, ~ts, mapped to ~ts",
         [ ActName, length( ArgSpecs ), BinDescStr, args_to_string( ArgSpecs ),
           result_spec_to_string( ResultSpec ), get_impl_string( SrvLookupInfo ),
           mapping_to_string( Mapping, length( ArgSpecs ) ) ] ).
@@ -859,30 +876,40 @@ args_to_string( ArgSpecs ) ->
 
 -doc "Returns a textual description of the specified argument specification.".
 -spec arg_spec_to_string( arg_spec() ) -> ustring().
-arg_spec_to_string( { ArgName, ArgType, _MaybeDesc=undefined } ) ->
-    text_utils:format( "~ts, of type ~w", [ ArgName, ArgType ] );
+arg_spec_to_string( { static, ArgValue, _MaybeDesc=undefined } ) ->
+    text_utils:format( "static argument of value '~p'", [ ArgValue ] );
 
-arg_spec_to_string( { ArgName, ArgType, BinDescStr } ) ->
-    text_utils:format( "~ts, of type ~w and described as '~ts'",
-                       [ ArgName, ArgType, BinDescStr ] ).
+arg_spec_to_string( { static, ArgValue, BinDesc } ) ->
+    text_utils:format( "static argument of value '~p', described as '~ts'",
+                       [ ArgValue, BinDesc ] );
+
+arg_spec_to_string( { dynamic, ArgName, ArgCtxtType, _MaybeDesc=undefined } ) ->
+    text_utils:format( "dynamic argument named '~ts', of contextual type ~ts",
+                       [ ArgName, type_utils:type_to_string( ArgCtxtType ) ] );
+
+arg_spec_to_string( { dynamic, ArgName, ArgCtxtType, BinDesc } ) ->
+    text_utils:format( "dynamic argument named '~ts', of contextual type ~ts, "
+        "described as '~ts'",
+        [ ArgName, type_utils:type_to_string( ArgCtxtType ), BinDesc ] ).
+
 
 
 -doc "Returns a textual description of the specified result specification.".
 -spec result_spec_to_string( result_spec() ) -> ustring().
 result_spec_to_string(
         _ResSpec={ action_outcome, _MaybeDescBinStr=undefined } ) ->
-    "action outcome";
+    "an action outcome";
 
 result_spec_to_string( _ResSpec={ ResCtxtType, _MaybeDescBinStr=undefined } ) ->
-    text_utils:format( "type ~ts",
+    text_utils:format( "a value of type ~ts",
                        [ type_utils:type_to_string( ResCtxtType ) ] );
 
 result_spec_to_string( _ResSpec={ action_outcome, DescBinStr } ) ->
-    text_utils:format( "action outcome, described as '~ts'",
+    text_utils:format( "an action outcome, described as '~ts'",
                        [ DescBinStr ] );
 
 result_spec_to_string( _ResSpec={ ResCtxtType, DescBinStr } ) ->
-    text_utils:format( "type ~ts, described as '~ts'",
+    text_utils:format( "a value of type ~ts, described as '~ts'",
         [ type_utils:type_to_string( ResCtxtType ), DescBinStr ] ).
 
 
@@ -900,23 +927,72 @@ mapping_to_string( ReqName, Arity ) ->
 
 
 -doc "Returns an overall help text, based on the specified actions.".
--spec help( action_table() ) -> ustring().
-help( ActTable ) ->
-    action_table_to_string( ActTable ).
+-spec action_info_to_help_string( action_table(), ustring() ) -> ustring().
+action_info_to_help_string( ActTable, AppName ) ->
+
+   case table:values( ActTable ) of
+
+        [] ->
+            text_utils:format( "The ~ts application does not support "
+                               "any automated action.", [ AppName ] );
+
+        [ SingleActInfo ] ->
+            text_utils:format( "The ~ts application supports a single "
+                "automated action: ~ts",
+                [ AppName, action_info_to_help_string( SingleActInfo ) ] );
+
+        ActInfos ->
+            text_utils:format( "The ~ts application supports ~B automated "
+                "actions: ~ts", [ AppName, length( ActInfos ),
+                    text_utils:strings_to_string(
+                        [ action_info_to_help_string( AI )
+                              || AI <- ActInfos ] ) ] )
+
+    end.
 
 
-% actions:
-% alarm:
-%%  * ${start_alarm_opt}: starts the alarm (siren)
-%%  * ${stop_alarm_opt}: stops the alarm
-%%  * ${get_alarm_opt}: tells whether the alarm is currently activated (hence wit a roaring siren)
 
-%%  - regarding presence:
-%%  * ${declare_presence_opt}: declares that somebody is at home (hence for example deactivate alarm)
-%%  * ${declare_absence_opt}: declares that nobody is at home (hence for example activate alarm)
-%%  * ${get_presence_opt}: tells whether US-Main considers that somebody is at home
+-doc """
+Returns a textual usage help deriving from the specified action information.
+""".
+-spec action_info_to_help_string( action_info() ) -> ustring().
+action_info_to_help_string( #action_info{ action_name=ActName,
+                                          arg_specs=ArgSpecs,
+                                          result_spec=ResultSpec } ) ->
 
-%%  - regarding (presence-related) lighting:
-%%  * ${start_lighting_opt}: starts all registered presence lighting
-%%  * ${stop_lighting_opt}: stops all registered presence lighting
-%% """.
+    % Filter out static arguments:
+    DynamicArgSpec = [ DArgS
+        || DArgS={ dynamic, _ArgName, _ArgCtxtType, _BinDesc } <- ArgSpecs ],
+
+    DArgStr = case DynamicArgSpec of
+
+        [] ->
+            "no user-supplied argument";
+
+        [ SingleDArgSpec ] ->
+            text_utils:format( "a single user-supplied argument: ~ts",
+                               [ arg_spec_to_help_string( SingleDArgSpec ) ] );
+
+        DArgSpecs ->
+            text_utils:format( "~B user-supplied argument: ~ts",
+                [ length( DArgSpecs ), text_utils:strings_to_enumerated_string(
+                    [ arg_spec_to_help_string( S ) || S <- DArgSpecs ],
+                    _IndentationLevel=1 ) ] )
+
+    end,
+
+    text_utils:format( "action ~ts taking ~ts and returning ~ts",
+        [ ActName, DArgStr, result_spec_to_string( ResultSpec ) ] ).
+
+
+
+-doc "Returns a textual help for the specified dynamic argument specification.".
+-spec arg_spec_to_help_string( dynamic_arg_spec() ) -> ustring().
+arg_spec_to_help_string(
+        { dynamic, ArgName, CtxtType, _MaybeBinDesc=undefined } ) ->
+    text_utils:format( "argument '~ts' of type ~ts",
+                       [ ArgName, type_utils:type_to_string( CtxtType )] );
+
+arg_spec_to_help_string( { dynamic, ArgName, CtxtType, BinDesc } ) ->
+    text_utils:format( "~ts: argument '~ts' of type ~ts",
+        [ BinDesc, ArgName, type_utils:type_to_string( CtxtType ) ] ).

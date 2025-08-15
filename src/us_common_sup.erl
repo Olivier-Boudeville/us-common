@@ -95,6 +95,9 @@ init( Args=[] ) ->
 	SupSettings = otp_utils:get_supervisor_settings(
 		_RestartStrategy=one_for_one, ExecTarget ),
 
+    % With a significant child, cannot be left to the 'never' default :
+    SigSupSettings = SupSettings#{ auto_shutdown => any_significant },
+
 	% First child, a bridge in charge of the US configuration server:
 	CfgBridgeChildSpec = get_config_bridge_spec( ExecTarget ),
 
@@ -106,20 +109,28 @@ init( Args=[] ) ->
 	%trace_bridge:debug_fmt( "Supervisor settings: ~p~nChild spec: ~p",
 	%                        [ SupSettings, ChildSpecs ] ),
 
-	{ ok, { SupSettings, ChildSpecs } }.
+	{ ok, { SigSupSettings, ChildSpecs } }.
 
 
 
 -doc "Returns the bridge spec for the US-Common configuration server.".
 -spec get_config_bridge_spec( execution_target() ) -> child_spec().
-get_config_bridge_spec( ExecTarget ) ->
+get_config_bridge_spec( _ExecTarget ) ->
 
 	#{ id => us_common_config_bridge_id,
 
 	   start => { _Mod=us_common_config_bridge_sup, _Fun=start_link, _Args=[] },
 
-	   % Always restarted in production:
-	   restart => otp_utils:get_restart_setting( ExecTarget ),
+	   % Was always restarted in production, by being set to
+	   % otp_utils:get_restart_setting(ExecTarget), yet now that is a
+	   % significant child, so must be set to:
+       %
+	   restart => temporary,
+
+       % So that an orderly shutdown can be triggered by
+       % class_USCentralServer:stop/1:
+       %
+       significant => true,
 
 	   % This child process is of the 'supervisor' type, and, in
 	   % https://erlang.org/doc, the

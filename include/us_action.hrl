@@ -29,7 +29,7 @@
 -record( action_info, {
 
     % Any naming-related lookup information for the server actually implementing
-    % that action ('undefined' if directly implemented by this server):
+    % that action ('undefined' if directly implemented by this local server):
     %
     server_lookup_info = 'undefined'
         :: option( naming_utils:lookup_info() ),
@@ -43,7 +43,7 @@
     % Type and possibly description:
     result_spec :: us_action:result_spec(),
 
-    % Mapping to an actual request:
-    mapping :: us_action:action_mapping(),
+    % The actual request this action maps to:
+    request_name :: wooper:request_name(),
 
     description :: option( us_action:description() ) } ).

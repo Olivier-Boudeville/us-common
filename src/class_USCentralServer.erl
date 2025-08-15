@@ -97,12 +97,12 @@ comprises.
       "the directory where (non-VM) US-xxx logs shall be written, "
       "notably traces" },
 
-    { waited_operations, option( count() ),
-      "the number of any ongoing asynchronous operations that are currently "
-      "still taking place (typically notifications that are waited for); used "
-      "so that this instance remains a (never-blocking) server, to avoid the "
-      "deadlocks bound to happen with the other US servers if it sent "
-      "(blocking) requests to them" }
+    { remaining_servers, [ classname() ],
+      "the classname of the federated US servers that are still to trigger "
+      "(typically so that each notifies in-order its automated actions) "
+      "asynchronously, so that this instance remains a (never-blocking) "
+      "server, to avoid the deadlocks bound to happen with the other US "
+      "servers if it sent (blocking) requests to them" }
 
     % (action_table and all inherited for class_USServer)
 
@@ -236,7 +236,7 @@ construct( State, USAppShortName, ServerInit, AppRunContext ) ->
         { conf_directory, undefined },
         { data_directory, undefined },
         { log_directory, undefined },
-        { waited_operations, undefined } ] ),
+        { remaining_servers, [] } ] ),
 
     % Better disabled, as a mother class:
 	%?send_info_fmt( SetState, "Constructed: ~ts.", [ to_string( SetState ) ] ),
@@ -325,6 +325,9 @@ onWOOPERExitReceived( State, CrashedPid, ExitType ) ->
 Centralises all automated actions, supported directly by this server or by the
 other servers of this US application, as specified by their classnames.
 
+Their respective order in the help action listing will be the same as the one
+specified here.
+
 All US-level user-configured, general-purpose automated actions are to be
 managed by this server, so that the user code has to interact with only a single
 overall server/service.
@@ -333,18 +336,32 @@ overall server/service.
                               [ classname() ] ) -> oneway_return().
 manageAutomatedActions( State, ConfigTable, SrvClassnames ) ->
 
-    % (to be added some day: credential_server_pid, comm_gateway_pid)
+    wooper:check_equal( remaining_servers, [], State ),
 
-    SrvPids = [ SrvCn:get_server_pid() || SrvCn <- SrvClassnames ],
+    % In the action table, the final preferred action order is:
+    %  1. any (ordered) actions of each (ordered) server specified
+    %  2. any (ordered) user-specified actions, as listed in the configuration
+    %  3. 'help' (but filtered out in listing)
+    %  4. 'stop'
+    %
+    % So it is more convenient to build it backwards and only ultimately reverse
+    % it; we thus finish with the 'stop' and 'help' built-in actions:
 
+
+    % Our own, user-defined, actions (their order is correct):
+    IntegState = executeOneway( State, addConfiguredAutomatedActions,
+                                [ ConfigTable ] ),
+
+    % Taking care now of the actions offered by the other servers (if any).
+    %
     % The aggregation on this central server of the actions of all other servers
     % of this US application should not be done based on blocking primitives
     % such as (concurrent) requests like in:
     %
-    %% Interleaving:
-    %% ConcurrentWaitInfo = wooper:send_concurrent_request(
-    %%    _TargetInstancePids=SrvPids, _ReqName=getAutomatedActions,
-    %%    _RequestArgs=[], _TimeOutMs=1000 ),
+    % Interleaving:
+    % ConcurrentWaitInfo = wooper:send_concurrent_request(
+    %    _TargetInstancePids=SrvPids, _ReqName=getAutomatedActions,
+    %    _RequestArgs=[], _TimeOutMs=1000 ),
     %
     % Indeed this would be a certain cause of deadlocks, as these servers
     % require information obtained from the current server, whereas it is
@@ -352,65 +369,87 @@ manageAutomatedActions( State, ConfigTable, SrvClassnames ) ->
 
     % So instead, as the role of this instance is essentially a server one, it
     % should refrain from sending requests (thus as a client) to other servers,
-    % and act upon them asynchronously instead, i.e. based on oneways:
-
-    % Hence not a request; could be named getAutomatedActionsAsync:
-    OnewayMsg = { notifyAutomatedActions, self() },
-
-    % Will result in each of these servers to answer with a
-    % onAutomatedActionsNotified/3 oneway call:
+    % and act upon them asynchronously instead, i.e. based on oneways.
     %
-    [ SrvPid ! OnewayMsg || SrvPid <- SrvPids ],
-
-    SrvCount = length( SrvPids ),
-
-    % Also a check:
-    { WaitState, undefined } =
-        swapInAttribute( State, waited_operations, SrvCount ),
-
-    % Integrate any user-defined actions in the meantime:
-    IntegState = executeOneway( WaitState, addConfiguredAutomatedActions,
-                                [ ConfigTable ] ),
-
-    ResTextType = "{'success', string()}",
-
-    UserResSpec = { ResTextType, "Help contents" },
-
-    HelpDesc = text_utils:format( "help about the ~ts supported actions",
-        [ get_us_app_name( ?getAttr(app_short_name) ) ] ),
-
-    HelpUserActSpec = { _ActName=help, _UserArgSpec=[], UserResSpec, HelpDesc },
-
-    HelpState = executeOneway( IntegState, addAutomatedActionSpec,
-                               HelpUserActSpec ),
-
-    % Not applicable anymore, now that asynchronous:
-
-    % End of interleaving:
-    %% SrvActions = case wooper:wait_for_concurrent_request_results(
-    %%         ConcurrentWaitInfo ) of
-
-    %%     { Results, _TimedOutInstances=[] } ->
-    %%         Results;
-
-    %%     { _MaybeResults, TimedOutInstances } ->
-    %%         throw( { fetch_action_time_out_from, TimedOutInstances } )
-
-    %% end,
-
-    %% ActState = executeOneway( HelpState, addAutomatedActions,
-    %%     [ SrvActions ] ),
-
-    ActState = HelpState,
+    % However, if sending asynchronously a (notifyAutomatedActions/1) oneway to
+    % all servers, their answer will arrive in unspecified order, wheres we want
+    % the help command to list them in a stable and meaningful order. So now we
+    % serialise these exchanges per oneway (waiting first for its answer).
 
     cond_utils:if_defined( us_common_debug_actions,
         class_USServer:send_action_trace_fmt( debug,
-        "Whereas waiting for the notifications of ~B servers, "
-        "starting with an ~ts",
-        [ SrvCount, us_action:action_table_to_string(
-            getAttribute( ActState, action_table ) ) ], ActState ) ),
+        "Before requesting in turn ~B servers (~w), starting with an ~ts",
+        [ length( SrvClassnames ), SrvClassnames,
+          us_action:action_table_to_string(
+            getAttribute( IntegState, action_table ) ) ], IntegState ) ),
 
-    wooper:return_state( ActState ).
+    FinalState = case SrvClassnames of
+
+        [] ->
+            finalise_action_setup( IntegState );
+
+        % We serialise the asynchronous (oneway) calls, for order:
+        SrvClassnames ->
+            trigger_server_for_action( SrvClassnames, IntegState )
+
+    end,
+
+    wooper:return_state( FinalState ).
+
+
+% (helper)
+-spec finalise_action_setup( wooper:state() ) -> wooper:state().
+finalise_action_setup( State ) ->
+
+    % Restore final order:
+    OrderedActTable = lists:reverse( ?getAttr(action_table) ),
+
+    % As added at tail:
+
+    NameStr = get_us_app_name( ?getAttr(app_short_name) ),
+    StringResType = "{'success', string()}",
+
+    %HelpDesc = text_utils:format( "displays help about the actions supported "
+    %                              "by this instance of ~ts", [ NameStr ] ),
+
+    % More user-friendly:
+    HelpDesc = "displays this help",
+
+    HelpUserActSpec =
+        { _ActName=help, _UserArgSpec=[], StringResType, HelpDesc },
+
+
+    StopDesc = text_utils:format( "stops this ~ts instance", [ NameStr ] ),
+
+    StopUserActSpec = { stop, [], StringResType, StopDesc },
+
+    ActSpecs = [ HelpUserActSpec, StopUserActSpec ],
+
+    FinalActTable = us_action:register_action_specs( ActSpecs, OrderedActTable,
+        wooper:get_classname( State ) ),
+
+    class_USServer:send_action_trace_fmt( info,
+        "Now that all automated actions are known, ~ts",
+        [ us_action:action_table_to_string( FinalActTable ) ], State ),
+
+    setAttribute( State, action_table, FinalActTable ).
+
+
+
+% (helper)
+-spec trigger_server_for_action( [ classname() ], wooper:state() ) ->
+                                            wooper:state().
+% Not expected to be empty:
+trigger_server_for_action( [ NextSrvClassname | OtherSrvClassnames ], State ) ->
+
+    SrvPid = NextSrvClassname:get_server_pid(),
+
+    % Hence not a request (see manageAutomatedActions/3); could be named
+    % getAutomatedActionsAsync:
+    %
+    SrvPid ! { notifyAutomatedActions, self() },
+
+    setAttribute( State, remaining_servers, OtherSrvClassnames ).
 
 
 
@@ -420,52 +459,39 @@ Records the actions sent back by the specified US server.
 Typically triggered by a prior `notifyAutomatedActions/2` oneway call.
 """.
 -spec onAutomatedActionsNotified( wooper:state(), action_table(),
-                                  server_pid() ) -> oneway_return().
-onAutomatedActionsNotified( State, AddActTable, ServerPid ) ->
+                                  classname() ) -> oneway_return().
+onAutomatedActionsNotified( State, AddActTable, SrvClassname ) ->
 
-    WaitedCount = ?getAttr(waited_operations),
+    RemainingSrvs = ?getAttr(remaining_servers),
 
     cond_utils:if_defined( us_common_debug_actions,
         class_USServer:send_action_trace_fmt( debug,
-            "Notified from US server ~w that ~ts "
-            "(whereas was waiting for ~B server(s)).",
-            [ ServerPid, us_action:action_table_to_string( AddActTable ),
-              WaitedCount ], State ) ),
-
-    NewMaybeWaitedCount = case WaitedCount of
-
-        undefined ->
-            throw( { unsollicited_action_table, AddActTable } );
-
-        1 ->
-            cond_utils:if_defined( us_common_debug_actions,
-                class_USServer:send_action_trace( debug,
-                    "All automated action tables received from US servers.",
-                    State ) ),
-            % No extra operation to be done for the moment.
-            undefined;
-
-        _ ->
-           WaitedCount-1
-
-    end,
+            "Notified from US ~ts server of its ~ts "
+            "(whereas was waiting for servers ~w).",
+            [ SrvClassname, us_action:action_table_to_string( AddActTable ),
+              RemainingSrvs ], State ) ),
 
     MergedActTable = us_action:merge_action_table( AddActTable,
                                                    ?getAttr(action_table) ),
 
-    WaitedCount =:= 1 andalso class_USServer:send_action_trace_fmt( debug,
-        "Now that all automated actions are known: relying on a total of ~ts",
-        [ us_action:action_table_to_string( MergedActTable ) ], State ),
+    MergedState = setAttribute( State, action_table, MergedActTable ),
 
-    ActState = setAttributes( State, [
-        { action_table, MergedActTable },
-        { waited_operations, NewMaybeWaitedCount } ] ),
+    ResState = case RemainingSrvs of
 
-    wooper:return_state( ActState ).
+        % It was the last waited:
+        [] ->
+            finalise_action_setup( MergedState );
+
+        AtLeastOneSrvs ->
+            trigger_server_for_action( AtLeastOneSrvs, MergedState )
+
+    end,
+
+    wooper:return_state( ResState ).
 
 
 
--doc "Built-in help action request.".
+-doc "Built-in 'help' action.".
 -spec help( wooper:state() ) ->
                     const_request_return( action_result( ustring() ) ).
 help( State ) ->
@@ -474,6 +500,23 @@ help( State ) ->
         get_us_app_name( ?getAttr(app_short_name) ) ),
 
     wooper:const_return_result( { success, HelpStr } ).
+
+
+
+-doc "Built-in 'stop' action.".
+-spec stop( wooper:state() ) -> request_return( action_result( ustring() ) ).
+stop( State ) ->
+
+    ?notice( "Requested by action to stop." ),
+
+    % Asynchronous termination of the significant child:
+
+    { CfgSrvPid, CfgState } = get_us_config_pid( State ),
+
+    % Hopefully us_common_config_bridge_sup is to terminate in turn:
+    CfgSrvPid ! delete,
+
+    wooper:return_state_result( CfgState, { success, "Stopping immediately" } ).
 
 
 
@@ -1013,6 +1056,35 @@ manageLogDirectory( State, ConfigTable, LogDirKey, DefaultLogDir ) ->
 	SetState = setAttribute( State, log_directory, BinLogDir ),
 
     wooper:return_state( SetState ).
+
+
+
+-doc """
+Returns the PID of the (current) US configuration server, updating the state if
+needed to speed up any next lookup.
+""".
+-spec get_us_config_pid( wooper:state() ) ->
+                                        { config_server_pid(), wooper:state() }.
+get_us_config_pid( State ) ->
+
+    case ?getAttr(us_config_lookup_info) of
+
+        undefined ->
+            { CfgSrvRegName, CfgSrvLookupScope, CfgSrvPid } =
+                class_USConfigServer:get_us_config_registration_info(
+                    _CreateIfNeeded=false, State ),
+
+            CfgState = setAttribute( State, us_config_lookup_info,
+                _LI={ CfgSrvRegName, CfgSrvLookupScope } ),
+
+            { CfgSrvPid, CfgState };
+
+
+        CfgLookupInfo ->
+            CfgSrvPid = naming_utils:get_registered_pid_for( CfgLookupInfo ),
+            { CfgSrvPid, State }
+
+    end.
 
 
 

@@ -88,7 +88,7 @@ It centralises states and behaviours on their behalf.
 -type trace_severity() :: trace_utils:trace_severity().
 -type trace_message() :: trace_utils: trace_message().
 
--type concurrent_result( R ) :: wooper:concurrent_result( R ).
+%-type concurrent_result( R ) :: wooper:concurrent_result( R ).
 
 -type emitter_init() :: class_TraceEmitter:emitter_init().
 
@@ -288,7 +288,7 @@ construct( State, ServerInit, MaybeRegistrationName, MaybeRegistrationScope,
 
 		{ username, text_utils:maybe_string_to_binary( MaybeUserName ) },
 
-        { action_table, table:new() } ] ),
+        { action_table, list_table:new() } ] ),
 
 	%trace_bridge:debug_fmt( "Registering server as '~ts' for scope ~ts.",
 	%    [ MaybeRegistrationName, MaybeRegistrationScope ] ),
@@ -373,11 +373,11 @@ addConfiguredAutomatedActions( State, ConfigTable ) ->
 
 
 -doc """
-Adds the specified user-level action to the internal action table of this
-server.
+Adds (in first position and in-order) the specified user-level action to the
+internal action table of this server.
 """.
 -spec addAutomatedActionSpec( wooper:state(), user_action_spec() ) ->
-                                                oneway_return().
+                                                    oneway_return().
 addAutomatedActionSpec( State, UserActSpec ) ->
 
     AddState = wooper:executeOneway( State, addAutomatedActionSpecs,
@@ -388,8 +388,8 @@ addAutomatedActionSpec( State, UserActSpec ) ->
 
 
 -doc """
-Adds the specified user-level actions to the internal action table of this
-server.
+Adds (in first position) the specified user-level actions to the internal action
+table of this server.
 """.
 -spec addAutomatedActionSpecs( wooper:state(), [ user_action_spec() ] ) ->
                                                     oneway_return().
@@ -398,26 +398,28 @@ addAutomatedActionSpecs( State, UserActSpecs ) ->
     RegActTable = us_action:register_action_specs( UserActSpecs,
         ?getAttr(action_table), wooper:get_classname( State ) ),
 
+    ?error_fmt( "from ~w to ~w.", [ ?getAttr(action_table), RegActTable ] ),
     RegState = setAttribute( State, action_table, RegActTable ),
 
     wooper:return_state( RegState ).
 
 
 
--doc """
-A concurrent request to return the automated actions known of this server.
-""".
--spec getAutomatedActions( wooper:state() ) ->
-                const_request_return( concurrent_result( action_table() ) ).
-getAutomatedActions( State ) ->
-    ActTable = ?getAttr(action_table),
-    ConcurrentRes = wooper:forge_concurrent_result( ActTable ),
-
-    cond_utils:if_defined( us_common_debug_actions, send_action_trace_fmt(
-        debug, "Returning ~ts",
-        [ us_action:action_table_to_string( ActTable ) ], State ) ),
-
-    wooper:const_return_result( ConcurrentRes ).
+% Not of use anymore:
+%-doc """
+%A concurrent request to return the automated actions known of this server.
+%""".
+% -spec getAutomatedActions( wooper:state() ) ->
+%                 const_request_return( concurrent_result( action_table() ) ).
+% getAutomatedActions( State ) ->
+%     ActTable = ?getAttr(action_table),
+%     ConcurrentRes = wooper:forge_concurrent_result( ActTable ),
+%
+%     cond_utils:if_defined( us_common_debug_actions, send_action_trace_fmt(
+%         debug, "Returning ~ts",
+%         [ us_action:action_table_to_string( ActTable ) ], State ) ),
+%
+%     wooper:const_return_result( ConcurrentRes ).
 
 
 
@@ -442,6 +444,8 @@ the one of the caller) of the automated actions that it supports.
 
 This asynchronous form has for purpose to avoid the deadlocks that
 `getAutomatedActions/1` would induce.
+
+Typically called based on `class_USCentralServer:manageAutomatedActions/3`.
 """.
 -spec notifyAutomatedActions( wooper:state(), instance_pid() ) ->
                                                     const_oneway_return().
@@ -452,17 +456,26 @@ notifyAutomatedActions( State, InstToNotifyPid ) ->
     OurLookupInfo =:= undefined andalso throw( no_lookup_info ),
 
     % The local actions shall here bear a relevant, absolute lookup info:
-    ToSendActTable = table:map_on_values(
+    ToSendActTable = list_table:map_on_values(
         fun( AI=#action_info{ server_lookup_info=undefined } ) ->
             AI#action_info{ server_lookup_info=OurLookupInfo };
 
            ( AI ) ->
             AI
         end,
-        ?getAttr(action_table) ),
+        % For a given server, we want the actions to be listed by action name:
+        lists:sort( ?getAttr(action_table) ) ),
 
+    cond_utils:if_defined( us_common_debug_actions,
+        send_action_trace_fmt( debug, "Sending to ~w ~ts",
+            [ InstToNotifyPid,
+              us_action:action_table_to_string( ToSendActTable ) ],
+        State ) ),
+
+    % Classname added to be able to sort first by server:
     InstToNotifyPid !
-        { onAutomatedActionsNotified, [ ToSendActTable, self() ] },
+        { onAutomatedActionsNotified,
+            [ ToSendActTable, wooper:get_classname( State ) ] },
 
     wooper:const_return().
 
@@ -484,18 +497,19 @@ performActionFromTokens( State, Tokens ) ->
 
     ActTable = ?getAttr(action_table),
 
-    { Res, ActState } = case table:lookup_entry( _K=ActId, ActTable ) of
+    { Res, ActState } = case list_table:lookup_entry( _K=ActId, ActTable ) of
 
         { value, ActionInfo } ->
             execute_action( ActionInfo, Tokens, State );
 
         key_not_found ->
-            send_action_trace_fmt( error,
+            % Only a *user* error:
+            send_action_trace_fmt( notice,
                 "No action ~ts found; the ones known of this server are: ~ts",
                 [ us_action:action_id_to_string( ActId ),
                   text_utils:strings_to_string(
                     [ us_action:action_id_to_string( AId )
-                        || AId <- table:keys( ActTable ) ] ) ], State ),
+                        || AId <- list_table:keys( ActTable ) ] ) ], State ),
             { { error, action_not_found }, State }
 
     end,
@@ -516,11 +530,11 @@ performActionFromTokens( State, Tokens ) ->
 execute_action( ActInfo=#action_info{ server_lookup_info=undefined,
                                       arg_specs=ArgSpecs,
                                       result_spec=ResSpec,
-                                      mapping={ ModName, ReqName } },
+                                      request_name=ReqName },
                 Tokens, State ) ->
 
     cond_utils:if_defined( us_common_debug_actions, send_action_trace_fmt(
-        debug, "Executing locally ~ts, based on ~w.",
+        debug, "Executing locally ~ts, based on tokens ~p.",
         [ us_action:action_info_to_string( ActInfo ), Tokens ], State ) ),
 
     try
@@ -530,16 +544,16 @@ execute_action( ActInfo=#action_info{ server_lookup_info=undefined,
         ActualArgs = us_action:coerce_argument_tokens( ArgsTokens, ArgSpecs ),
 
         cond_utils:if_defined( us_common_debug_actions, send_action_trace_fmt(
-            debug, "Executing now ~ts:~ts/~B, with arguments ~p.",
-            [ ModName, ReqName, length( ActualArgs ), ActualArgs ], State ) ),
+            debug, "Executing now request ~ts/~B, with non-state arguments ~p.",
+            [ ReqName, length( ActualArgs )+1, ActualArgs ], State ) ),
 
-        { ExecState, Res } = executeRequestAs( ModName, State, ReqName,
-                                               ActualArgs ),
+        % Res possibly of the form {success,Term}:
+        { ExecState, Res } = executeRequest( State, ReqName, ActualArgs ),
         us_action:check_result( Res, ResSpec ),
 
-        send_action_trace_fmt( debug,
-            "Executed ~ts:~ts/~B with arguments ~p, returned:~n ~p",
-            [ ModName, ReqName, length( ActualArgs ), ActualArgs, Res ],
+        send_action_trace_fmt( debug, "Executed request ~ts/~B with "
+            "non-state arguments ~p, returned:~n ~p",
+            [ ReqName, length( ActualArgs )+1, ActualArgs, Res ],
             ExecState ),
 
         { Res, ExecState }
@@ -548,9 +562,9 @@ execute_action( ActInfo=#action_info{ server_lookup_info=undefined,
 
         throw:Error ->
             ArgTokens = tl( Tokens ),
-            send_action_trace_fmt( error, "Execution of ~ts:~ts/~B "
-                "with argument tokens ~p failed: ~p",
-                [ ModName, ReqName, length( ArgTokens ), ArgTokens, Error ],
+            send_action_trace_fmt( error, "Execution of the ~ts/~B request"
+                "with non-state argument tokens ~p failed: ~p",
+                [ ReqName, length( ArgTokens )+1, ArgTokens, Error ],
                 State ),
             { { error, Error }, State }
 
@@ -570,15 +584,16 @@ execute_action( ActInfo=#action_info{ server_lookup_info=ImplSrvLookupInfo },
 
             %throw( { impl_server_lookup_info_lookup_failed, ImplSrvLookupInfo,
             %         ActInfo } );
-            { { error, implementation_server_not_found }, State };
+            Res = { failure, { action_server_not_found, ImplSrvLookupInfo } },
+            { Res, State };
 
         SrvPid ->
 
             cond_utils:if_defined( us_common_debug_actions,
-                send_action_trace_fmt( debug, "Forwarding to ~w (~ts) ~ts.",
-                    [ SrvPid,
-                      naming_utils:lookup_info_to_string( ImplSrvLookupInfo ),
-                      us_action:action_info_to_string( ActInfo ) ], State ) ),
+                send_action_trace_fmt( debug,
+                    "Forwarding to server ~w (~ts) ~ts.", [ SrvPid,
+                        naming_utils:lookup_info_to_string( ImplSrvLookupInfo ),
+                        us_action:action_info_to_string( ActInfo ) ], State ) ),
 
             SrvPid ! { performActionFromTokens, [ Tokens ] },
             receive

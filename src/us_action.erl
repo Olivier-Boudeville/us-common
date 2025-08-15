@@ -67,7 +67,7 @@ Examples of such specs:
 
 - `{stop_room_heating, [{static, room_heater_plug, "Target device short name"},
   {static, switch_off, "Device operation"}], "void()", "switch off the heating
-  of my room", actOnDevice}`
+  of my room"}`
 
 - `{start_tv, [{static, tv_plug, "Target device short name"}, {static,
   switch_on, "Device operation"}, {static, {next_possible_today, {19,54,0}},
@@ -76,16 +76,16 @@ Examples of such specs:
   schedulePeriodicalActionOnDevice}`
 
 - `{switch_device, [{dynamic, string, "Device identifier"}, {dynamic, "atom()",
-  "'on' or 'off'"}, {static, no_timeout}], {my_action_mod, switch_device_impl}}`
+  "'on' or 'off'"}, {static, no_timeout}], switchDevice}}`
 """.
 -type user_action_spec() ::
 
     % Most complete form:
     { action_name(), [ user_arg_spec() ], user_result_spec(),
-      user_description(), user_action_mapping() }
+      user_description(), request_name() }
 
-    % No action mapping (thus the request name is the same as the action one,
-    % and it is expected to be directly implemented in the server module):
+    % No request name mapping (thus the request name is expected to be the same
+    % as the action one):
     %
   | { action_name(), [ user_arg_spec() ], user_result_spec(),
       user_description() }
@@ -104,7 +104,7 @@ Examples of such specs:
 The internal specification of an action, corresponding to a request.
 """.
 -type action_spec() :: { action_name(), [ arg_spec() ], result_spec(),
-                         option( description() ), action_mapping() }.
+                         option( description() ), request_name() }.
 
 
 -doc """
@@ -252,51 +252,14 @@ facilitate, on the caller side, the matching of answers to asynchronous calls.
     { 'action_outcome', action_result( TSuccess ) }.
 
 
-
--doc """
-The internal description of an actual request to which an action maps.
-
-No arity listed, as it is deduced from the declared action arguments.
-
-Such a request is expected to be defined and exported in the corresponding
-module.
-
-Mapping to a mere module rather than to a class (even if, as relying on a state
-is generally essential, targeting a request rather than a mere function) to let
-the possibility of gathering any set of action-related methods in a separate,
-dedicated (server) module (if ever this was relevant/useful).
-""".
--type action_mapping() :: { module_name(), request_name() }.
-
-
-
--doc """
-The user-level description of an actual request to which an action maps.
-
-No arity listed, as it is deduced from the declared action arguments.
-
-Such a request is expected to be defined and exported in the corresponding
-module.
-
-Mapping to a mere module rather than to a class (even if, as relying on a state
-is generally essential, targeting a request rather than a mere function) to let
-the possibility of gathering any set of action-related methods in a separate,
-dedicated (server) module.
-""".
--type user_action_mapping() ::
-
-    action_mapping()
-
-    % Direct implementation in the server module implied:
-  | request_name().
-
-
-
 -doc """
 A table recording, for a given US-Server, all information about known, supported
 actions.
+
+Note that list_table/2 has been preferred to `table/2`, as it allows to define a
+(thematical, and then defined per-action for each server) order
 """.
--type action_table() :: table( action_id(), action_info() ).
+-type action_table() :: list_table( action_id(), action_info() ).
 
 
 -doc "The identifier of an action (typically in an action table).".
@@ -304,7 +267,7 @@ actions.
 
 
 -doc """
-The arity of an action is the number of its actual dynamic arguments.
+The arity of an action is the number of its actual **dynamic** arguments.
 
 Therefore it takes into account neither the static arguments (if any) nor the
 first, `State` one of its mapped request.
@@ -340,7 +303,7 @@ synchronisation.
 
 -export_type([ user_description/0, description/0,
                user_action_spec/0, action_spec/0,
-               action_name/0, user_action_mapping/0, action_mapping/0,
+               action_name/0,
 
                arg_kind/0, static_value/0,
                user_arg_spec/0,
@@ -370,14 +333,15 @@ synchronisation.
 
 % Type shorthands:
 
+-type count() :: basic_utils:count().
+
 -type ustring() :: text_utils:ustring().
 -type bin_string() :: text_utils:bin_string().
 -type any_string() :: text_utils:any_string().
 
+-type list_table( K, V ) :: list_table:list_table( K, V ).
+
 -type lookup_info() :: naming_utils:lookup_info().
-
--type module_name() :: meta_utils:module_name().
-
 
 -type classname() :: wooper:classname().
 
@@ -391,7 +355,10 @@ synchronisation.
 
 -doc """
 Registers the specified user action specifications in the specified action
-table, based on the specified classname of that server.
+table (at its tail, and in reverse order).
+
+Note that the specified classname is used just for checking at
+registration-time, and is not stored.
 """.
 -spec register_action_specs( [ user_action_spec() ], action_table(),
                              classname() ) -> action_table().
@@ -400,7 +367,7 @@ register_action_specs( _UserActSpecs=[], ActTable, _SrvClassname ) ->
 
 % Full spec:
 register_action_specs( _UserActSpecs=[ Spec={ ActName, ArgSpecs,
-        ResSpec, MaybeDesc, UserActionMapping } | T ], ActTable,
+        ResSpec, MaybeDesc, RequestName } | T ], ActTable,
         SrvClassname ) ->
 
     is_atom( ActName ) orelse begin
@@ -421,12 +388,12 @@ register_action_specs( _UserActSpecs=[ Spec={ ActName, ArgSpecs,
 
     ArgCount = length( CanonArgSpecs ),
 
-    ActionMapping = canonicalise_action_mapping( UserActionMapping, ArgCount,
-                                                 SrvClassname ),
+    % Incremented for the State:
+    check_action_mapping( RequestName, _Arity=ArgCount+1, SrvClassname ),
 
-    ActId = { ActName, ArgCount },
+    ActId = { ActName, count_dynamic_arguments( CanonArgSpecs ) },
 
-    table:has_entry( _K=ActId, ActTable ) andalso begin
+    list_table:has_entry( _K=ActId, ActTable ) andalso begin
 
 		trace_bridge:error_fmt( "Multiple actions ~ts defined "
             "in user action specification ~p.",
@@ -439,23 +406,23 @@ register_action_specs( _UserActSpecs=[ Spec={ ActName, ArgSpecs,
     ActInfo = #action_info{ action_name=ActName,
                             arg_specs=CanonArgSpecs,
                             result_spec=CanonResSpec,
-                            mapping=ActionMapping,
+                            request_name=RequestName,
                             description=MaybeBinDesc },
 
     % Not in the best trace categorisation:
     cond_utils:if_defined( us_common_debug_actions, trace_bridge:debug_fmt(
         "Registering ~ts.", [ action_info_to_string( ActInfo ) ] ) ),
 
-    NewActTable = table:add_entry( ActId, ActInfo, ActTable ),
+    NewActTable = list_table:add_entry( ActId, ActInfo, ActTable ),
 
     register_action_specs( T, NewActTable, SrvClassname );
 
-% No action mapping:
+% No request name, using action one:
 register_action_specs(
         _UserActSpecs=[ { ActName, ArgSpecs, ResSpec, MaybeDesc } | T ],
         ActTable, SrvClassname ) ->
     register_action_specs( [ { ActName, ArgSpecs, ResSpec, MaybeDesc,
-        _ActionMapping=ActName } | T ], ActTable, SrvClassname );
+        _ReqName=ActName } | T ], ActTable, SrvClassname );
 
 % No description:
 register_action_specs( _UserActSpecs=[ { ActName, ArgSpecs, ResSpec } | T ],
@@ -484,87 +451,62 @@ register_action_specs( Other, _ActTable, _SrvClassname ) ->
 -doc """
 Registers the specified action table in the specified master one.
 
+Preserves action order ultimately.
+
 Any collision in terms of action identifiers is an error.
 """.
 -spec merge_action_table( action_table(), action_table() ) -> action_table().
 merge_action_table( AddActTable, MasterActTable ) ->
-    % Clearer than a fold:
-   merge_action_entries( table:enumerate( AddActTable ), MasterActTable ).
+    NewMasterActTable = lists:reverse( AddActTable ) ++ MasterActTable,
+    list_table:check_keys_unique( NewMasterActTable ).
+
+    % When it was still a table/2; clearer than a fold:
+    %merge_action_entries( table:enumerate( AddActTable ), MasterActTable ).
 
 
 % (helper)
-merge_action_entries( _ActEntries=[], ActTable ) ->
-    ActTable;
+% merge_action_entries( _ActEntries=[], ActTable ) ->
+%     ActTable;
 
-merge_action_entries( _ActEntries=[ { ActId, ActInfo } | T ], ActTable ) ->
-    case table:lookup_entry( ActId, ActTable ) of
+% merge_action_entries( _ActEntries=[ { ActId, ActInfo } | T ], ActTable ) ->
+%     case table:lookup_entry( ActId, ActTable ) of
 
-        key_not_found ->
-            NewActTable = table:add_entry( _K=ActId, ActInfo, ActTable ),
-            merge_action_entries( T, NewActTable );
+%         key_not_found ->
+%             NewActTable = table:add_entry( _K=ActId, ActInfo, ActTable ),
+%             merge_action_entries( T, NewActTable );
 
-        { value, V } ->
-            throw( { colliding_actions, ActId, V, ActInfo } )
+%         { value, V } ->
+%             throw( { colliding_actions, ActId, V, ActInfo } )
 
-    end.
+%     end.
 
 
 
--doc "Checks that the specified term is a valid action mapping.".
--spec canonicalise_action_mapping( term(), arity(), classname() ) -> void().
-canonicalise_action_mapping( AM={ ModName, ReqName }, Arity, SrvClassname ) ->
+-doc "Checks that the specified term is a valid request action mapping.".
+-spec check_action_mapping( term(), arity(), classname() ) -> void().
+check_action_mapping( ReqName, ReqArity, SrvClassname ) ->
 
-    is_atom( ModName ) orelse throw( { non_atom_action_module, ModName } ),
-
-    code_utils:is_beam_in_path( ModName ) =:= not_found andalso
-        throw( { action_module_not_found, ModName, AM } ),
+    wooper_class_management:check_classname( SrvClassname ),
 
     wooper_method_management:is_valid_request_name( ReqName ) orelse
         throw( { invalid_action_request_mapping, ReqName } ),
 
-    FunName = ReqName,
+    ReqId = { ReqName, ReqArity },
 
-    % For the State:
-    FunArity = Arity+1,
+    % Failing would be surprising, as typically called from that class:
+    code_utils:is_beam_in_path( SrvClassname ) =:= not_found andalso
+        throw( { action_class_not_found, SrvClassname, ReqId } ),
 
+    % Takes inheritance into account:
+    wooper_info:implements_method( SrvClassname, ReqId ) orelse
+         begin
 
-    % Both tests are needed, as the method can be directly implemented by the
-    % server class (the corresponding function may not be exported, thanks to
-    % inheritance) or by the delegating module
+             trace_bridge:error_fmt( "No ~ts request is supported by ~ts.",
+                 [ ast_info:function_id_to_string( ReqId ), SrvClassname ] ),
 
+             throw( { action_request_not_available, { SrvClassname, ReqId } } )
 
-    meta_utils:is_function_exported( ModName, FunName, FunArity ) orelse
-        begin
-
-            trace_bridge:error_fmt( "No ~ts/~B function is exported from the "
-                "~ts module (regarding a ~ts server).",
-                [ FunName, FunArity, ModName, SrvClassname ] ),
-
-            throw( { action_request_not_exported,
-                     { ModName, FunName, FunArity } } )
-
-        end,
-
-    AM;
-
-canonicalise_action_mapping( _ReqName=undefined, _Arity, _SrvClassname ) ->
-    throw( no_action_mapping_set );
-
-% Arity being the number of dynamic arguments, it may be zero:
-canonicalise_action_mapping( ReqName, Arity, SrvClassname )
-                                        when is_integer( Arity ) ->
-
-    % Cannot determine here the class module to check that it defines that
-    % request.
-
-    wooper_method_management:is_valid_request_name( ReqName ) orelse
-        throw( { invalid_action_request_mapping, ReqName } ),
-
-    canonicalise_action_mapping( _AM={ SrvClassname, ReqName }, Arity,
-                                 SrvClassname );
-
-canonicalise_action_mapping( ReqName, Arity, _SrvClassname ) ->
-    throw( { invalid_action_request_arity, Arity, ReqName } ).
+         end.
 
 
 
@@ -712,6 +654,13 @@ perform_action( ActionName, Args, ServerPid ) ->
 
 % Helpers to implement actions.
 
+-doc "Returns the number of dynamic arguments among the specified arguments.".
+-spec count_dynamic_arguments( [ arg_spec() ] ) -> count().
+count_dynamic_arguments( ArgSpecs ) ->
+    length( [ DynArgSpec || DynArgSpec={ dynamic, _ArgName, _ArgTypeStr,
+                                         _MaybeUserDesc } <- ArgSpecs ] ).
+
+
 -doc """
 Returns the action identifier corresponding to the token-based specified
 command.
@@ -720,7 +669,7 @@ command.
 get_action_id( _Tokens=[ ActionNameBinStr | Args ] ) ->
     ActName = text_utils:binary_to_atom( ActionNameBinStr ),
     ActArity = length( Args ),
-    { ActName, ActArity};
+    { ActName, ActArity };
 
 get_action_id( Other ) ->
     throw( { invalid_action_tokens, Other } ).
@@ -801,26 +750,27 @@ action_info_to_string( #action_info{ server_lookup_info=SrvLookupInfo,
                                      action_name=ActName,
                                      arg_specs=ArgSpecs,
                                      result_spec=ResultSpec,
-                                     mapping=Mapping,
+                                     request_name=ReqName,
                                      description=undefined } ) ->
+    ArgCount = length( ArgSpecs ),
     text_utils:format( "action ~ts/~B, ~ts and returning ~ts, ~ts, "
         "mapped to ~ts",
-        [ ActName, length( ArgSpecs ), args_to_string( ArgSpecs ),
-          result_spec_to_string( ResultSpec ),
-          get_impl_string( SrvLookupInfo ),
-          mapping_to_string( Mapping, length( ArgSpecs ) ) ] );
+        [ ActName, ArgCount, args_to_string( ArgSpecs ),
+          result_spec_to_string( ResultSpec ), get_impl_string( SrvLookupInfo ),
+          mapping_to_string( ReqName, ArgCount ) ] );
 
 action_info_to_string( #action_info{ server_lookup_info=SrvLookupInfo,
                                      action_name=ActName,
                                      arg_specs=ArgSpecs,
                                      result_spec=ResultSpec,
-                                     mapping=Mapping,
+                                     request_name=ReqName,
                                      description=BinDescStr } ) ->
+    ArgCount = length( ArgSpecs ),
     text_utils:format( "action ~ts/~B, described as '~ts', ~ts "
         "and returning ~ts, ~ts, mapped to ~ts",
-        [ ActName, length( ArgSpecs ), BinDescStr, args_to_string( ArgSpecs ),
+        [ ActName, ArgCount, BinDescStr, args_to_string( ArgSpecs ),
           result_spec_to_string( ResultSpec ), get_impl_string( SrvLookupInfo ),
-          mapping_to_string( Mapping, length( ArgSpecs ) ) ] ).
+          mapping_to_string( ReqName, ArgCount ) ] ).
 
 
 
@@ -838,7 +788,7 @@ get_impl_string( SrvLookupInfo ) ->
 -doc "Returns a textual description of the specified action table.".
 -spec action_table_to_string( action_table() ) -> ustring().
 action_table_to_string( ActTable ) ->
-    case table:values( ActTable ) of
+    case list_table:values( ActTable ) of
 
         [] ->
             "no automated action defined";
@@ -915,38 +865,33 @@ result_spec_to_string( _ResSpec={ ResCtxtType, DescBinStr } ) ->
 
 
 -doc "Returns a textual description of the specified request mapping.".
--spec mapping_to_string( action_mapping(), arity() ) -> ustring().
-mapping_to_string( { ModName, ReqName }, Arity ) ->
-    % Arity increased for first parameter State:
-    text_utils:format( "request ~ts:~ts/~B", [ ModName, ReqName, Arity+1 ] );
-
+-spec mapping_to_string( request_name(), arity() ) -> ustring().
 mapping_to_string( ReqName, Arity ) ->
     % Arity increased for first parameter State:
-    text_utils:format( "local request ~ts/~B", [ ReqName, Arity+1 ] ).
+    text_utils:format( "request ~ts/~B", [ ReqName, Arity+1 ] ).
 
 
 
 -doc "Returns an overall help text, based on the specified actions.".
 -spec action_info_to_help_string( action_table(), ustring() ) -> ustring().
 action_info_to_help_string( ActTable, AppName ) ->
-
-   case table:values( ActTable ) of
+    % We ensured that the native order of these entries is the intended one:
+   case list_table:values( ActTable ) of
 
         [] ->
-            text_utils:format( "The ~ts application does not support "
-                               "any automated action.", [ AppName ] );
+            text_utils:format( "This ~ts application does not support "
+                "any specific automated action.", [ AppName ] );
 
         [ SingleActInfo ] ->
-            text_utils:format( "The ~ts application supports a single "
+            text_utils:format( "This ~ts application supports a single "
                 "automated action: ~ts",
                 [ AppName, action_info_to_help_string( SingleActInfo ) ] );
 
         ActInfos ->
-            text_utils:format( "The ~ts application supports ~B automated "
+            text_utils:format( "This ~ts application supports ~B automated "
                 "actions: ~ts", [ AppName, length( ActInfos ),
-                    text_utils:strings_to_string(
-                        [ action_info_to_help_string( AI )
-                              || AI <- ActInfos ] ) ] )
+                    text_utils:strings_to_string( [ action_info_to_help_string(
+                        AI ) || AI <- ActInfos ] ) ] )
 
     end.
 
@@ -958,41 +903,79 @@ Returns a textual usage help deriving from the specified action information.
 -spec action_info_to_help_string( action_info() ) -> ustring().
 action_info_to_help_string( #action_info{ action_name=ActName,
                                           arg_specs=ArgSpecs,
-                                          result_spec=ResultSpec } ) ->
+                                          %result_spec=ResultSpec,
+                                          description=undefined } ) ->
+
+    % Shorter is better:
+    ArgStr = case describe_dynamic_arguments( ArgSpecs ) of
+
+        undefined ->
+            "";
+
+        DynStr ->
+           ", expecting " ++ DynStr
+
+    end,
+
+
+    % Too verbose: "and returning ~ts" / result_spec_to_string( ResultSpec )
+    text_utils:format( "'~ts'~ts", [ ActName, ArgStr ] );
+
+action_info_to_help_string( #action_info{ action_name=ActName,
+                                          arg_specs=ArgSpecs,
+                                          %result_spec=ResultSpec,
+                                          description=BinDesc } ) ->
+    % Shorter is better:
+    ArgStr = case describe_dynamic_arguments( ArgSpecs ) of
+
+       undefined ->
+            "";
+
+        DynStr ->
+           "; expects " ++ DynStr
+
+    end,
+
+    % Too verbose: "and returning ~ts" / result_spec_to_string( ResultSpec )
+    text_utils:format( "'~ts': ~ts~ts", [ ActName, BinDesc, ArgStr ] ).
+
+
+
+-doc "Describes any dynamic arguments among the specified action arguments.".
+-spec describe_dynamic_arguments( arg_spec() ) -> option( ustring() ).
+describe_dynamic_arguments( ArgSpecs ) ->
 
     % Filter out static arguments:
     DynamicArgSpec = [ DArgS
         || DArgS={ dynamic, _ArgName, _ArgCtxtType, _BinDesc } <- ArgSpecs ],
 
-    DArgStr = case DynamicArgSpec of
+    case DynamicArgSpec of
 
         [] ->
-            "no user-supplied argument";
+            %"no user-supplied argument";
+            % Better (shorter/clearer):
+            undefined;
 
         [ SingleDArgSpec ] ->
             text_utils:format( "a single user-supplied argument: ~ts",
                                [ arg_spec_to_help_string( SingleDArgSpec ) ] );
 
         DArgSpecs ->
-            text_utils:format( "~B user-supplied argument: ~ts",
+            text_utils:format( "~B user-supplied arguments: ~ts",
                 [ length( DArgSpecs ), text_utils:strings_to_enumerated_string(
                     [ arg_spec_to_help_string( S ) || S <- DArgSpecs ],
                     _IndentationLevel=1 ) ] )
 
-    end,
-
-    text_utils:format( "action ~ts taking ~ts and returning ~ts",
-        [ ActName, DArgStr, result_spec_to_string( ResultSpec ) ] ).
-
+    end.
 
 
 -doc "Returns a textual help for the specified dynamic argument specification.".
 -spec arg_spec_to_help_string( dynamic_arg_spec() ) -> ustring().
 arg_spec_to_help_string(
         { dynamic, ArgName, CtxtType, _MaybeBinDesc=undefined } ) ->
-    text_utils:format( "argument '~ts' of type ~ts",
+    text_utils:format( "'~ts' of type ~ts",
                        [ ArgName, type_utils:type_to_string( CtxtType )] );
 
 arg_spec_to_help_string( { dynamic, ArgName, CtxtType, BinDesc } ) ->
-    text_utils:format( "~ts: argument '~ts' of type ~ts",
+    text_utils:format( "~ts: '~ts' of type ~ts",
         [ BinDesc, ArgName, type_utils:type_to_string( CtxtType ) ] ).

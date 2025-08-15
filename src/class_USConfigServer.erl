@@ -226,8 +226,8 @@ the Universal Server, at the level of US-Common.
 
 
 % Used by tests:
+-doc "A table holding US configuration information.".
 -type us_config_table() :: table( atom(), term() ).
-% A table holding US configuration information.
 
 -export_type([ us_config_table/0 ]).
 
@@ -1580,8 +1580,8 @@ its PID), creating it if ever necessary and if enabled.
 
 Centralised here on behalf of clients (e.g. US-{Main,Web,...}).
 
-This is an helper function, not a static method, as a trace emitter state shall
-be specified as parameter, so that traces can be sent in all cases needed.
+This is an helper function for **any** (trace-emitting) class (so that traces
+can be sent in all cases needed), not a static method.
 """.
 -spec get_us_config_registration_info( boolean(), wooper:state() ) ->
     { registration_name(), lookup_scope(), config_server_pid() }.

@@ -40,7 +40,7 @@
     % Information regarding the (ordered) arguments of that action entry:
     arg_specs :: [ us_action:arg_spec() ],
 
-    % Type and possibly description:
+    % Any type and possibly description, or no checking at all:
     result_spec :: us_action:result_spec(),
 
     % The actual request this action maps to:

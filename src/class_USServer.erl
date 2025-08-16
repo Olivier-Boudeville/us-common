@@ -88,10 +88,7 @@ It centralises states and behaviours on their behalf.
 -type trace_severity() :: trace_utils:trace_severity().
 -type trace_message() :: trace_utils: trace_message().
 
-%-type concurrent_result( R ) :: wooper:concurrent_result( R ).
-
 -type emitter_init() :: class_TraceEmitter:emitter_init().
-
 
 
 -type user_action_spec() :: us_action:user_action_spec().
@@ -99,7 +96,6 @@ It centralises states and behaviours on their behalf.
 -type action_token() :: us_action:action_token().
 -type action_outcome() :: us_action:action_outcome().
 -type action_info() :: us_action:action_info().
--type action_result() :: us_action:action_result().
 
 
 
@@ -484,9 +480,13 @@ notifyAutomatedActions( State, InstToNotifyPid ) ->
 -doc """
 Requests this server to perform the automated action corresponding to the
 specified tokens.
+
+The PID of this server is returned so that callers may request multiple actions
+to be performed concurrently yet still be able to match each outcome to each
+call.
 """.
 -spec performActionFromTokens( wooper:state(), [ action_token() ] ) ->
-                                    request_return( action_outcome() ).
+                        request_return( { action_outcome(), server_pid() } ).
 performActionFromTokens( State, Tokens ) ->
 
     send_action_trace_fmt( debug,
@@ -497,7 +497,8 @@ performActionFromTokens( State, Tokens ) ->
 
     ActTable = ?getAttr(action_table),
 
-    { Res, ActState } = case list_table:lookup_entry( _K=ActId, ActTable ) of
+    { Outcome, ActState } = case list_table:lookup_entry( _K=ActId,
+                                                          ActTable ) of
 
         { value, ActionInfo } ->
             execute_action( ActionInfo, Tokens, State );
@@ -510,13 +511,14 @@ performActionFromTokens( State, Tokens ) ->
                   text_utils:strings_to_string(
                     [ us_action:action_id_to_string( AId )
                         || AId <- list_table:keys( ActTable ) ] ) ], State ),
-            { { error, action_not_found }, State }
+
+            ActOutcome ={ action_failed, _FailureReport=action_not_found },
+
+            { ActOutcome, State }
 
     end,
 
-    Outcome = { action_outcome, Res },
-
-    wooper:return_state_result( ActState, Outcome ).
+    wooper:return_state_result( ActState, { Outcome, self() } ).
 
 
 
@@ -525,7 +527,7 @@ performActionFromTokens( State, Tokens ) ->
 %
 % (helper)
 -spec execute_action( action_info(), [ action_token() ], wooper:state() ) ->
-                                            { action_result(), wooper:state() }.
+                                        { action_outcome(), wooper:state() }.
 % No lookup information, hence action implemented locally:
 execute_action( ActInfo=#action_info{ server_lookup_info=undefined,
                                       arg_specs=ArgSpecs,
@@ -534,39 +536,17 @@ execute_action( ActInfo=#action_info{ server_lookup_info=undefined,
                 Tokens, State ) ->
 
     cond_utils:if_defined( us_common_debug_actions, send_action_trace_fmt(
-        debug, "Executing locally ~ts, based on tokens ~p.",
+        debug, "Executing locally ~ts, based on the following tokens;~n ~p",
         [ us_action:action_info_to_string( ActInfo ), Tokens ], State ) ),
 
-    try
+    case us_action:coerce_token_arguments( Tokens, ArgSpecs ) of
 
-        ArgsTokens = tl( Tokens ),
+        { ok, ActualArgs } ->
+            apply_arguments( ReqName, ActualArgs, Tokens, ResSpec, State );
 
-        ActualArgs = us_action:coerce_argument_tokens( ArgsTokens, ArgSpecs ),
-
-        cond_utils:if_defined( us_common_debug_actions, send_action_trace_fmt(
-            debug, "Executing now request ~ts/~B, with non-state arguments ~p.",
-            [ ReqName, length( ActualArgs )+1, ActualArgs ], State ) ),
-
-        % Res possibly of the form {success,Term}:
-        { ExecState, Res } = executeRequest( State, ReqName, ActualArgs ),
-        us_action:check_result( Res, ResSpec ),
-
-        send_action_trace_fmt( debug, "Executed request ~ts/~B with "
-            "non-state arguments ~p, returned:~n ~p",
-            [ ReqName, length( ActualArgs )+1, ActualArgs, Res ],
-            ExecState ),
-
-        { Res, ExecState }
-
-    catch
-
-        throw:Error ->
-            ArgTokens = tl( Tokens ),
-            send_action_trace_fmt( error, "Execution of the ~ts/~B request"
-                "with non-state argument tokens ~p failed: ~p",
-                [ ReqName, length( ArgTokens )+1, ArgTokens, Error ],
-                State ),
-            { { error, Error }, State }
+        { error, DiagStr } ->
+            Outcome= { action_failed, { wrong_argument_count, DiagStr } },
+            { Outcome, State }
 
     end;
 
@@ -574,18 +554,22 @@ execute_action( ActInfo=#action_info{ server_lookup_info=undefined,
 execute_action( ActInfo=#action_info{ server_lookup_info=ImplSrvLookupInfo },
                 Tokens, State ) ->
 
-    case naming_utils:get_maybe_registered_pid_for(
-            ImplSrvLookupInfo ) of
+    case naming_utils:get_maybe_registered_pid_for( ImplSrvLookupInfo ) of
 
         undefined ->
+
             send_action_trace_fmt( error, "Failed to resolve the ~ts for ~ts.",
                 [ naming_utils:lookup_info_to_string( ImplSrvLookupInfo ),
                   us_action:action_info_to_string( ActInfo ) ], State ),
 
             %throw( { impl_server_lookup_info_lookup_failed, ImplSrvLookupInfo,
             %         ActInfo } );
-            Res = { failure, { action_server_not_found, ImplSrvLookupInfo } },
-            { Res, State };
+
+            FailureReport =
+                { implementation_server_not_found, ImplSrvLookupInfo },
+
+            { _Outcome={ action_failed, FailureReport }, State };
+
 
         SrvPid ->
 
@@ -595,19 +579,82 @@ execute_action( ActInfo=#action_info{ server_lookup_info=ImplSrvLookupInfo },
                         naming_utils:lookup_info_to_string( ImplSrvLookupInfo ),
                         us_action:action_info_to_string( ActInfo ) ], State ) ),
 
-            SrvPid ! { performActionFromTokens, [ Tokens ] },
+            SrvPid ! { performActionFromTokens, [ Tokens ], self() },
             receive
 
-                { wooper_result, _ActOutcome={ action_outcome, Res } } ->
+                { wooper_result, { ActOutcome, SrvPid } } ->
 
                     cond_utils:if_defined( us_common_debug_actions,
                        send_action_trace_fmt( debug,
-                           "Received and forwarding action result ~w.", [ Res ],
-                           State ) ),
+                           "Returning received action outcome from "
+                           "~w:~n ~p", [ SrvPid, ActOutcome ], State ) ),
 
-                    { Res, State }
+                    { ActOutcome, State }
+
+            % A time-out might be used here.
 
             end
+
+    end.
+
+
+
+% (helper)
+-spec apply_arguments( request_name(), [ us_action:argument() ],
+    [ action_token() ], us_action:result_spec(), wooper:state() ) ->
+                                        { action_outcome(), wooper:state() }.
+apply_arguments( ReqName, ActualArgs, Tokens, ResSpec, State ) ->
+
+    cond_utils:if_defined( us_common_debug_actions, send_action_trace_fmt(
+        debug, "Executing now request ~ts/~B, with non-state arguments ~p.",
+        [ ReqName, length( ActualArgs )+1, ActualArgs ], State ) ),
+
+    % ActualRes is opaque (possibly of the fallible/2 type):
+    try executeRequest( State, ReqName, ActualArgs ) of
+
+        { ExecState, ActualRes } ->
+
+            case us_action:is_result_matching_spec( ActualRes, ResSpec ) of
+
+                true ->
+                    send_action_trace_fmt( debug, "Executed request ~ts/~B "
+                        "with non-state arguments ~p, got result:~n ~p",
+                        [ ReqName, length( ActualArgs )+1, ActualArgs,
+                          ActualRes ], ExecState ),
+
+                    { _Outcome={ action_done, ActualRes }, ExecState };
+
+
+                false ->
+                     send_action_trace_fmt( error, "Executed request ~ts/~B "
+                        "with non-state arguments ~p, returned a result that "
+                        "does not match its result specification (~p):~n ~p",
+                        [ ReqName, length( ActualArgs )+1, ActualArgs,
+                          us_action:result_spec_to_string( ResSpec ),
+                          ActualRes ], ExecState ),
+
+                    Outcome= { action_failed,
+                               _FailureReport=invalid_result_type },
+
+                    { Outcome, State }
+
+            end
+
+    catch
+
+        throw:Error ->
+
+            ArgTokens = tl( Tokens ),
+
+            send_action_trace_fmt( error, "Exception thrown when executing "
+                "the action-implementation ~ts/~B request, based on "
+                "non-state argument tokens ~p: ~p",
+                [ ReqName, length( ArgTokens )+1, ArgTokens, Error ],
+                State ),
+
+            FailureReport = { exception_thrown, Error },
+
+           { _Outcome={ action_failed, FailureReport }, State }
 
     end.
 

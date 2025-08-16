@@ -187,8 +187,6 @@ In our conventions:
 
 -type config_key() :: app_facilities:config_key().
 
-%-type user_action_spec() :: us_action:user_action_spec().
--type action_result( T ) :: us_action:action_result( T ).
 -type action_table() :: us_action:action_table().
 
 
@@ -404,24 +402,16 @@ finalise_action_setup( State ) ->
     % Restore final order:
     OrderedActTable = lists:reverse( ?getAttr(action_table) ),
 
-    % As added at tail:
+    HelpUserActSpec = { _ActName=help, _HelpDesc="displays this help"},
 
-    NameStr = get_us_app_name( ?getAttr(app_short_name) ),
-    StringResType = "{'success', string()}",
+    StopDesc = text_utils:format( "stops this ~ts instance",
+        [ get_us_app_name( ?getAttr(app_short_name) ) ] ),
 
-    %HelpDesc = text_utils:format( "displays help about the actions supported "
-    %                              "by this instance of ~ts", [ NameStr ] ),
+    %StopUserActSpec = { stop, StopDesc },
 
-    % More user-friendly:
-    HelpDesc = "displays this help",
-
-    HelpUserActSpec =
-        { _ActName=help, _UserArgSpec=[], StringResType, HelpDesc },
-
-
-    StopDesc = text_utils:format( "stops this ~ts instance", [ NameStr ] ),
-
-    StopUserActSpec = { stop, [], StringResType, StopDesc },
+    % To test result checking (should be "successful(string())"):
+    StopUserActSpec = { stop, StopDesc, _ReqName=stop, _UserArgSpecs=[],
+                        _UserResSpec="{ok, string()}" },
 
     ActSpecs = [ HelpUserActSpec, StopUserActSpec ],
 
@@ -493,18 +483,18 @@ onAutomatedActionsNotified( State, AddActTable, SrvClassname ) ->
 
 -doc "Built-in 'help' action.".
 -spec help( wooper:state() ) ->
-                    const_request_return( action_result( ustring() ) ).
+                    const_request_return( successful( ustring() ) ).
 help( State ) ->
 
     HelpStr = us_action:action_info_to_help_string( ?getAttr(action_table),
         get_us_app_name( ?getAttr(app_short_name) ) ),
 
-    wooper:const_return_result( { success, HelpStr } ).
+    wooper:const_return_result( { ok, HelpStr } ).
 
 
 
 -doc "Built-in 'stop' action.".
--spec stop( wooper:state() ) -> request_return( action_result( ustring() ) ).
+-spec stop( wooper:state() ) -> request_return( successful( ustring() ) ).
 stop( State ) ->
 
     ?notice( "Requested by action to stop." ),
@@ -513,10 +503,15 @@ stop( State ) ->
 
     { CfgSrvPid, CfgState } = get_us_config_pid( State ),
 
-    % Hopefully us_common_config_bridge_sup is to terminate in turn:
+    % Hopefully (being a significant child), us_common_config_bridge_sup is to
+    % terminate in turn; nevertheless visibly this central server survives.
+    %
     CfgSrvPid ! delete,
 
-    wooper:return_state_result( CfgState, { success, "Stopping immediately" } ).
+    % So:
+    self() ! delete,
+
+    wooper:return_state_result( CfgState, { ok, "Stopping immediately" } ).
 
 
 

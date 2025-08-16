@@ -61,50 +61,61 @@ The user-level specification of an automated action.
 The designated request will be executed based on the specified arguments (static
 or dynamic).
 
-Examples of such specs:
+If no result spec is defined, the `unchecked_result` default will apply: the
+type of the result returned by the implementation request will not be checked
+against a user-specified one.
+
+Examples of such user action specs:
 
 - `startAlarm`
 
-- `{stop_room_heating, [{static, room_heater_plug, "Target device short name"},
-  {static, switch_off, "Device operation"}], "void()", "switch off the heating
-  of my room"}`
+- `{stop_room_heating, "switch off the heating of my room", actOnDevice,
+  [{static, room_heater_plug, "target device short name"}, {static, switch_off,
+  "Device operation"}]}`
 
-- `{start_tv, [{static, tv_plug, "Target device short name"}, {static,
-  switch_on, "Device operation"}, {static, {next_possible_today, {19,54,0}},
-  "Start time"}, {static, {1,0,0,0}, "DHMS periodicity"}], "action_outcome()",
-  "switch on the television each day at 19h54, starting from today",
-  schedulePeriodicalActionOnDevice}`
+- `{start_tv, "switch on the television each day at 19h54, starting from today",
+  schedulePeriodicalActionOnDevice, [{static, tv_plug, "target device short
+  name"}, {static, switch_on, "Device operation"}, {static,
+  {next_possible_today, {19,54,0}}, "Start time"}, {static, {1,0,0,0}, "DHMS
+  periodicity"}]}`
 
-- `{switch_device, [{dynamic, string, "Device identifier"}, {dynamic, "atom()",
-  "'on' or 'off'"}, {static, no_timeout}], switchDevice}}`
+- `{switch_device, undefined, switchDevice, [{dynamic, string, "Device
+  identifier"}, {dynamic, "atom()", "'on' or 'off'"}, {static, no_timeout}],
+  "boolean()"}`
+
 """.
 -type user_action_spec() ::
 
     % Most complete form:
-    { action_name(), [ user_arg_spec() ], user_result_spec(),
-      user_description(), request_name() }
+    { action_name(), option( user_description() ),
+      request_name(), [ user_arg_spec() ], user_result_spec() }
+
+    % Nnote that the last element of the tuple is removed at each next new type:
+
+    % No result spec specified, so the 'unchecked_result' policy will apply:
+  | { action_name(), option( user_description() ),
+      request_name(), [ user_arg_spec() ] }
+
 
     % No request name mapping (thus the request name is expected to be the same
-    % as the action one):
+    % as the action one, like `stop`):
     %
-  | { action_name(), [ user_arg_spec() ], user_result_spec(),
-      user_description() }
+  | { action_name(), option( user_description() ), request_name() }
 
-    % Additionally, no description:
-  | { action_name(), [ user_arg_spec() ], user_result_spec() }
+    % Additionally, no argument expected:
+  | { action_name(), option( user_description() ) }
 
-    % Thus no expected result ('void') here:
-  | { action_name(), [ user_arg_spec() ] }
-
-    % Thus no argument expected (and returning void):
+    % Thus not even a description:
   | action_name().
 
 
+
 -doc """
-The internal specification of an action, corresponding to a request.
+The internal, canonical specification of an action, branching to its
+implementation request.
 """.
--type action_spec() :: { action_name(), [ arg_spec() ], result_spec(),
-                         option( description() ), request_name() }.
+-type action_spec() :: { action_name(), option( description() ), request_name(),
+                         [ arg_spec() ], option( result_spec() ) }.
 
 
 -doc """
@@ -194,42 +205,77 @@ It corresponds to a dynamic argument in the action specification.
 -type argument() :: any().
 
 
--doc "The user-level specification of a result.".
--type user_result_spec() :: { text_type(), option( user_description() ) }.
+-doc """
+The user-level specification of a result.
 
+The textual type corresponds to the returned type of the corresponding
+implementation request.
 
--doc "The internal specification of a result.".
--type result_spec() :: { contextual_type(), option( description() ) }.
+If controlling the return type, we recommend relying on fallible-like types (for
+example `ReturnT :: basic_utils:fallible/2`, or `successful/1`).
+
+Mildy interesting to specify, as type-checking the result of an implementation
+request may have little interest.
+""".
+-type user_result_spec() ::
+    { text_type(), option( user_description() ) }
+  | text_type()
+  | 'unchecked_result'. % Default: do not typecheck result
 
 
 
 -doc """
-An actual, successful (non-error) result for an action, presumably respecting
-its specification.
+The internal specification of a result.
+
+The (contextual) type corresponds to the returned type of the corresponding
+implementation request (for example `ReturnT :: basic_utils:fallible/2`).
+
+If controlling the return type, we recommend relying on fallible-like types (for
+example `ReturnT :: basic_utils:fallible/2`, or `successful/1`).
 """.
--type action_raw_result() :: any().
-
-
--doc "The description of an actual error regarding action execution.".
--type failure_report() :: ustring()
-                      | 'implementation_server_not_found'
-                      | 'action_not_found'
-                      | 'timed_out'
-                      | any(). % Typically if an exception is thrown.
+-type result_spec() :: option( { contextual_type(), option( description() ) } ).
 
 
 
 -doc """
-An actual result for an action, presumably respecting its specification.
+The description of an error triggered when trying to execute an action.
+
+This describes a failure at the level of the action system; this is not a term
+to be directly returned by an implementation request.
 """.
--type action_result() :: action_result( any() ).
+-type failure_report() ::
+    { 'implementation_server_not_found', lookup_info() }
+  | 'action_not_found'
+  | 'timed_out'
+  | { 'wrong_argument_count', DiagStr :: ustring() }
+  | 'invalid_result_type'
+  | { 'exception_thrown', term() }. % When executing said request
+
+
 
 
 -doc """
-An actual result for an action, presumably respecting its specification.
+The actual outcome of a (locally) performed action.
+
+This is an ad hoc type defined in the context of actions, based on an actual
+result that is tagged in order to facilitate, on the caller side, the matching
+of answers to asynchronous calls.
+
+An action being done (and thus not failed) means that its implementation request
+could be executed as intended - this does not imply that it reports any success;
+indeed the implementation code may have reported (its own way) an error. Yet in
+both cases its actual result shall be of the `ReturnT` type, which shall be the
+one reported by that request (typically with `request_return(ReturnT)`).
+
+An action being reported as failed means that the corresponding request was not
+even executed.
+
+Often, when possible (i.e. when they are defined on purpose), the implementation
+requests return actual results of the `ReturnT :: basic_utils:fallible/2` type,
+for an easier error management.
 """.
--type action_result( TSuccess ) :: { 'success', TSuccess }
-                                 | { 'failure', failure_report() }.
+-type action_outcome( ReturnT ) :: { 'action_done', ReturnT }
+                                 | { 'action_failed', failure_report() }.
 
 
 -doc """
@@ -238,18 +284,12 @@ The actual outcome of a performed action.
 This is an ad hoc type defined in the context of actions, based on an actual
 result that is tagged in order to facilitate, on the caller side, the matching
 of answers to asynchronous calls.
+
+Here no specific typing information regarding to the possible actual results is
+specified.
 """.
--type action_outcome() :: action_outcome( any() ).
+-type action_outcome() :: action_outcome( request_result() ).
 
-
--doc """
-The actual outcome of a performed action.
-
-This is an ad hoc type defined in the context of actions, tagged in order to
-facilitate, on the caller side, the matching of answers to asynchronous calls.
-""".
--type action_outcome( TSuccess ) ::
-    { 'action_outcome', action_result( TSuccess ) }.
 
 
 -doc """
@@ -309,19 +349,19 @@ synchronisation.
                user_arg_spec/0,
                arg_spec/0, static_arg_spec/0, dynamic_arg_spec/0,
                arg_name/0, argument/0,
-               user_result_spec/0, result_spec/0, action_raw_result/0,
-               action_result/0, action_result/1,
-               failure_report/0,
-               action_outcome/0, action_outcome/1,
+               user_result_spec/0, result_spec/0,
+               failure_report/0, action_outcome/0, action_outcome/1,
                action_table/0, action_id/0, action_arity/0, action_info/0,
                action_token/0, action_request/0 ]).
 
 
 -export([ register_action_specs/3, merge_action_table/2,
           perform_action/2, perform_action/3,
-          get_action_id/1, coerce_argument_tokens/2, check_result/2,
+          get_action_id/1, coerce_token_arguments/2, is_result_matching_spec/2,
           action_id_to_string/1,
-          action_table_to_string/1, action_info_to_string/1,
+          action_table_to_string/1, args_to_string/1, arg_spec_to_string/1,
+          result_spec_to_string/1, mapping_to_string/2,
+          action_info_to_string/1,
           action_info_to_help_string/1, action_info_to_help_string/2 ]).
 
 
@@ -366,9 +406,8 @@ register_action_specs( _UserActSpecs=[], ActTable, _SrvClassname ) ->
     ActTable;
 
 % Full spec:
-register_action_specs( _UserActSpecs=[ Spec={ ActName, ArgSpecs,
-        ResSpec, MaybeDesc, RequestName } | T ], ActTable,
-        SrvClassname ) ->
+register_action_specs( _UserActSpecs=[ Spec={ ActName, MaybeDesc, RequestName,
+        ArgSpecs, ResSpec } | T ], ActTable, SrvClassname ) ->
 
     is_atom( ActName ) orelse begin
 
@@ -380,11 +419,11 @@ register_action_specs( _UserActSpecs=[ Spec={ ActName, ArgSpecs,
 
                               end,
 
+    MaybeBinDesc = text_utils:ensure_maybe_binary( MaybeDesc ),
+
     CanonArgSpecs = canonicalise_arg_specs( ArgSpecs, ActName ),
 
-    CanonResSpec = canonicalise_res_spec( ResSpec, ActName ),
-
-    MaybeBinDesc = text_utils:ensure_maybe_binary( MaybeDesc ),
+    CanonResSpec = canonicalise_result_spec( ResSpec, ActName ),
 
     ArgCount = length( CanonArgSpecs ),
 
@@ -417,30 +456,30 @@ register_action_specs( _UserActSpecs=[ Spec={ ActName, ArgSpecs,
 
     register_action_specs( T, NewActTable, SrvClassname );
 
-% No request name, using action one:
+% No request spec specified, so the 'unchecked_result' policy will apply:
 register_action_specs(
-        _UserActSpecs=[ { ActName, ArgSpecs, ResSpec, MaybeDesc } | T ],
+        _UserActSpecs=[ { ActName, MaybeDesc, RequestName, ArgSpecs } | T ],
         ActTable, SrvClassname ) ->
-    register_action_specs( [ { ActName, ArgSpecs, ResSpec, MaybeDesc,
-        _ReqName=ActName } | T ], ActTable, SrvClassname );
-
-% No description:
-register_action_specs( _UserActSpecs=[ { ActName, ArgSpecs, ResSpec } | T ],
-                       ActTable, SrvClassname ) ->
-    register_action_specs(
-        [ { ActName, ArgSpecs, ResSpec, _MaybeDesc=undefined } | T ], ActTable,
-        SrvClassname );
-
-% No result type:
-register_action_specs( _UserActSpecs=[ { ActName, ArgSpecs } | T ],
-                       ActTable, SrvClassname ) ->
-    register_action_specs( [ { ActName, ArgSpecs, _ResSpec=void } | T ],
-                           ActTable, SrvClassname );
+    register_action_specs( [ { ActName, MaybeDesc, RequestName, ArgSpecs,
+        _UsrResSpec=unchecked_result } | T ], ActTable, SrvClassname );
 
 % No argument spec:
+register_action_specs( _UserActSpecs=[ { ActName, MaybeDesc, ReqName } | T ],
+                       ActTable, SrvClassname ) ->
+    register_action_specs(
+        [ { ActName, MaybeDesc, ReqName, _ArgSpecs=[] } | T ], ActTable,
+        SrvClassname );
+
+% No request name, using the action one:
+register_action_specs( _UserActSpecs=[ { ActName, MaybeDesc } | T ], ActTable,
+                       SrvClassname ) ->
+    register_action_specs( [ { ActName, MaybeDesc, _ReqName=ActName } | T ],
+                           ActTable, SrvClassname );
+
+% Not even a description:
 register_action_specs( _UserActSpecs=[ ActName | T ], ActTable,
                        SrvClassname ) ->
-    register_action_specs( [ { ActName,  _ArgSpecs=[] } | T ], ActTable,
+    register_action_specs( [ { ActName, _MaybeDesc=undefined } | T ], ActTable,
                            SrvClassname );
 
 register_action_specs( Other, _ActTable, _SrvClassname ) ->
@@ -584,8 +623,12 @@ Returns an internal, canonicalised version of the specified user result
 specification of the specified action.
 """.
 % term() expected to be user_result_spec():
--spec canonicalise_res_spec( term(), action_name() ) -> result_spec().
-canonicalise_res_spec( ResSpec={ ResTypeStr, MaybeUserDesc }, ActName ) ->
+-spec canonicalise_result_spec( term(), action_name() ) ->
+                                            option( result_spec() ).
+canonicalise_result_spec( _ResSpec=unchecked_result, _ActName ) ->
+    undefined;
+
+canonicalise_result_spec( ResSpec={ ResTypeStr, MaybeUserDesc }, ActName ) ->
 
     ResCtxtType = case type_utils:parse_type( ResTypeStr ) of
 
@@ -606,8 +649,9 @@ canonicalise_res_spec( ResSpec={ ResTypeStr, MaybeUserDesc }, ActName ) ->
 
     { ResCtxtType, MaybeBinDesc };
 
-canonicalise_res_spec( _ResSpec=ResTypeStr, ActName ) ->
-    canonicalise_res_spec( { ResTypeStr, _MaybeUserDesc=undefined }, ActName ).
+canonicalise_result_spec( _ResSpec=ResTypeStr, ActName ) ->
+    canonicalise_result_spec( { ResTypeStr, _MaybeUserDesc=undefined },
+                              ActName ).
 
 
 
@@ -681,59 +725,73 @@ Tries to coerce any arguments obtained from the specified tokens into the
 expected ones, as they were specified, and to produce the expected final list of
 actual arguments.
 
+At least one token is expected (the action name).
+
 Throws an exception on failure.
 """.
--spec coerce_argument_tokens( [ action_token() ], [ arg_spec() ] ) ->
-                                            [ argument() ].
+-spec coerce_token_arguments( [ action_token() ], [ arg_spec() ] ) ->
+                                        fallible( [ argument() ], ustring() ).
 % First token is the action name, the next ones are the arguments:
-coerce_argument_tokens( _Tokens=[ _ActName ], _ArgSpecs=[] ) ->
-    [];
-
-coerce_argument_tokens( _Tokens=[ _ActName ], _ArgSpecs ) ->
-    [];
-
-coerce_argument_tokens( ArgsTokens, ArgSpecs ) ->
-    coerce_argument_tokens( ArgsTokens, ArgSpecs, _Args=[] ).
+coerce_token_arguments( _Tokens=[ ActName | ArgTokens ], ArgSpecs ) ->
+    coerce_token_arguments( ArgTokens, ArgSpecs, ActName, _Args=[] ).
 
 
 % (helper)
-coerce_argument_tokens( _ArgsTokens=[], _ArgSpecs=[], Args ) ->
-    lists:reverse( Args );
+coerce_token_arguments( _ArgsTokens=[], _ArgSpecs=[], _ActName, Args ) ->
+    { ok, lists:reverse( Args ) };
+
+coerce_token_arguments( ExtraArgsTokens, _ArgSpecs=[], ActName, _Args ) ->
+
+    DiagStr = text_utils:format( "~B extraneous argument(s) received "
+        "for action '~ts':~n ~p",
+        [ length( ExtraArgsTokens ), ActName, ExtraArgsTokens ] ),
+
+    { error, DiagStr };
+
 
 % Insert literally, in-place, any static argument:
-coerce_argument_tokens( ArgsTokens,
+coerce_token_arguments( ArgsTokens,
                         _ArgSpecs=[ { static, Arg, _MaybeBinDesc } | T ],
-                        Args ) ->
-    coerce_argument_tokens( ArgsTokens, T, [ Arg | Args ] );
+                        ActName, Args ) ->
+    coerce_token_arguments( ArgsTokens, T, ActName, [ Arg | Args ] );
 
 
 % Associate a dynamic argument to its type:
-coerce_argument_tokens( _ArgsTokens=[ ArgToken | TTokens ],
-        _ArgSpecs=[ { dynamic, _ArgName, ArgType, _MaybeBinDesc } | TArgSpecs ],
-        Args ) ->
-    ActualArg = type_utils:coerce_string_to_term( ArgToken, ArgType ),
-    coerce_argument_tokens( TTokens, TArgSpecs, [ ActualArg | Args ] ).
+coerce_token_arguments( _ArgsTokens=[ ArgToken | TTokens ],
+        _ArgSpecs=[ { dynamic, ArgName, ArgType, _MaybeBinDesc } | TArgSpecs ],
+        ActName, Args ) ->
+
+    case type_utils:coerce_stringified_to_type( ArgToken, ArgType ) of
+
+        { ok, ActualArg } ->
+            coerce_token_arguments( TTokens, TArgSpecs, ActName,
+                                    [ ActualArg | Args ] );
+
+        { error, Reason } ->
+            { error, { argument_coercing_failed, ArgName, Reason, ActName } }
+
+    end;
+
+coerce_token_arguments( _ArgsTokens=[], ArgSpecs, ActName, _Args ) ->
+
+    DiagStr = text_utils:format( "~B argument(s) lacking for action '~ts'.",
+                                 [ length( ArgSpecs ), ActName ] ),
+
+    { error, DiagStr }.
+
 
 
 
 -doc """
-Checks that the specified request result matches the specified action result
+Tells whether the specified result conforms to the specified result
 specification.
 """.
--spec check_result( request_result(), result_spec() ) -> void().
-% Outcome sent back, no available type to further check:
-check_result( _Res={ action_outcome, _ActualRes={ OutcomeTag, _OutcomeRes } },
-              _ResSpec={ _Type=action_outcome, _MaybeBinDesc } )
-                    when OutcomeTag =:= success orelse OutcomeTag =:= failure ->
-    ok;
+-spec is_result_matching_spec( request_result(), result_spec() ) -> boolean().
+is_result_matching_spec( _Res, _ResSpec=undefined ) ->
+   true;
 
-check_result( Res, _ResSpec={ _Type=action_outcome, MaybeBinDesc } ) ->
-    throw( { invalid_action_outcome, Res, MaybeBinDesc } );
-
-% Here we have a type to check against:
-check_result( Res, _ResSpec={ CtxtType, MaybeBinDesc } ) ->
-    type_utils:is_of_type( Res, CtxtType ) orelse
-        throw( { invalid_action_result_type, Res, CtxtType, MaybeBinDesc } ).
+is_result_matching_spec( Res, _ResSpec={ CtxtType, _MaybeBinDesc } ) ->
+   type_utils:is_of_type( Res, CtxtType ).
 
 
 
@@ -846,17 +904,12 @@ arg_spec_to_string( { dynamic, ArgName, ArgCtxtType, BinDesc } ) ->
 
 -doc "Returns a textual description of the specified result specification.".
 -spec result_spec_to_string( result_spec() ) -> ustring().
-result_spec_to_string(
-        _ResSpec={ action_outcome, _MaybeDescBinStr=undefined } ) ->
-    "an action outcome";
+result_spec_to_string( _ResSpec=undefined ) ->
+    "a value whose type will not be checked";
 
 result_spec_to_string( _ResSpec={ ResCtxtType, _MaybeDescBinStr=undefined } ) ->
     text_utils:format( "a value of type ~ts",
                        [ type_utils:type_to_string( ResCtxtType ) ] );
-
-result_spec_to_string( _ResSpec={ action_outcome, DescBinStr } ) ->
-    text_utils:format( "an action outcome, described as '~ts'",
-                       [ DescBinStr ] );
 
 result_spec_to_string( _ResSpec={ ResCtxtType, DescBinStr } ) ->
     text_utils:format( "a value of type ~ts, described as '~ts'",

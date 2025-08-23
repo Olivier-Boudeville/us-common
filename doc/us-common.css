@@ -9,28 +9,33 @@
 /* Updated: Michal Guerquin (michalg@gmail.com) */
 
 
+/* For blocks of code (introduced with '.. code::'): */
 pre.code {
 	margin-left: 3%;
-	background: #eeeeee;
+	background: #e8e8e8;
 	text-indent: 0%;
 }
 
 
+/* For inline (in-text) literals (i.e. surrounded with '``'): */
 .literal {
-	color: #209CEE;
-	font-weight: bold;
+	font-family: monospace, serif;
+	background: #e8e8e8;
+	white-space: pre-wrap;
+	font-size: 90%;
 }
 
 
-/* For command printouts: */
+/* For command printouts (introduced with '::' then a block): */
 .literal-block {
-	background: #d1f1f1;
+	background: #e8e8e8 ;
 	margin-left: 2%;
 }
 
 
+/* Unused: */
 div.box {
-	color: #FF0000;
+	/*color: #FF0000;*/
 	background: #FFFFFF;
 	border: solid;
 	padding: 5px;
@@ -293,6 +298,7 @@ table caption {
 	font-style: italic;
 }
 
+
 table p, table dl, ol p, ul p, dl p, blockquote p, .note p, .note ul, .note ol, .note dl, li pre, dd pre {
 	margin-left: 0;
 	margin-right: 0;
@@ -371,8 +377,9 @@ th {
 }
 
 
+/* Notably for footnotes: */
 td {
-	background: #dddddd;
+	background: #e8e8e8;
 	font-size: 14px;
 }
 
@@ -550,7 +557,6 @@ div.banner {
 div.banner p {
 	/*color: #00FF00;*/
 	background: #209CEE;
-	margin-left: 0em;
 	padding: 0em;
 	font-family: Arial, sans-serif;
 	border: thin outset #000044;

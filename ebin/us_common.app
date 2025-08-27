@@ -36,7 +36,7 @@
   {env,[]},
 
   % Flat hierarchy in ebin here:
-  {modules, [class_USConfigServer, class_USScheduler, class_USServer, class_USTaskRing, us_action, us_client, us_common_app, us_common_config_bridge_sup, us_common_scheduler_bridge_sup, us_common_sup]},
+  {modules, [class_USCentralServer, class_USConfigServer, class_USScheduler, class_USServer, class_USTaskRing, us_action, us_client, us_common_app, us_common_config_bridge_sup, us_common_scheduler_bridge_sup, us_common_sup]},
 
   {licenses, ["US-Common is licensed by its author (Olivier Boudeville) under the GNU Affero General Public License (AGPL), version 3.0 or later"]},
 

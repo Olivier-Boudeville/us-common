@@ -297,7 +297,7 @@ A table recording, for a given US-Server, all information about known, supported
 actions.
 
 Note that list_table/2 has been preferred to `table/2`, as it allows to define a
-(thematical, and then defined per-action for each server) order
+(thematical, and then defined per-action for each server) order.
 """.
 -type action_table() :: list_table( action_id(), action_info() ).
 
@@ -806,14 +806,15 @@ action_id_to_string( _ActionInfo={ ActName, ActArity } ) ->
 -spec action_info_to_string( action_info() ) -> ustring().
 action_info_to_string( #action_info{ server_lookup_info=SrvLookupInfo,
                                      action_name=ActName,
+                                     splitter=Splitter,
                                      arg_specs=ArgSpecs,
                                      result_spec=ResultSpec,
                                      request_name=ReqName,
                                      description=undefined } ) ->
     ArgCount = length( ArgSpecs ),
-    text_utils:format( "action ~ts/~B, ~ts and returning ~ts, ~ts, "
-        "mapped to ~ts",
-        [ ActName, ArgCount, args_to_string( ArgSpecs ),
+    text_utils:format( "action ~ts/~B (splitter: ~p), ~ts and "
+        "returning ~ts, ~ts, mapped to ~ts",
+        [ ActName, ArgCount, Splitter, args_to_string( ArgSpecs ),
           result_spec_to_string( ResultSpec ), get_impl_string( SrvLookupInfo ),
           mapping_to_string( ReqName, ArgCount ) ] );
 
@@ -937,16 +938,24 @@ action_info_to_help_string( ActTable, AppName ) ->
 
         [ SingleActInfo ] ->
             text_utils:format( "This ~ts application supports a single "
-                "automated action: ~ts",
-                [ AppName, action_info_to_help_string( SingleActInfo ) ] );
+                "automated action: ~ts ~ts",
+                [ AppName, action_info_to_help_string( SingleActInfo ),
+                  explain_splitter() ] );
 
         ActInfos ->
             text_utils:format( "This ~ts application supports ~B automated "
-                "actions: ~ts", [ AppName, length( ActInfos ),
+                "actions: ~ts~n~ts", [ AppName, length( ActInfos ),
                     text_utils:strings_to_string( [ action_info_to_help_string(
-                        AI ) || AI <- ActInfos ] ) ] )
+                        AI ) || AI <- ActInfos ] ), explain_splitter() ] )
 
     end.
+
+
+explain_splitter() ->
+    "(a pipe character in an action name denotes the possibility of "
+    "abbreviating it by not specifying the characters on the right of that "
+    "pipe)".
+
 
 
 
@@ -954,7 +963,8 @@ action_info_to_help_string( ActTable, AppName ) ->
 Returns a textual usage help deriving from the specified action information.
 """.
 -spec action_info_to_help_string( action_info() ) -> ustring().
-action_info_to_help_string( #action_info{ action_name=ActName,
+% No description here:
+action_info_to_help_string( #action_info{ splitter=ActSplitter,
                                           arg_specs=ArgSpecs,
                                           %result_spec=ResultSpec,
                                           description=undefined } ) ->
@@ -972,9 +982,10 @@ action_info_to_help_string( #action_info{ action_name=ActName,
 
 
     % Too verbose: "and returning ~ts" / result_spec_to_string( ResultSpec )
-    text_utils:format( "'~ts'~ts", [ ActName, ArgStr ] );
+    text_utils:format( "'~ts'~ts",
+        [ spell_tree:splitter_to_string( ActSplitter ), ArgStr ] );
 
-action_info_to_help_string( #action_info{ action_name=ActName,
+action_info_to_help_string( #action_info{ splitter=ActSplitter,
                                           arg_specs=ArgSpecs,
                                           %result_spec=ResultSpec,
                                           description=BinDesc } ) ->
@@ -990,7 +1001,8 @@ action_info_to_help_string( #action_info{ action_name=ActName,
     end,
 
     % Too verbose: "and returning ~ts" / result_spec_to_string( ResultSpec )
-    text_utils:format( "'~ts': ~ts~ts", [ ActName, BinDesc, ArgStr ] ).
+    text_utils:format( "'~ts': ~ts~ts",
+        [ spell_tree:splitter_to_string( ActSplitter ), BinDesc, ArgStr ] ).
 
 
 

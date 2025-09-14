@@ -37,6 +37,9 @@
     % The name of that action:
     action_name :: us_action:action_name(),
 
+    % The spelling splitter for that action (shortest unambiguous prefix):
+    splitter :: option( spell_tree:splitter() ),
+
     % Information regarding the (ordered) arguments of that action entry:
     arg_specs :: [ us_action:arg_spec() ],
 

@@ -52,8 +52,8 @@ comprises.
 % Implementation notes:
 %
 % A US central server is responsible for the parsing and sharing of all US
-% configuration information, and for the management of the actions supported by
-% this US application (named 'xxx' in examples).
+% configuration information, and for the management of all actions supported by
+% the various servers of this US application (named 'xxx' in examples).
 
 
 
@@ -102,7 +102,10 @@ comprises.
       "(typically so that each notifies in-order its automated actions) "
       "asynchronously, so that this instance remains a (never-blocking) "
       "server, to avoid the deadlocks bound to happen with the other US "
-      "servers if it sent (blocking) requests to them" }
+      "servers if it sent (blocking) requests to them" },
+
+    { action_spell_tree, option( spell_tree() ),
+      "the spell tree used to resolve action prefixes" }
 
     % (action_table and all inherited for class_USServer)
 
@@ -163,6 +166,9 @@ In our conventions:
 -include_lib("myriad/include/utils/basic_utils.hrl").
 
 
+-include("us_action.hrl").
+
+
 
 % Type shorthands:
 
@@ -174,6 +180,9 @@ In our conventions:
 
 -type directory_path() :: file_utils:directory_path().
 %-type bin_directory_path() :: file_utils:bin_directory_path().
+
+%-type spell_tree() :: spell_tree:spell_tree().
+-type splitter() :: spell_tree:splitter().
 
 -type env_variable_name() :: system_utils:env_variable_name().
 
@@ -415,14 +424,67 @@ finalise_action_setup( State ) ->
 
     ActSpecs = [ HelpUserActSpec, StopUserActSpec ],
 
-    FinalActTable = us_action:register_action_specs( ActSpecs, OrderedActTable,
+    FullActTable = us_action:register_action_specs( ActSpecs, OrderedActTable,
         wooper:get_classname( State ) ),
+
+    %?debug_fmt( "FullActTable: ~p.", [ FullActTable ] ),
+
+    % To auto-complete requested actions:
+    ActSpellTree = spell_tree:create( [ text_utils:atom_to_string( ActName )
+        || _ActId={ ActName, _ActArity }
+                <:- list_table:keys( FullActTable ) ] ),
+
+    ActSplitters = spell_tree:get_splitters( ActSpellTree ),
+
+    %?debug_fmt( "Splitters: ~p.", [ ActSplitters ] ),
+
+    % There should be a bijection between actions and splitters:
+    FinalActTable = declare_splitters( ActSplitters, FullActTable ),
 
     class_USServer:send_action_trace_fmt( info,
         "Now that all automated actions are known, ~ts",
         [ us_action:action_table_to_string( FinalActTable ) ], State ),
 
-    setAttribute( State, action_table, FinalActTable ).
+    setAttributes( State, [ { action_table, FinalActTable },
+                            { action_spell_tree, ActSpellTree } ] ).
+
+
+
+-doc "Adds the specified splitters to the actions in the specified table.".
+-spec declare_splitters( [ splitter() ], action_table() ) -> action_table().
+% By design each splitter string should be found exactly once (even if the same
+% action name could correspond to multiple arities):
+%
+declare_splitters( _Splitters=[], ActTable ) ->
+    ActTable;
+
+% Iterating on splitter is simpler, even if list_table:update_in_place/3 cannot
+% be used due to arities:
+%
+declare_splitters( _Splitters=[ Splitter={ Prefix, Rest } | T ], ActTable ) ->
+    ActName = text_utils:string_to_atom( Prefix ++ Rest ),
+
+    % Order preserved:
+    UpdatedActTable = add_splitter( Splitter, ActName, ActTable ),
+
+    declare_splitters( T, UpdatedActTable ).
+
+
+
+% (helper)
+%
+% Found:
+add_splitter( Splitter, ActName,
+              _ActTable=[ { ActId={ ActName, _ActArity }, ActInfo } | T ] ) ->
+    NewActInfo = ActInfo#action_info{ splitter=Splitter },
+    % So stopping the recursion here:
+    [ { ActId, NewActInfo } | T ];
+
+% Not found, continuing:
+add_splitter( Splitter, ActName, _ActTable=[ NonMatchingActEntry | T ] ) ->
+    [ NonMatchingActEntry | add_splitter( Splitter, ActName, T ) ].
+
+
 
 
 

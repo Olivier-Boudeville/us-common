@@ -80,18 +80,18 @@ comprises.
 
 	{ config_base_directory, option( bin_directory_path() ),
 	  "the base directory where all US configuration is to be found "
-	  "(not the us_xxx/priv/conf internal directory)" },
+	  "(not the `us_xxx/priv/conf` internal directory)" },
 
 	{ app_base_directory, option( bin_directory_path() ),
 	  "the base directory of the US application (the root where src, priv, "
       "ebin, etc. can be found)" },
 
 	{ conf_directory, option( bin_directory_path() ),
-	  "the US internal configuration directory, 'us_xxx/priv/conf'" },
+	  "the US internal configuration directory, `us_xxx/priv/conf`" },
 
 	{ data_directory, option( bin_directory_path() ),
 	  "the directory where the US-xxx working data is to be stored "
-	  "(typically [...]/us_xxx/priv/data)" },
+	  "(typically `[...]/us_xxx/priv/data`)" },
 
 	{ log_directory, option( bin_directory_path() ),
       "the directory where (non-VM) US-xxx logs shall be written, "
@@ -105,7 +105,7 @@ comprises.
       "servers if it sent (blocking) requests to them" },
 
     { action_spell_tree, option( spell_tree() ),
-      "the spell tree used to resolve action prefixes" }
+      "any spell tree used to resolve action prefixes" }
 
     % (action_table and all inherited for class_USServer)
 
@@ -196,8 +196,9 @@ In our conventions:
 
 -type config_key() :: app_facilities:config_key().
 
+-type action_token() :: action_token().
+-type action_id() :: us_action:action_id().
 -type action_table() :: us_action:action_table().
-
 
 -type emitter_init() :: class_TraceEmitter:emitter_init().
 
@@ -205,6 +206,7 @@ In our conventions:
 -type config_table() :: class_USServer:config_table().
 
 -type config_server_pid() :: class_USConfigServer:config_server_pid().
+
 
 % No way of centralising here start_link/1 and init/1 (e.g. they require
 % ?MODULE). At least for consistency, terminate/2 not centralised here either.
@@ -243,7 +245,8 @@ construct( State, USAppShortName, ServerInit, AppRunContext ) ->
         { conf_directory, undefined },
         { data_directory, undefined },
         { log_directory, undefined },
-        { remaining_servers, [] } ] ),
+        { remaining_servers, [] },
+        { action_spell_tree, undefined } ] ),
 
     % Better disabled, as a mother class:
 	%?send_info_fmt( SetState, "Constructed: ~ts.", [ to_string( SetState ) ] ),
@@ -543,7 +546,7 @@ onAutomatedActionsNotified( State, AddActTable, SrvClassname ) ->
 
 
 
--doc "Built-in 'help' action.".
+-doc "Built-in `help` action.".
 -spec help( wooper:state() ) ->
                     const_request_return( successful( ustring() ) ).
 help( State ) ->
@@ -555,7 +558,7 @@ help( State ) ->
 
 
 
--doc "Built-in 'stop' action.".
+-doc "Built-in `stop` action.".
 -spec stop( wooper:state() ) -> request_return( successful( ustring() ) ).
 stop( State ) ->
 
@@ -1142,6 +1145,47 @@ get_us_config_pid( State ) ->
             { CfgSrvPid, State }
 
     end.
+
+
+
+-doc """
+Returns the identifier of the action deduced from the specified tokens, using
+the internal spell tree to support abbreviated actions.
+
+Overridden from the `class_USServer` mother class.
+""".
+-spec getActionId( wooper:state(), [ action_token() ] ) ->
+                        const_request_return( fallible( action_id() ) ).
+getActionId( State, _Tokens=[ ActionNamePfxBinStr | Args ] ) ->
+    % Here we can use the spelling tree to manage abbreviations - provided that
+    % this tree is already available (knowing an action request may be requested
+    % at startup, before the various actions are collected and managed):
+    %
+    Outcome = case ?getAttr(action_spell_tree) of
+
+        undefined ->
+            { error, action_service_not_ready };
+
+        ActSpellTree ->
+            case spell_tree:resolve( ActionNamePfxBinStr, ActSpellTree ) of
+
+                undefined ->
+                    { error, { unresolved_action_name_prefix,
+                               ActionNamePfxBinStr } };
+
+                ActNameStr ->
+                    ActId = { text_utils:string_to_atom( ActNameStr ),
+                              length( Args ) },
+                    { ok, ActId }
+
+            end
+
+    end,
+
+    wooper:const_return_result( Outcome );
+
+getActionId( State, Other ) ->
+    wooper:const_return_result( { error, { invalid_action_tokens, Other } } ).
 
 
 

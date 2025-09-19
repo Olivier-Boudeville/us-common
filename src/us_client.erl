@@ -44,7 +44,8 @@ For example: `us_{main,web}` or `us_foo`, the example taken here.
 
 
 
--export([ setup/1, get_config_server_info/1, teardown/0,
+-export([ setup/1, setup/2,
+          get_config_server_info/1, teardown/0, teardown/1,
           get_tcp_port_range/1 ]).
 
 
@@ -67,16 +68,29 @@ For example: `us_{main,web}` or `us_foo`, the example taken here.
 
 
 
-
 -doc """
 Setups this US client.
 
-Returns the name of the target US node, the corresponding configuration, and the
-table of remaining command-line arguments (if any).
+Returns the name of the target US node, whether this client should be verbose
+(by default: no), the corresponding configuration, and the table of remaining
+command-line arguments (if any).
 """.
 -spec setup( server_prefix() ) ->
-						{ atom_node_name(), cfg_table(), argument_table() }.
+	{ atom_node_name(), IsVerbose :: boolean(), cfg_table(), argument_table() }.
 setup( ServerPrefix ) ->
+    setup( ServerPrefix, _IsVerboseByDefault=false ).
+
+
+-doc """
+Setups this US client, possibly verbose.
+
+Returns the name of the target US node, whether this client should be verbose,
+the corresponding configuration, and the table of remaining command-line
+arguments (if any).
+""".
+-spec setup( server_prefix(), IsVerboseByDefault :: boolean() ) ->
+	{ atom_node_name(), IsVerbose :: boolean(), cfg_table(), argument_table() }.
+setup( ServerPrefix, IsVerboseByDefault ) ->
 
 	% First, enable all possible helper code (hence to be done first of all):
 	update_code_path_for_myriad_from_module(),
@@ -84,7 +98,8 @@ setup( ServerPrefix ) ->
 	% Allows to support both OTP conventions and ad hoc, automatic ones:
 	wooper_utils:start_for_app(),
 
-	{ CfgFilePath, FinalArgTable } = init_from_command_line(),
+	{ CfgFilePath, IsVerbose, FinalArgTable } =
+        init_from_command_line( IsVerboseByDefault ),
 
 	CfgTable = file_utils:read_etf_file( CfgFilePath ),
 
@@ -94,8 +109,9 @@ setup( ServerPrefix ) ->
 	{ MainTargetNodeName, UserTargetNodeName } =
 		get_target_node_names( CfgTable, ServerPrefix ),
 
-	app_facilities:display( "Trying to connect to US server node '~ts', "
-		"as client node '~ts'.", [ MainTargetNodeName, node() ] ),
+	IsVerbose andalso app_facilities:display(
+        "Trying to connect to US server node '~ts', as client node '~ts'.",
+        [ MainTargetNodeName, node() ] ),
 
 	ActualTargetNodeName = case net_adm:ping( MainTargetNodeName ) of
 
@@ -133,9 +149,9 @@ setup( ServerPrefix ) ->
 	global:sync(),
 
 	%app_facilities:display( "Globally registered names: ~w.",
-	%						 [ global:registered_names() ] ),
+	%                        [ global:registered_names() ] ),
 
-	{ ActualTargetNodeName, CfgTable, FinalArgTable }.
+	{ ActualTargetNodeName, IsVerbose, CfgTable, FinalArgTable }.
 
 
 
@@ -175,10 +191,12 @@ get_config_server_info( CfgTable ) ->
 -doc """
 Initialises this application from the command line.
 
-Returns the remaining argument table.
+Returns the path to the selected configuration file, whether verbose mode is
+activated, and the remaining argument table.
 """.
--spec init_from_command_line() -> { file_path(), cfg_table() }.
-init_from_command_line() ->
+-spec init_from_command_line( IsVerboseByDefault :: boolean() ) ->
+          { CfgFilePath :: file_path(), IsVerbose :: boolean(), cfg_table() }.
+init_from_command_line( IsVerboseByDefault ) ->
 
 	% To force options for testing:
 	%ArgTable = cmd_line_utils:generate_argument_table( "--help" ),
@@ -215,10 +233,27 @@ init_from_command_line() ->
 
 	%trace_utils:debug_fmt( "Configuration file: '~ts'.", [ CfgFilePath ] ),
 
+
+    { IsVerbose, VerbShrunkArgTable } =
+            case cmd_line_utils:extract_command_arguments_for_option(
+                _Opt='-verbose', ConfigShrunkTable ) of
+
+        { undefined, VArgTable } ->
+            { IsVerboseByDefault, VArgTable };
+
+        { [ [] ], VArgTable } ->
+            { true, VArgTable };
+
+        { UnexpectedVArgs, _VArgTable } ->
+            throw( { unexpected_verbose_args, UnexpectedVArgs } )
+
+     end,
+
+
 	% Argument also expected to be set by the caller script:
 	{ RemoteCookie, CookieShrunkTable } =
 			case list_table:extract_entry_if_existing( '-target-cookie',
-													   ConfigShrunkTable ) of
+													   VerbShrunkArgTable ) of
 
 		false ->
 			throw( no_target_cookie_set );
@@ -244,7 +279,7 @@ init_from_command_line() ->
 	%   throw( { unexpected_arguments,
 	%            list_table:enumerate( CookieShrunkTable ) } ),
 
-	{ CfgFilePath, CookieShrunkTable }.
+	{ CfgFilePath, IsVerbose, CookieShrunkTable }.
 
 
 
@@ -316,10 +351,10 @@ get_target_node_names( CfgTable, ServerPrefix ) ->
 
 
 -doc "Returns the TCP port range to use (if any).".
-get_tcp_port_range( Cfg ) ->
+get_tcp_port_range( CfgTable ) ->
 
 	MaybePortRange = list_table:get_value_with_default( _K=tcp_port_range,
-		_Default=undefined, Cfg ),
+		_Default=undefined, CfgTable ),
 
 	%trace_utils:debug_fmt( "TCP port range: ~p.", [ MaybePortRange ] ),
 
@@ -328,13 +363,17 @@ get_tcp_port_range( Cfg ) ->
 
 
 
--doc """
-Tears down the client gracefully.
-""".
+-doc "Tears down the client gracefully.".
 -spec teardown() -> void().
 teardown() ->
+    teardown( _IsVerbose=false ).
 
-	app_facilities:display( "Client terminating now "
+
+-doc "Tears down the client gracefully.".
+-spec teardown( IsVerbose :: boolean() ) -> void().
+teardown( IsVerbose ) ->
+
+	IsVerbose andalso app_facilities:display( "Client terminating now "
 		"(while known other nodes are ~w).", [ nodes() ] ),
 
 	% Feeble attempt of avoiding non-systematic "'global' at node us_foo@xxx
@@ -370,5 +409,6 @@ teardown() ->
 	%
 	% ?app_stop_without_waiting_for_trace_supervisor() is not used either, as
 	% no aggregator was started from that client.
-	%
-	app_facilities:finished().
+
+    % Otherwise too slow:
+	app_facilities:finished( IsVerbose, _BeQuick=true ).

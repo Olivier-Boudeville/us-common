@@ -357,7 +357,7 @@ synchronisation.
 
 -export([ register_action_specs/3, merge_action_table/2,
           perform_action/2, perform_action/3,
-          get_action_id/1, coerce_token_arguments/2, is_result_matching_spec/2,
+          get_action_id/1, coerce_token_arguments/3, is_result_matching_spec/2,
           action_id_to_string/1,
           action_table_to_string/1, args_to_string/1, arg_spec_to_string/1,
           result_spec_to_string/1, mapping_to_string/2,
@@ -709,14 +709,14 @@ count_dynamic_arguments( ArgSpecs ) ->
 Returns the action identifier corresponding to the token-based specified
 command.
 """.
--spec get_action_id( [ action_token() ] ) -> action_id().
+-spec get_action_id( [ action_token() ] ) -> fallible( action_id() ).
 get_action_id( _Tokens=[ ActionNameBinStr | Args ] ) ->
     ActName = text_utils:binary_to_atom( ActionNameBinStr ),
     ActArity = length( Args ),
-    { ActName, ActArity };
+    { ok, _ActId={ ActName, ActArity } };
 
 get_action_id( Other ) ->
-    throw( { invalid_action_tokens, Other } ).
+    { error, { invalid_action_tokens, Other } }.
 
 
 
@@ -725,14 +725,11 @@ Tries to coerce any arguments obtained from the specified tokens into the
 expected ones, as they were specified, and to produce the expected final list of
 actual arguments.
 
-At least one token is expected (the action name).
-
 Throws an exception on failure.
 """.
--spec coerce_token_arguments( [ action_token() ], [ arg_spec() ] ) ->
-                                        fallible( [ argument() ], ustring() ).
-% First token is the action name, the next ones are the arguments:
-coerce_token_arguments( _Tokens=[ ActName | ArgTokens ], ArgSpecs ) ->
+-spec coerce_token_arguments( [ action_token() ], [ arg_spec() ],
+        action_name() ) -> fallible( [ argument() ], ustring() ).
+coerce_token_arguments( ArgTokens, ArgSpecs, ActName ) ->
     coerce_token_arguments( ArgTokens, ArgSpecs, ActName, _Args=[] ).
 
 

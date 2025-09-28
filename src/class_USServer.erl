@@ -395,7 +395,8 @@ addAutomatedActionSpecs( State, UserActSpecs ) ->
     RegActTable = us_action:register_action_specs( UserActSpecs,
         ?getAttr(action_table), wooper:get_classname( State ) ),
 
-    ?error_fmt( "from ~w to ~w.", [ ?getAttr(action_table), RegActTable ] ),
+    %?debug_fmt( "from ~w to ~w.", [ ?getAttr(action_table), RegActTable ] ),
+
     RegState = setAttribute( State, action_table, RegActTable ),
 
     wooper:return_state( RegState ).
@@ -464,7 +465,7 @@ notifyAutomatedActions( State, InstToNotifyPid ) ->
         lists:sort( ?getAttr(action_table) ) ),
 
     cond_utils:if_defined( us_common_debug_actions,
-        send_action_trace_fmt( debug, "Sending to ~w ~ts",
+        send_action_trace_fmt( debug, "Sending to ~w that ~ts",
             [ InstToNotifyPid,
               us_action:action_table_to_string( ToSendActTable ) ],
         State ) ),
@@ -566,7 +567,6 @@ getActionId( State, Tokens ) ->
 % The caller is expected to have ensured that the correct number of argument
 % tokens has been provided.
 %
-% (helper)
 -spec execute_action( action_info(), [ action_token() ], wooper:state() ) ->
                                         { action_outcome(), wooper:state() }.
 % No lookup information, hence action implemented locally:

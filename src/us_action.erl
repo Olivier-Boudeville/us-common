@@ -67,7 +67,8 @@ against a user-specified one.
 
 Examples of such user action specs:
 
-- `startAlarm`
+- `startAlarm` (yet we recommend defining a user-targeted, snake-cased, specific
+  action name)
 
 - `{stop_room_heating, "switch off the heating of my room", actOnDevice,
   [{static, room_heater_plug, "target device short name"}, {static, switch_off,
@@ -82,7 +83,6 @@ Examples of such user action specs:
 - `{switch_device, undefined, switchDevice, [{dynamic, string, "Device
   identifier"}, {dynamic, "atom()", "'on' or 'off'"}, {static, no_timeout}],
   "boolean()"}`
-
 """.
 -type user_action_spec() ::
 
@@ -122,6 +122,10 @@ implementation request.
 The reference name of an action, used to trigger it.
 
 It usually describes (as first element) the action to undertake, with a verb.
+
+It might be convenient to retain the shortest action names with as little common
+prefixes as possible (e.g. avoiding generalising too much `start-` and `stop-`
+prefixes, so that they get automatically abbreviated with shorter prefixes.
 
 Together with the action arity, it acts, in the context of an `action_id/0`, as
 a user-friendly identifier (for which no duplicates are thus allowed).
@@ -540,7 +544,8 @@ check_action_mapping( ReqName, ReqArity, SrvClassname ) ->
     wooper_info:implements_method( SrvClassname, ReqId ) orelse
          begin
 
-             trace_bridge:error_fmt( "No ~ts request is supported by ~ts.",
+             trace_bridge:error_fmt( "No ~ts request is supported by ~ts, "
+                 "whereas it is designated as the implementation of an action.",
                  [ ast_info:function_id_to_string( ReqId ), SrvClassname ] ),
 
              throw( { action_request_not_available, { SrvClassname, ReqId } } )
@@ -847,14 +852,14 @@ action_table_to_string( ActTable ) ->
     case list_table:values( ActTable ) of
 
         [] ->
-            "no automated action defined";
+            "no automated action is defined";
 
         [ SingleActInfo ] ->
-            text_utils:format( "a single automated action defined: ~ts",
+            text_utils:format( "a single automated action is defined: ~ts",
                                [ action_info_to_string( SingleActInfo ) ] );
 
         ActInfos ->
-            text_utils:format( "~B automated actions defined: ~ts",
+            text_utils:format( "~B automated actions are defined: ~ts",
                 [ length( ActInfos ), text_utils:strings_to_string(
                     [ action_info_to_string( AI ) || AI <- ActInfos ] ) ] )
 
@@ -949,9 +954,8 @@ action_info_to_help_string( ActTable, AppName ) ->
 
 
 explain_splitter() ->
-    "(a pipe character in an action name denotes the possibility of "
-    "abbreviating it by not specifying the characters on the right of that "
-    "pipe)".
+    "(a pipe character in a name denotes the possibility of abbreviating "
+    "this name by not specifying the characters on the right of that pipe)".
 
 
 

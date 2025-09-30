@@ -580,7 +580,8 @@ execute_action( ActInfo=#action_info{ server_lookup_info=undefined,
     cond_utils:if_defined( us_common_debug_actions, send_action_trace_fmt(
         debug,
         "Executing locally ~ts, based on the following argument tokens:~n ~p",
-        [ us_action:action_info_to_string( ActInfo ), ArgTokens ], State ) ),
+        [ us_action:action_info_to_string( ActInfo ), ArgTokens ], State ),
+        basic_utils:ignore_unused( ActInfo ) ),
 
     case us_action:coerce_token_arguments( ArgTokens, ArgSpecs, ActName ) of
 

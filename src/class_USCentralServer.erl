@@ -524,7 +524,8 @@ onAutomatedActionsNotified( State, AddActTable, SrvClassname ) ->
             "Notified from US ~ts server of its ~ts "
             "(whereas was waiting for servers ~w).",
             [ SrvClassname, us_action:action_table_to_string( AddActTable ),
-              RemainingSrvs ], State ) ),
+              RemainingSrvs ], State ),
+            basic_utils:ignore_unused( SrvClassname ) ),
 
     MergedActTable = us_action:merge_action_table( AddActTable,
                                                    ?getAttr(action_table) ),

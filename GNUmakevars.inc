@@ -52,7 +52,7 @@ endif
 ifeq ($(ENABLE_DEBUG),true)
 	#US_COMMON_DEBUG_FLAGS += -Dus_common_debug_registration
 	#US_COMMON_DEBUG_FLAGS += -Dus_common_debug_scheduling
-	US_COMMON_DEBUG_FLAGS += -Dus_common_debug_actions
+	#US_COMMON_DEBUG_FLAGS += -Dus_common_debug_actions
 endif
 
 

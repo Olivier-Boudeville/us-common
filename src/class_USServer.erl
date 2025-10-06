@@ -37,8 +37,7 @@ It centralises states and behaviours on their behalf.
 
 % Exported helpers:
 -export([ register_name/3, unregister_name/1,
-          send_action_trace/3, send_action_trace_fmt/4,
-          to_string/1 ]).
+          send_action_trace/3, send_action_trace_fmt/4, to_string/1 ]).
 
 
 -doc "The PID of a US server.".
@@ -146,7 +145,11 @@ It centralises states and behaviours on their behalf.
 	  "the user (if any) under which this server is expected to run" },
 
     { action_table, action_table(),
-      "the table recording all the actions supported by this server" } ] ).
+      "the table recording all the actions supported by this server" },
+
+    {  header_table, header_table(),
+       "the table recording the action headers and the actions that each "
+       "regroups" } ] ).
 
 
 
@@ -181,7 +184,7 @@ requested.
 
 Parameter is ServerInit, the name of that US server, and whether it should trap
 EXITS, if wanting a better control by resisting to exit messages being received
-(see the onWOOPERExitReceived/3 callback).
+(see the `onWOOPERExitReceived/3` callback).
 
 It is not expected to be run as any specific user.
 """.
@@ -285,7 +288,9 @@ construct( State, ServerInit, MaybeRegistrationName, MaybeRegistrationScope,
 
 		{ username, text_utils:maybe_string_to_binary( MaybeUserName ) },
 
-        { action_table, list_table:new() } ] ),
+        { action_table, list_table:new() },
+
+        { header_table, us_action:init_header_table() } ] ),
 
 	%trace_bridge:debug_fmt( "Registering server as '~ts' for scope ~ts.",
 	%    [ MaybeRegistrationName, MaybeRegistrationScope ] ),
@@ -423,6 +428,8 @@ addAutomatedActionSpecs( State, UserActSpecs ) ->
 
 -doc """
 Registers the additional actions in the specified table in our internal one.
+
+Not used currently.
 """.
 -spec registerAutomatedActions( wooper:state(), action_table() ) ->
                                             oneway_return().
@@ -437,7 +444,7 @@ registerAutomatedActions( State, AddActTable ) ->
 
 -doc """
 Tells that this server should notify - thanks to the sending of an
-`onAutomatedActionsNotified/3` oneway call - the specified instance (generally
+`onAutomatedActionsNotified/4` oneway call - the specified instance (generally
 the one of the caller) of the automated actions that it supports.
 
 This asynchronous form has for purpose to avoid the deadlocks that
@@ -445,16 +452,16 @@ This asynchronous form has for purpose to avoid the deadlocks that
 
 Typically called based on `class_USCentralServer:manageAutomatedActions/3`.
 """.
--spec notifyAutomatedActions( wooper:state(), instance_pid() ) ->
+-spec requestAutomatedActions( wooper:state(), instance_pid() ) ->
                                                     const_oneway_return().
-notifyAutomatedActions( State, InstToNotifyPid ) ->
+requestAutomatedActions( State, InstToNotifyPid ) ->
 
     OurLookupInfo = executeConstRequest( State, getLookupInformation ),
 
     OurLookupInfo =:= undefined andalso throw( no_lookup_info ),
 
     % The local actions shall here bear a relevant, absolute lookup info:
-    ToSendActTable = list_table:map_on_values(
+    ToSendActTable = table:map_on_values(
         fun( AI=#action_info{ server_lookup_info=undefined } ) ->
             AI#action_info{ server_lookup_info=OurLookupInfo };
 
@@ -472,8 +479,8 @@ notifyAutomatedActions( State, InstToNotifyPid ) ->
 
     % Classname added to be able to sort first by server:
     InstToNotifyPid !
-        { onAutomatedActionsNotified,
-            [ ToSendActTable, wooper:get_classname( State ) ] },
+        { onAutomatedActionsNotified, [ ToSendActTable, 
+            ?getAttr(header_table), wooper:get_classname( State ) ] },
 
     wooper:const_return().
 

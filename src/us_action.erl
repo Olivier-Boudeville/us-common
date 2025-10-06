@@ -111,6 +111,26 @@ Examples of such user action specs:
 
 
 -doc """
+A user-defined header text describing a thematical set of actions.
+
+Only of use for user interaction.
+""".
+-type user_action_header() :: ustring().
+
+
+-doc """
+A user-defined, internal header text describing a thematical set of actions, or
+a specific atom to regroup all actions declared without any header.
+""".
+-type action_header() :: bin_string() | ?headerless_actions_key.
+
+
+-doc "A list of user action specs, possibly with (non-nested) header texts.".
+-type user_action_specs() ::
+    [ user_action_spec() | { user_action_header(), [ user_action_spec() ] } ].
+
+
+-doc """
 The internal, canonical specification of an action, branching to its
 implementation request.
 """.
@@ -300,14 +320,26 @@ specified.
 A table recording, for a given US-Server, all information about known, supported
 actions.
 
-Note that list_table/2 has been preferred to `table/2`, as it allows to define a
-(thematical, and then defined per-action for each server) order.
+Their order/sorting is determined solely by the header table.
 """.
--type action_table() :: list_table( action_id(), action_info() ).
+-type action_table() :: table( action_id(), action_info() ).
 
 
 -doc "The identifier of an action (typically in an action table).".
 -type action_id() :: { action_name(), action_arity() }.
+
+
+-doc """
+Stores the headers and the (ordered) actions that each federates.
+
+Actions that are declared within no specific header are to be associated to the
+default header - which is designated by the (atom) key designated by the
+`headerless_actions_key` define; such an entry is expected to be always
+defined/available.
+""".
+% Not a list_table, as no pre-existing order in headers to preserve here:
+-type header_table() :: table( action_header(), [ action_id() ] ).
+
 
 
 -doc """
@@ -355,11 +387,12 @@ synchronisation.
                arg_name/0, argument/0,
                user_result_spec/0, result_spec/0,
                failure_report/0, action_outcome/0, action_outcome/1,
-               action_table/0, action_id/0, action_arity/0, action_info/0,
+               action_table/0, header_table/0,
+               action_id/0, action_arity/0, action_info/0,
                action_token/0, action_request/0 ]).
 
 
--export([ register_action_specs/3, merge_action_table/2,
+-export([ register_action_specs/3, init_header_table/0, merge_action_table/2,
           perform_action/2, perform_action/3,
           get_action_id/1, coerce_token_arguments/3, is_result_matching_spec/2,
           action_id_to_string/1,
@@ -373,6 +406,9 @@ synchronisation.
 
 -type text_type() :: type_utils:text_type().
 -type contextual_type() :: type_utils:contextual_type().
+
+
+-define( headerless_actions_key, headerless ).
 
 
 % Type shorthands:
@@ -399,19 +435,62 @@ synchronisation.
 
 -doc """
 Registers the specified user action specifications in the specified action
+table (at its tail, and in reverse order) and header table.
+
+Note that the specified classname is just used for checking at
+registration-time, and is not stored.
+""".
+-spec register_action_specs( [ user_action_spec() ], action_table(),
+    header_table(), classname() ) -> { action_table(), header_table() }.
+register_action_specs( _UserActSpecs=[], ActTable, HdTable, _SrvClassname ) ->
+    { ActTable, HdTable };
+
+
+% With an action header:
+register_action_specs( _UserActSpecs=[ { UAHStr, UASs } | T ], ActTable,
+        HdTable, SrvClassname ) when is_list( UAHStr ) % (string)
+                                     andalso is_list( UASs ) % (actual list) ->
+
+    { ActIds, NewActTable ] = lists:foldl(
+        fun( UAS, _Acc={ AccIds, AccAccTable } ) ->
+            { ActId, NewAccAccTable } = register_action_spec( UAS,
+                AccActTable, SrvClassname ),
+            { [ ActId | AccIds ], NewAccAccTable }
+        end,
+        _Acc0={ _AccIds0=[], ActTable },
+        _List=UASs )
+
+    HdBinStr = text_utils:string_to_binary( UAHStr ),
+    NewHdTable = table:append_to_entry( _K=HdBinStr, _Elem=ActIds, HdTable ),
+
+    register_action_specs( T, NewActTable, NewHdTable, SrvClassname );
+
+
+% No header, just an action:
+register_action_specs( _UserActSpecs=[ UAS | T ], ActTable, HdTable,
+                       SrvClassname ) ->
+
+    { ActId, NewActTable ] =
+        register_action_spec( UAS, ActTable, SrvClassname ),
+
+    NewHdTable = table:append_to_existing_entry( ?headerless_actions_key,
+                                                 _Elem=ActId, HdTable ),
+
+    register_action_specs( T, NewActTable, NewHdTable, SrvClassname ).
+
+
+
+-doc """
+Registers the specified user action specification in the specified action
 table (at its tail, and in reverse order).
 
 Note that the specified classname is used just for checking at
 registration-time, and is not stored.
 """.
--spec register_action_specs( [ user_action_spec() ], action_table(),
-                             classname() ) -> action_table().
-register_action_specs( _UserActSpecs=[], ActTable, _SrvClassname ) ->
-    ActTable;
 
 % Full spec:
-register_action_specs( _UserActSpecs=[ Spec={ ActName, MaybeDesc, RequestName,
-        ArgSpecs, ResSpec } | T ], ActTable, SrvClassname ) ->
+register_action_spec( _UserActSpec={ ActName, MaybeDesc, RequestName,
+        ArgSpecs, ResSpec }, ActTable, SrvClassname ) ->
 
     is_atom( ActName ) orelse begin
 
@@ -458,36 +537,42 @@ register_action_specs( _UserActSpecs=[ Spec={ ActName, MaybeDesc, RequestName,
 
     NewActTable = list_table:add_entry( ActId, ActInfo, ActTable ),
 
-    register_action_specs( T, NewActTable, SrvClassname );
+    { ActId, NewActTable };
 
 % No request spec specified, so the 'unchecked_result' policy will apply:
-register_action_specs(
-        _UserActSpecs=[ { ActName, MaybeDesc, RequestName, ArgSpecs } | T ],
+register_action_spec(
+        _UserActSpec={ ActName, MaybeDesc, RequestName, ArgSpecs },
         ActTable, SrvClassname ) ->
-    register_action_specs( [ { ActName, MaybeDesc, RequestName, ArgSpecs,
-        _UsrResSpec=unchecked_result } | T ], ActTable, SrvClassname );
+    register_action_spec( { ActName, MaybeDesc, RequestName, ArgSpecs,
+        _UsrResSpec=unchecked_result }, ActTable, SrvClassname );
 
 % No argument spec:
-register_action_specs( _UserActSpecs=[ { ActName, MaybeDesc, ReqName } | T ],
+register_action_spec( _UserActSpec={ ActName, MaybeDesc, ReqName },
                        ActTable, SrvClassname ) ->
-    register_action_specs(
-        [ { ActName, MaybeDesc, ReqName, _ArgSpecs=[] } | T ], ActTable,
-        SrvClassname );
+    register_action_spec( { ActName, MaybeDesc, ReqName, _ArgSpecs=[] },
+                          ActTable, SrvClassname );
 
 % No request name, using the action one:
-register_action_specs( _UserActSpecs=[ { ActName, MaybeDesc } | T ], ActTable,
-                       SrvClassname ) ->
-    register_action_specs( [ { ActName, MaybeDesc, _ReqName=ActName } | T ],
-                           ActTable, SrvClassname );
+register_action_spec( _UserActSpec={ ActName, MaybeDesc }, ActTable,
+                      SrvClassname ) ->
+    register_action_spec( { ActName, MaybeDesc, _ReqName=ActName }, ActTable,
+                          SrvClassname );
 
 % Not even a description:
-register_action_specs( _UserActSpecs=[ ActName | T ], ActTable,
-                       SrvClassname ) ->
-    register_action_specs( [ { ActName, _MaybeDesc=undefined } | T ], ActTable,
+register_action_spec( _UserActSpec=ActName, ActTable, SrvClassname ) ->
+    register_action_spec( { ActName, _MaybeDesc=undefined }, ActTable,
                            SrvClassname );
 
-register_action_specs( Other, _ActTable, _SrvClassname ) ->
-    throw( { invalid_action_specifications, not_list, Other } ).
+register_action_spec( Other, _ActTable, _SrvClassname ) ->
+    throw( { invalid_action_specification, Other } ).
+
+
+
+-doc "Returns an initialised header table."
+-spec init_header_table() -> header_table().
+init_header_table() ->
+    % Always defined, to be ready:
+    table:singleton( _K=?headerless_actions_key, _V=[] ).
 
 
 
@@ -849,7 +934,7 @@ get_impl_string( SrvLookupInfo ) ->
 -doc "Returns a textual description of the specified action table.".
 -spec action_table_to_string( action_table() ) -> ustring().
 action_table_to_string( ActTable ) ->
-    case list_table:values( ActTable ) of
+    case table:values( ActTable ) of
 
         [] ->
             "no automated action is defined";
@@ -861,9 +946,60 @@ action_table_to_string( ActTable ) ->
         ActInfos ->
             text_utils:format( "~B automated actions are defined: ~ts",
                 [ length( ActInfos ), text_utils:strings_to_string(
-                    [ action_info_to_string( AI ) || AI <- ActInfos ] ) ] )
+                    [ action_info_to_string( AI )
+                        || AI <- lists:sort( ActInfos ) ] ) ] )
 
     end.
+
+
+-doc "Returns a textual description of the specified action tables.".
+-spec action_tables_to_string( header_table(), action_table() ) -> ustring().
+action_tables_to_string( HdTable, ActTable ) ->
+    case table:values( HdTable ) of
+
+        [ { ?headerless_actions_key, _ActIds=[] } ] ->
+            "no action referenced";
+
+        [ { ?headerless_actions_key, _ActIds=[ ActId ] } ] ->
+            ActInfo = table:get_value( _K=ActId, ActTable ),
+            text_utils:format( "a single automated action is defined, "
+                "with no header: ~ts", [ action_info_to_string( ActInfo ) ] );
+
+        [ { ?headerless_actions_key, ActIds } ] ->
+            ActInfo = table:get_value( _K=ActId, ActTable ),
+            text_utils:format( "~B automated actions defined, "
+        % At least a non-default header here:
+        HeaderIdsPairs ->
+            ActCount = table:size( ActTable ),
+            text_utils:format( "~B automated actions defined, "
+                "in ~B headers: ~ts",
+                [ table:size( ActTable ), length( HeaderIdsPairs ) - 1,
+
+text_utils:strings_to_string(
+                    [ action_info_to_string( AI )
+                        || AI <- lists:sort( ActInfos ) ] ) ] )
+
+    end.
+
+
+
+-doc """
+Returns a textual description of the specified actions in the specified header.
+""".
+-spec header_to_string( action_header(), [ action_id() ], action_table() ) ->
+                                                    ustring().
+action_tables_to_string( _ActHeader=?headerless_actions_key, ActIds,
+                         ActTable ) ->
+     text_utils:format( "~B actions with no header: ~ts", [ length( ActIds ),
+         text_utils:strings_to_string( [
+             action_info_to_string( table:get_value( ActId, Actable ) )
+                        || ActId <- lists:sort( ActIds ) ] ) ] );
+
+action_tables_to_string( ActHeaderBinStr, ActIds, ActTable ) ->
+     text_utils:format( "~B actions within header '~ts': ~ts",
+         [ length( ActIds ), ActHeaderBinStr, text_utils:strings_to_string( [
+            action_info_to_string( table:get_value( ActId, Actable ) )
+                || ActId <- lists:sort( ActIds ) ] ) ] ).
 
 
 

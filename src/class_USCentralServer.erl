@@ -349,8 +349,11 @@ manageAutomatedActions( State, ConfigTable, SrvClassnames ) ->
     wooper:check_equal( remaining_servers, [], State ),
 
     % In the action table, the final preferred action order is:
-    %  1. any (ordered) actions of each (ordered) server specified
-    %  2. any (ordered) user-specified actions, as listed in the configuration
+
+    %  1. any (ordered) actions of each (ordered) server specified, possibly
+    %  with action headers
+    %  2. any (ordered) user-specified actions, as listed in the configuration,
+    %  possibly with action headers
     %  3. 'help' (but filtered out in listing)
     %  4. 'stop'
     %
@@ -381,7 +384,7 @@ manageAutomatedActions( State, ConfigTable, SrvClassnames ) ->
     % should refrain from sending requests (thus as a client) to other servers,
     % and act upon them asynchronously instead, i.e. based on oneways.
     %
-    % However, if sending asynchronously a (notifyAutomatedActions/1) oneway to
+    % However, if sending asynchronously a (requestAutomatedActions/1) oneway to
     % all servers, their answer will arrive in unspecified order, wheres we want
     % the help command to list them in a stable and meaningful order. So now we
     % serialise these exchanges per oneway (waiting first for its answer).
@@ -398,7 +401,9 @@ manageAutomatedActions( State, ConfigTable, SrvClassnames ) ->
         [] ->
             finalise_action_setup( IntegState );
 
-        % We serialise the asynchronous (oneway) calls, for order:
+        % We serialise the asynchronous (oneway) calls to the thematical
+        % servers, for order:
+        %
         SrvClassnames ->
             trigger_server_for_action( SrvClassnames, IntegState )
 
@@ -502,7 +507,7 @@ trigger_server_for_action( [ NextSrvClassname | OtherSrvClassnames ], State ) ->
     % Hence not a request (see manageAutomatedActions/3); could be named
     % getAutomatedActionsAsync:
     %
-    SrvPid ! { notifyAutomatedActions, self() },
+    SrvPid ! { requestAutomatedActions, self() },
 
     setAttribute( State, remaining_servers, OtherSrvClassnames ).
 
@@ -511,11 +516,11 @@ trigger_server_for_action( [ NextSrvClassname | OtherSrvClassnames ], State ) ->
 -doc """
 Records the actions sent back by the specified US server.
 
-Typically triggered by a prior `notifyAutomatedActions/2` oneway call.
+Typically triggered by a prior `requestAutomatedActions/2` oneway call.
 """.
 -spec onAutomatedActionsNotified( wooper:state(), action_table(),
-                                  classname() ) -> oneway_return().
-onAutomatedActionsNotified( State, AddActTable, SrvClassname ) ->
+        header_table(), classname() ) -> oneway_return().
+onAutomatedActionsNotified( State, AddActTable, AddhdTable, SrvClassname ) ->
 
     RemainingSrvs = ?getAttr(remaining_servers),
 
@@ -527,8 +532,9 @@ onAutomatedActionsNotified( State, AddActTable, SrvClassname ) ->
               RemainingSrvs ], State ),
             basic_utils:ignore_unused( SrvClassname ) ),
 
-    MergedActTable = us_action:merge_action_table( AddActTable,
-                                                   ?getAttr(action_table) ),
+    { MergedActTable, MergedHdTable } = us_action:merge_action_tables(
+        AddActTable, AddhdTable,
+        ?getAttr(action_table), ?getAttr(header_table) ),
 
     MergedState = setAttribute( State, action_table, MergedActTable ),
 

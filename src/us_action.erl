@@ -115,7 +115,12 @@ A user-defined header text describing a thematical set of actions.
 
 Only of use for user interaction.
 """.
--type user_action_header() :: ustring().
+-type user_action_header() :: any_string().
+
+
+
+% The key in an header table regrouping the header-less actions:
+-define( headerless_actions_key, headerless ).
 
 
 -doc """
@@ -330,12 +335,13 @@ Their order/sorting is determined solely by the header table.
 
 
 -doc """
-Stores the headers and the (ordered) actions that each federates.
+Stores the headers and the (ordered) actions that each federates, through their
+identifiers (which correspond to the keys of the action table).
 
 Actions that are declared within no specific header are to be associated to the
-default header - which is designated by the (atom) key designated by the
+default header - which is designated by the (atom) key specified by the
 `headerless_actions_key` define; such an entry is expected to be always
-defined/available.
+set/available in an header table.
 """.
 % Not a list_table, as no pre-existing order in headers to preserve here:
 -type header_table() :: table( action_header(), [ action_id() ] ).
@@ -378,8 +384,9 @@ synchronisation.
 
 
 -export_type([ user_description/0, description/0,
-               user_action_spec/0, action_spec/0,
-               action_name/0,
+               user_action_header/0, action_header/0,
+               user_action_spec/0, user_action_specs/0,
+               action_spec/0, action_name/0,
 
                arg_kind/0, static_value/0,
                user_arg_spec/0,
@@ -392,11 +399,13 @@ synchronisation.
                action_token/0, action_request/0 ]).
 
 
--export([ register_action_specs/3, init_header_table/0, merge_action_table/2,
+-export([ register_action_specs/4, init_header_table/0, merge_action_table/2,
           perform_action/2, perform_action/3,
           get_action_id/1, coerce_token_arguments/3, is_result_matching_spec/2,
           action_id_to_string/1,
-          action_table_to_string/1, args_to_string/1, arg_spec_to_string/1,
+          action_table_to_string/1, action_tables_to_string/2,
+          header_to_string/3,
+          args_to_string/1, arg_spec_to_string/1,
           result_spec_to_string/1, mapping_to_string/2,
           action_info_to_string/1,
           action_info_to_help_string/1, action_info_to_help_string/2 ]).
@@ -408,8 +417,6 @@ synchronisation.
 -type contextual_type() :: type_utils:contextual_type().
 
 
--define( headerless_actions_key, headerless ).
-
 
 % Type shorthands:
 
@@ -418,8 +425,6 @@ synchronisation.
 -type ustring() :: text_utils:ustring().
 -type bin_string() :: text_utils:bin_string().
 -type any_string() :: text_utils:any_string().
-
--type list_table( K, V ) :: list_table:list_table( K, V ).
 
 -type lookup_info() :: naming_utils:lookup_info().
 
@@ -446,31 +451,33 @@ register_action_specs( _UserActSpecs=[], ActTable, HdTable, _SrvClassname ) ->
     { ActTable, HdTable };
 
 
-% With an action header:
-register_action_specs( _UserActSpecs=[ { UAHStr, UASs } | T ], ActTable,
-        HdTable, SrvClassname ) when is_list( UAHStr ) % (string)
-                                     andalso is_list( UASs ) % (actual list) ->
+% Here actions with an header:
+register_action_specs( _UserActSpecs=[ { UAHAnyStr, UASs } | T ], ActTable,
+        HdTable, SrvClassname ) when
+            ( is_list( UAHAnyStr ) orelse is_binary( UAHAnyStr ) )
+            andalso is_list( UASs ) -> % (actual list)
 
-    { ActIds, NewActTable ] = lists:foldl(
-        fun( UAS, _Acc={ AccIds, AccAccTable } ) ->
+    { ActIds, NewActTable } = lists:foldl(
+        fun( UAS, _Acc={ AccIds, AccActTable } ) ->
             { ActId, NewAccAccTable } = register_action_spec( UAS,
                 AccActTable, SrvClassname ),
             { [ ActId | AccIds ], NewAccAccTable }
         end,
         _Acc0={ _AccIds0=[], ActTable },
-        _List=UASs )
+        _List=UASs ),
 
-    HdBinStr = text_utils:string_to_binary( UAHStr ),
-    NewHdTable = table:append_to_entry( _K=HdBinStr, _Elem=ActIds, HdTable ),
+    HdBinStr = text_utils:ensure_binary( UAHAnyStr ),
+    NewHdTable = table:append_list_to_entry( _K=HdBinStr, _Elem=ActIds,
+                                             HdTable ),
 
     register_action_specs( T, NewActTable, NewHdTable, SrvClassname );
 
 
-% No header, just an action:
+% No header, just a standalone action:
 register_action_specs( _UserActSpecs=[ UAS | T ], ActTable, HdTable,
                        SrvClassname ) ->
 
-    { ActId, NewActTable ] =
+    { ActId, NewActTable } =
         register_action_spec( UAS, ActTable, SrvClassname ),
 
     NewHdTable = table:append_to_existing_entry( ?headerless_actions_key,
@@ -487,18 +494,19 @@ table (at its tail, and in reverse order).
 Note that the specified classname is used just for checking at
 registration-time, and is not stored.
 """.
-
+-spec register_action_spec( user_action_spec(), action_table(), classname() ) ->
+                                { action_id(), action_table() }.
 % Full spec:
-register_action_spec( _UserActSpec={ ActName, MaybeDesc, RequestName,
+register_action_spec( UserActSpec={ ActName, MaybeDesc, RequestName,
         ArgSpecs, ResSpec }, ActTable, SrvClassname ) ->
 
     is_atom( ActName ) orelse begin
 
 		trace_bridge:error_fmt( "Invalid action name ('~p') "
 			"in user action specification ~p (not an atom).",
-            [ ActName, Spec ] ),
+            [ ActName, UserActSpec ] ),
 
-       throw( { invalid_action_name, ActName, Spec } )
+       throw( { invalid_action_name, ActName, UserActSpec } )
 
                               end,
 
@@ -519,9 +527,9 @@ register_action_spec( _UserActSpec={ ActName, MaybeDesc, RequestName,
 
 		trace_bridge:error_fmt( "Multiple actions ~ts defined "
             "in user action specification ~p.",
-            [ action_id_to_string( ActId ), Spec ] ),
+            [ action_id_to_string( ActId ), UserActSpec ] ),
 
-        throw( { multiple_action_definitions, ActName, Spec } )
+        throw( { multiple_action_definitions, ActName, UserActSpec } )
 
                                                   end,
 
@@ -561,14 +569,13 @@ register_action_spec( _UserActSpec={ ActName, MaybeDesc }, ActTable,
 % Not even a description:
 register_action_spec( _UserActSpec=ActName, ActTable, SrvClassname ) ->
     register_action_spec( { ActName, _MaybeDesc=undefined }, ActTable,
-                           SrvClassname );
+                           SrvClassname ).
 
-register_action_spec( Other, _ActTable, _SrvClassname ) ->
-    throw( { invalid_action_specification, Other } ).
-
+% (no catch-all error clause useful here)
 
 
--doc "Returns an initialised header table."
+
+-doc "Returns an initialised header table.".
 -spec init_header_table() -> header_table().
 init_header_table() ->
     % Always defined, to be ready:
@@ -952,10 +959,10 @@ action_table_to_string( ActTable ) ->
     end.
 
 
--doc "Returns a textual description of the specified action tables.".
+-doc "Returns a textual description of the specified action-related tables.".
 -spec action_tables_to_string( header_table(), action_table() ) -> ustring().
 action_tables_to_string( HdTable, ActTable ) ->
-    case table:values( HdTable ) of
+    case table:enumerate( HdTable ) of
 
         [ { ?headerless_actions_key, _ActIds=[] } ] ->
             "no action referenced";
@@ -966,40 +973,47 @@ action_tables_to_string( HdTable, ActTable ) ->
                 "with no header: ~ts", [ action_info_to_string( ActInfo ) ] );
 
         [ { ?headerless_actions_key, ActIds } ] ->
-            ActInfo = table:get_value( _K=ActId, ActTable ),
-            text_utils:format( "~B automated actions defined, "
-        % At least a non-default header here:
-        HeaderIdsPairs ->
-            ActCount = table:size( ActTable ),
-            text_utils:format( "~B automated actions defined, "
-                "in ~B headers: ~ts",
-                [ table:size( ActTable ), length( HeaderIdsPairs ) - 1,
+            text_utils:format( "~B no-header automated actions defined: ~ts",
+                [ length( ActIds ), text_utils:strings_to_string(
+                    [ action_info_to_string(
+                        table:get_value( _K=ActId, ActTable ) )
+                            || ActId <- ActIds ] ) ] );
 
-text_utils:strings_to_string(
-                    [ action_info_to_string( AI )
-                        || AI <- lists:sort( ActInfos ) ] ) ] )
+
+        % At least one non-default header here:
+        HeaderIdsPairs ->
+            text_utils:format( "~B automated actions and ~B headers "
+                "defined: ~ts",
+                [ table:size( ActTable ), length( HeaderIdsPairs ) - 1,
+                  text_utils:strings_to_string(
+                    [ header_to_string( Hd, ActIds, ActTable )
+                        % To finish with header-less actions:
+                        || { Hd, ActIds } <- lists:sort( HeaderIdsPairs )
+                    ] ) ] )
 
     end.
 
 
 
 -doc """
-Returns a textual description of the specified actions in the specified header.
+Returns a textual description of the specified actions set in the specified
+header.
 """.
 -spec header_to_string( action_header(), [ action_id() ], action_table() ) ->
                                                     ustring().
-action_tables_to_string( _ActHeader=?headerless_actions_key, ActIds,
-                         ActTable ) ->
+header_to_string( _ActHeader=?headerless_actions_key, ActIds, ActTable ) ->
      text_utils:format( "~B actions with no header: ~ts", [ length( ActIds ),
          text_utils:strings_to_string( [
-             action_info_to_string( table:get_value( ActId, Actable ) )
-                        || ActId <- lists:sort( ActIds ) ] ) ] );
+             action_info_to_string( table:get_value( ActId, ActTable ) )
+                        %|| ActId <- lists:sort( ActIds ) ] ) ] );
+                        || ActId <- ActIds ] ) ] );
 
-action_tables_to_string( ActHeaderBinStr, ActIds, ActTable ) ->
+header_to_string( ActHeaderBinStr, ActIds, ActTable ) ->
      text_utils:format( "~B actions within header '~ts': ~ts",
          [ length( ActIds ), ActHeaderBinStr, text_utils:strings_to_string( [
-            action_info_to_string( table:get_value( ActId, Actable ) )
-                || ActId <- lists:sort( ActIds ) ] ) ] ).
+            action_info_to_string( table:get_value( ActId, ActTable ) )
+                %|| ActId <- lists:sort( ActIds ) ] ) ] ).
+                || ActId <- ActIds ] ) ] ).
 
 
 

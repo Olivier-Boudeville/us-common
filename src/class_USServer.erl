@@ -148,8 +148,8 @@ It centralises states and behaviours on their behalf.
       "the table recording all the actions supported by this server" },
 
     {  header_table, header_table(),
-       "the table recording the action headers and the actions that each "
-       "regroups" } ] ).
+       "the table recording the action headers, and the actions that each "
+       "of them regroups" } ] ).
 
 
 
@@ -243,6 +243,8 @@ Parameters are:
 - RegistrationScope, the scope at which this server shall be registered
 - TrapExits, whether EXIT messages shall be trapped
 - MaybeUserName, the name of any user under which this server is expected to run
+
+(most complete constructor)
 """.
 -spec construct( wooper:state(), emitter_init(), option( registration_name() ),
 		option( registration_scope() ), boolean(), option( user_name() ) ) ->
@@ -288,7 +290,7 @@ construct( State, ServerInit, MaybeRegistrationName, MaybeRegistrationScope,
 
 		{ username, text_utils:maybe_string_to_binary( MaybeUserName ) },
 
-        { action_table, list_table:new() },
+        { action_table, table:new() },
 
         { header_table, us_action:init_header_table() } ] ),
 

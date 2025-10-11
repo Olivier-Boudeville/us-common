@@ -196,9 +196,10 @@ In our conventions:
 
 -type config_key() :: app_facilities:config_key().
 
--type action_token() :: action_token().
+-type action_token() :: us_action:action_token().
 -type action_id() :: us_action:action_id().
 -type action_table() :: us_action:action_table().
+-type header_table() :: us_action:header_table().
 
 -type emitter_init() :: class_TraceEmitter:emitter_init().
 
@@ -520,23 +521,25 @@ Typically triggered by a prior `requestAutomatedActions/2` oneway call.
 """.
 -spec onAutomatedActionsNotified( wooper:state(), action_table(),
         header_table(), classname() ) -> oneway_return().
-onAutomatedActionsNotified( State, AddActTable, AddhdTable, SrvClassname ) ->
+onAutomatedActionsNotified( State, AddActTable, AddHdTable, SrvClassname ) ->
 
     RemainingSrvs = ?getAttr(remaining_servers),
 
     cond_utils:if_defined( us_common_debug_actions,
         class_USServer:send_action_trace_fmt( debug,
-            "Notified from US ~ts server of its ~ts "
+            "Notified from US ~ts server of its ~ts and ~ts"
             "(whereas was waiting for servers ~w).",
             [ SrvClassname, us_action:action_table_to_string( AddActTable ),
+              us_action:header_table_to_string( AddHdTable ),
               RemainingSrvs ], State ),
             basic_utils:ignore_unused( SrvClassname ) ),
 
     { MergedActTable, MergedHdTable } = us_action:merge_action_tables(
-        AddActTable, AddhdTable,
+        AddActTable, AddHdTable,
         ?getAttr(action_table), ?getAttr(header_table) ),
 
-    MergedState = setAttribute( State, action_table, MergedActTable ),
+    MergedState = setAttributes( State, [ { action_table, MergedActTable },
+                                          { header_table, MergedHdTable } ] ),
 
     ResState = case RemainingSrvs of
 

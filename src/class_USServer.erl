@@ -116,40 +116,39 @@ It centralises states and behaviours on their behalf.
 % Class-specific attributes of a server are:
 -define( class_attributes, [
 
-	% Attempt also to keep this millisecond count not too large:
-	{ server_start, time_utils:ms_monotonic(),
-	  "a point of time reference for later duration measurements, in VM "
-	  "monotonic time (milliseconds)" },
+    % Attempt also to keep this millisecond count not too large:
+    { server_start, time_utils:ms_monotonic(),
+      "a point of time reference for later duration measurements, in VM "
+      "monotonic time (milliseconds)" },
 
-	% As Gregorian conventions are used for conversions (from a given measured
-	% duration, obtained through monotonic times), adding this value allows,
-	% with the Gregorian result, to establish directly a proper (absolute)
-	% timestamp:
-	%
-	{ server_gregorian_start, ms_since_year_0(),
-	  "the internal system time at which this server was started "
-	  "since year 0, to facilitate timestamp conversions to/from user time" },
+    % As Gregorian conventions are used for conversions (from a given measured
+    % duration, obtained through monotonic times), adding this value allows,
+    % with the Gregorian result, to establish directly a proper (absolute)
+    % timestamp:
+    %
+    { server_gregorian_start, ms_since_year_0(),
+      "the internal system time at which this server was started "
+      "since year 0, to facilitate timestamp conversions to/from user time" },
 
-	% The reference to tell whether a server shall be registered (regardless of
-	% the scope):
-	%
-	{ registration_name, option( registration_name() ),
-	  "records the name of this server, as possibly registered in the "
-	  "naming service" },
+    % The reference to tell whether a server shall be registered (regardless of
+    % the scope):
+    %
+    { registration_name, option( registration_name() ),
+      "records the name of this server, as possibly registered in the "
+      "naming service" },
 
-	{ registration_scope, option( registration_scope() ),
-	  "records the scope of the registration of this server in the naming "
-	  "service" },
+    { registration_scope, option( registration_scope() ),
+      "records the scope of the registration of this server in the naming "
+      "service" },
 
-	{ username, option( user_name() ),
-	  "the user (if any) under which this server is expected to run" },
+    { username, option( user_name() ),
+      "the user (if any) under which this server is expected to run" },
 
     { action_table, action_table(),
       "the table recording all the actions supported by this server" },
 
-    {  header_table, header_table(),
-       "the table recording the action headers, and the actions that each "
-       "of them regroups" } ] ).
+    { header_info, header_info(), "records the headers defined with their "
+      "actions, and the headerlesss actions" } ] ).
 
 
 
@@ -174,7 +173,7 @@ It is not expected to be run as any specific user.
 """.
 -spec construct( wooper:state(), emitter_init() ) -> wooper:state().
 construct( State, ServerInit ) ->
-	construct( State, ServerInit, _TrapExits=true ).
+    construct( State, ServerInit, _TrapExits=true ).
 
 
 
@@ -190,8 +189,8 @@ It is not expected to be run as any specific user.
 """.
 -spec construct( wooper:state(), emitter_init(), boolean() ) -> wooper:state().
 construct( State, ServerInit, TrapExits ) ->
-	construct( State, ServerInit, _MaybeRegistrationName=undefined,
-		_MaybeRegistrationScope=undefined, TrapExits ).
+    construct( State, ServerInit, _MaybeRegistrationName=undefined,
+        _MaybeRegistrationScope=undefined, TrapExits ).
 
 
 
@@ -206,10 +205,10 @@ Parameters are:
 It is not expected to be run as any specific user.
 """.
 -spec construct( wooper:state(), emitter_init(), option( registration_name() ),
-				 option( registration_scope() ) ) -> wooper:state().
+                 option( registration_scope() ) ) -> wooper:state().
 construct( State, ServerInit, MaybeRegistrationName, MaybeRegistrationScope ) ->
-	construct( State, ServerInit, MaybeRegistrationName, MaybeRegistrationScope,
-			   _TrapExits=true ).
+    construct( State, ServerInit, MaybeRegistrationName, MaybeRegistrationScope,
+               _TrapExits=true ).
 
 
 
@@ -225,11 +224,11 @@ Parameters are:
 It is not expected to be run as any specific user.
 """.
 -spec construct( wooper:state(), emitter_init(), option( registration_name() ),
-				 option( registration_scope() ), boolean() ) -> wooper:state().
+                 option( registration_scope() ), boolean() ) -> wooper:state().
 construct( State, ServerInit, MaybeRegistrationName, MaybeRegistrationScope,
-		   TrapExits ) ->
-	construct( State, ServerInit, MaybeRegistrationName, MaybeRegistrationScope,
-			   TrapExits, _MaybeUserName=undefined ).
+           TrapExits ) ->
+    construct( State, ServerInit, MaybeRegistrationName, MaybeRegistrationScope,
+               TrapExits, _MaybeUserName=undefined ).
 
 
 
@@ -247,19 +246,19 @@ Parameters are:
 (most complete constructor)
 """.
 -spec construct( wooper:state(), emitter_init(), option( registration_name() ),
-		option( registration_scope() ), boolean(), option( user_name() ) ) ->
-													wooper:state().
+        option( registration_scope() ), boolean(), option( user_name() ) ) ->
+                                                    wooper:state().
 construct( State, ServerInit, MaybeRegistrationName, MaybeRegistrationScope,
-		   TrapExits, MaybeUserName ) ->
+           TrapExits, MaybeUserName ) ->
 
-	TrapExits =:= true andalso
-		% Wanting a better control by resisting to exit messages being received
-		% (see the onWOOPERExitReceived/3 callback):
-		%
-		erlang:process_flag( trap_exit, true ),
+    TrapExits =:= true andalso
+        % Wanting a better control by resisting to exit messages being received
+        % (see the onWOOPERExitReceived/3 callback):
+        %
+        erlang:process_flag( trap_exit, true ),
 
-	% First the direct mother classes:
-	TraceState = class_TraceEmitter:construct( State,
+    % First the direct mother classes:
+    TraceState = class_TraceEmitter:construct( State,
                                                ?trace_categorize(ServerInit) ),
 
     % Enable all US servers to rely on a trace bridge, notably if using
@@ -272,32 +271,32 @@ construct( State, ServerInit, MaybeRegistrationName, MaybeRegistrationScope,
     % Inconvenient (too verbose/too early: at start-up, gets printed on the
     % console):
     %
-	%TrapExits =:= true andalso
+    %TrapExits =:= true andalso
     %    trace_bridge:debug( "Will be trapping EXIT messages." ),
 
-	% Constant based on the number of milliseconds of the EPOCH, since year 0;
-	% used in order to compute the most complete offset (in UTC):
-	%
-	MsOfEpoch = time_utils:get_epoch_milliseconds_since_year_0(),
+    % Constant based on the number of milliseconds of the EPOCH, since year 0;
+    % used in order to compute the most complete offset (in UTC):
+    %
+    MsOfEpoch = time_utils:get_epoch_milliseconds_since_year_0(),
 
-	SetState = setAttributes( TraceState, [
+    SetState = setAttributes( TraceState, [
 
-		{ server_start, time_utils:get_monotonic_time() },
+        { server_start, time_utils:get_monotonic_time() },
 
-		% Hence since year 0 (so a large number), based on "user" time:
-		{ server_gregorian_start,
-		  MsOfEpoch + time_utils:get_system_time() },
+        % Hence since year 0 (so a large number), based on "user" time:
+        { server_gregorian_start,
+          MsOfEpoch + time_utils:get_system_time() },
 
-		{ username, text_utils:maybe_string_to_binary( MaybeUserName ) },
+        { username, text_utils:maybe_string_to_binary( MaybeUserName ) },
 
         { action_table, table:new() },
 
-        { header_table, us_action:init_header_table() } ] ),
+        { header_info, us_action:init_header_info() } ] ),
 
-	%trace_bridge:debug_fmt( "Registering server as '~ts' for scope ~ts.",
-	%    [ MaybeRegistrationName, MaybeRegistrationScope ] ),
+    %trace_bridge:debug_fmt( "Registering server as '~ts' for scope ~ts.",
+    %    [ MaybeRegistrationName, MaybeRegistrationScope ] ),
 
-	register_name( MaybeRegistrationName, MaybeRegistrationScope, SetState ).
+    register_name( MaybeRegistrationName, MaybeRegistrationScope, SetState ).
 
 
 
@@ -305,13 +304,13 @@ construct( State, ServerInit, MaybeRegistrationName, MaybeRegistrationScope,
 -spec destruct( wooper:state() ) -> wooper:state().
 destruct( State ) ->
 
-	?info_fmt( "Deleting server ~ts.", [ to_string( State ) ] ),
+    ?info_fmt( "Deleting server ~ts.", [ to_string( State ) ] ),
 
-	UnregState = unregister_name( State ),
+    UnregState = unregister_name( State ),
 
-	?info( "Server deleted." ),
+    ?info( "Server deleted." ),
 
-	UnregState.
+    UnregState.
 
 
 
@@ -331,10 +330,10 @@ Not to be mixed up with the `ping` direct WOOPER message.
 -spec ping( wooper:state(), ping_id(), pid() ) -> const_oneway_return().
 ping( State, PingId, MonitorPid ) ->
 
-	% Sends back another oneway (no result expected here):
-	MonitorPid ! { pong, [ PingId, self() ] },
+    % Sends back another oneway (no result expected here):
+    MonitorPid ! { pong, [ PingId, self() ] },
 
-	wooper:const_return().
+    wooper:const_return().
 
 
 
@@ -470,8 +469,7 @@ requestAutomatedActions( State, InstToNotifyPid ) ->
            ( AI ) ->
             AI
         end,
-        % For a given server, we want the actions to be listed by action name:
-        lists:sort( ?getAttr(action_table) ) ),
+        ?getAttr(action_table) ),
 
     cond_utils:if_defined( us_common_debug_actions,
         send_action_trace_fmt( debug, "Sending to ~w that ~ts",
@@ -481,8 +479,8 @@ requestAutomatedActions( State, InstToNotifyPid ) ->
 
     % Classname added to be able to sort first by server:
     InstToNotifyPid !
-        { onAutomatedActionsNotified, [ ToSendActTable, 
-            ?getAttr(header_table), wooper:get_classname( State ) ] },
+        { onAutomatedActionsNotified, [ ToSendActTable,
+            ?getAttr(header_info), wooper:get_classname( State ) ] },
 
     wooper:const_return().
 
@@ -723,22 +721,22 @@ Callback triggered, if this server enabled the trapping of exits, whenever a
 linked process terminates.
 """.
 -spec onWOOPERExitReceived( wooper:state(), pid(),
-		basic_utils:exit_reason() ) -> const_oneway_return().
+        basic_utils:exit_reason() ) -> const_oneway_return().
 onWOOPERExitReceived( State, StoppedPid, _ExitType=normal ) ->
-	?info_fmt( "Ignoring normal exit from process ~w.", [ StoppedPid ] ),
-	wooper:const_return();
+    ?info_fmt( "Ignoring normal exit from process ~w.", [ StoppedPid ] ),
+    wooper:const_return();
 
 onWOOPERExitReceived( State, CrashPid, ExitType ) ->
 
-	% Typically: "Received exit message '{{nocatch,
-	%   {wooper_oneway_failed,<0.44.0>,class_XXX,
-	%    FunName,Arity,Args,AtomCause}}, [...]}"
+    % Typically: "Received exit message '{{nocatch,
+    %   {wooper_oneway_failed,<0.44.0>,class_XXX,
+    %    FunName,Arity,Args,AtomCause}}, [...]}"
 
-	% Redundant information yet useful for console outputs:
-	?warning_fmt( "US Server ~w received and ignored following exit message "
-				  "from ~w:~n  ~p", [ self(), CrashPid, ExitType ] ),
+    % Redundant information yet useful for console outputs:
+    ?warning_fmt( "US Server ~w received and ignored following exit message "
+                  "from ~w:~n  ~p", [ self(), CrashPid, ExitType ] ),
 
-	wooper:const_return().
+    wooper:const_return().
 
 
 
@@ -763,12 +761,12 @@ resolve_server_pid( RegName, RegScope ) ->
 
     % Relying on the default time-out currently:
     SrvPid = naming_utils:wait_for_registration_of( RegName,
-		naming_utils:registration_to_lookup_scope( RegScope ) ),
+        naming_utils:registration_to_lookup_scope( RegScope ) ),
 
     cond_utils:if_defined( us_common_debug_registration,
         trace_bridge:debug_fmt( "Resolved as ~w.", [ SrvPid ] ) ),
 
-	wooper:return_static( SrvPid ).
+    wooper:return_static( SrvPid ).
 
 
 
@@ -822,11 +820,11 @@ Meant to be defined by each actual US server.
 -spec get_server_pid() -> static_return( server_pid() ).
 get_server_pid() ->
 
-	%SrvPid = class_USServer:resolve_server_pid(
+    %SrvPid = class_USServer:resolve_server_pid(
     %   _RegName=?foo_server_registration_name,
     %   _RegScope=?foo_server_registration_scope ),
 
-	%wooper:return_static( SrvPid ).
+    %wooper:return_static( SrvPid ).
 
     throw( not_implemented ).
 
@@ -842,30 +840,30 @@ Registers this (supposedly not registered) server to the naming server.
 (exported helper)
 """.
 -spec register_name( registration_name(), registration_scope(),
-					 wooper:state() ) -> wooper:state().
+                     wooper:state() ) -> wooper:state().
 register_name( _RegistrationName=undefined, RegistrationScope, State ) ->
 
-	% May be done later in the construction of the actual instance (e.g. based
-	% on a configuration file being then read):
-	%
-	cond_utils:if_defined( us_common_debug_registration,
-		?debug( "As a US server: no name to register, "
-				"no registration performed." ) ),
+    % May be done later in the construction of the actual instance (e.g. based
+    % on a configuration file being then read):
+    %
+    cond_utils:if_defined( us_common_debug_registration,
+        ?debug( "As a US server: no name to register, "
+                "no registration performed." ) ),
 
-	setAttributes( State, [ { registration_name, undefined },
-							{ registration_scope, RegistrationScope } ] );
+    setAttributes( State, [ { registration_name, undefined },
+                            { registration_scope, RegistrationScope } ] );
 
 
 register_name( RegistrationName, RegistrationScope, State ) ->
 
-	naming_utils:register_as( RegistrationName, RegistrationScope ),
+    naming_utils:register_as( RegistrationName, RegistrationScope ),
 
-	cond_utils:if_defined( us_common_debug_registration,
-		?debug_fmt( "Registered (~ts) as '~ts'.",
-					[ RegistrationScope, RegistrationName ] ) ),
+    cond_utils:if_defined( us_common_debug_registration,
+        ?debug_fmt( "Registered (~ts) as '~ts'.",
+                    [ RegistrationScope, RegistrationName ] ) ),
 
-	setAttributes( State, [ { registration_name, RegistrationName },
-							{ registration_scope, RegistrationScope } ] ).
+    setAttributes( State, [ { registration_name, RegistrationName },
+                            { registration_scope, RegistrationScope } ] ).
 
 
 
@@ -877,27 +875,27 @@ Unregisters this (supposedly registered) server from the naming server.
 -spec unregister_name( wooper:state() ) -> wooper:state().
 unregister_name( State ) ->
 
-	case ?getAttr(registration_name) of
+    case ?getAttr(registration_name) of
 
-		undefined ->
-			cond_utils:if_defined( us_common_debug_registration, ?info(
-				"No registration name available, "
-				"no unregistering performed." ) ),
-			State;
+        undefined ->
+            cond_utils:if_defined( us_common_debug_registration, ?info(
+                "No registration name available, "
+                "no unregistering performed." ) ),
+            State;
 
-		RegName ->
+        RegName ->
 
-			RegScope = ?getAttr(registration_scope),
+            RegScope = ?getAttr(registration_scope),
 
-			cond_utils:if_defined( us_common_debug_registration, ?info_fmt(
-				"Unregistering from name '~ts' (scope: ~ts).",
-				[ RegName, RegScope ] ) ),
+            cond_utils:if_defined( us_common_debug_registration, ?info_fmt(
+                "Unregistering from name '~ts' (scope: ~ts).",
+                [ RegName, RegScope ] ) ),
 
-			naming_utils:unregister( RegName, RegScope ),
+            naming_utils:unregister( RegName, RegScope ),
 
-			State
+            State
 
-	end.
+    end.
 
 
 
@@ -913,7 +911,7 @@ send_action_trace( TraceSeverity, TraceMsg, State ) ->
 -spec send_action_trace_fmt( trace_severity(), trace_format(), trace_values(),
                              wooper:state() ) -> void().
 send_action_trace_fmt( TraceSeverity, TraceFormat, TraceValues, State ) ->
-	TraceMsg = text_utils:format( TraceFormat, TraceValues ),
+    TraceMsg = text_utils:format( TraceFormat, TraceValues ),
     send_action_trace( TraceSeverity, TraceMsg, State ).
 
 
@@ -922,37 +920,37 @@ send_action_trace_fmt( TraceSeverity, TraceFormat, TraceValues, State ) ->
 -spec to_string( wooper:state() ) -> ustring().
 to_string( State ) ->
 
-	StartTimestamp = time_utils:gregorian_ms_to_timestamp(
-		?getAttr(server_gregorian_start) ),
+    StartTimestamp = time_utils:gregorian_ms_to_timestamp(
+        ?getAttr(server_gregorian_start) ),
 
-	UptimeStr = time_utils:duration_to_string(
-		time_utils:get_monotonic_time() - ?getAttr(server_start) ),
+    UptimeStr = time_utils:duration_to_string(
+        time_utils:get_monotonic_time() - ?getAttr(server_start) ),
 
-	TimeStr = text_utils:format( "started on ~ts (uptime: ~ts)",
-		[ time_utils:timestamp_to_string( StartTimestamp ), UptimeStr ] ),
+    TimeStr = text_utils:format( "started on ~ts (uptime: ~ts)",
+        [ time_utils:timestamp_to_string( StartTimestamp ), UptimeStr ] ),
 
-	RegStr = case ?getAttr(registration_name) of
+    RegStr = case ?getAttr(registration_name) of
 
-		undefined ->
-			"with no registration name defined";
+        undefined ->
+            "with no registration name defined";
 
-		RegName ->
-			text_utils:format( "whose registration name is '~ts' (scope: ~ts)",
-							   [ RegName, ?getAttr(registration_scope) ] )
+        RegName ->
+            text_utils:format( "whose registration name is '~ts' (scope: ~ts)",
+                               [ RegName, ?getAttr(registration_scope) ] )
 
-	end,
+    end,
 
-	UserStr = case ?getAttr(username) of
+    UserStr = case ?getAttr(username) of
 
-		undefined ->
-			"not expected to run as a specific user";
+        undefined ->
+            "not expected to run as a specific user";
 
-		BinUsrName ->
-			text_utils:format( "expected to run as user '~ts'", [ BinUsrName ] )
+        BinUsrName ->
+            text_utils:format( "expected to run as user '~ts'", [ BinUsrName ] )
 
-	end,
+    end,
 
     ActStr = us_action:action_table_to_string( ?getAttr(action_table) ),
 
-	text_utils:format( "server named '~ts', ~ts, ~ts, ~ts; this server has ~ts",
-					   [ ?getAttr(name), TimeStr, RegStr, UserStr, ActStr ] ).
+    text_utils:format( "server named '~ts', ~ts, ~ts, ~ts; this server has ~ts",
+                       [ ?getAttr(name), TimeStr, RegStr, UserStr, ActStr ] ).

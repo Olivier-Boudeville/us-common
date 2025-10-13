@@ -41,30 +41,30 @@ Module implementing the **US-Common (active) OTP application behaviour**.
 
 -doc "Starts the US-Common services.".
 -spec start( application:start_type(), StartArgs :: term() ) -> { 'ok', pid() }
-		| { 'ok', pid(), State :: term() } | { 'error', Reason :: term() }.
+        | { 'ok', pid(), State :: term() } | { 'error', Reason :: term() }.
 start( Type, StartArgs ) ->
 
-	trace_bridge:debug_fmt( "Starting the US-Common application (type: ~w, "
-							"start arguments: ~w).", [ Type, StartArgs ] ),
+    trace_bridge:debug_fmt( "Starting the US-Common application (type: ~w, "
+                            "start arguments: ~w).", [ Type, StartArgs ] ),
 
-	case us_common_sup:start_link() of
+    case us_common_sup:start_link() of
 
-		R={ ok, UsCommonRootSupervisorPid }
-						when is_pid( UsCommonRootSupervisorPid ) ->
-			R;
+        R={ ok, UsCommonRootSupervisorPid }
+                        when is_pid( UsCommonRootSupervisorPid ) ->
+            R;
 
-		% Includes 'ignore':
-		Other ->
-			trace_bridge:error_fmt( "The US-Common root supervisor did not "
-									"start properly:~n  ~p.", [ Other ] ),
-			{ error, Other }
+        % Includes 'ignore':
+        Other ->
+            trace_bridge:error_fmt( "The US-Common root supervisor did not "
+                                    "start properly:~n  ~p.", [ Other ] ),
+            { error, Other }
 
-	end.
+    end.
 
 
 
 -doc "Stops the US-Common services.".
 -spec stop( State :: term() ) -> void().
 stop( State ) ->
-	trace_bridge:debug_fmt( "Stopping the US-Common application (state: ~w).",
-							[ State ] ).
+    trace_bridge:debug_fmt( "Stopping the US-Common application (state: ~w).",
+                            [ State ] ).

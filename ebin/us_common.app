@@ -47,7 +47,7 @@
   {mod, {us_common_app, []}},
 
   {links, [ {"Official website", "http://us-common.esperide.org" },
-			{"Github", "https://github.com/Olivier-Boudeville/us-common"} ]}
+            {"Github", "https://github.com/Olivier-Boudeville/us-common"} ]}
 
   %{exclude_files, []}
 

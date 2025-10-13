@@ -71,17 +71,17 @@ verbatim to their actuators.
 -doc "Specifies the start time of a task scheduling.".
 -type start_time() ::
 
-	% As soon as possible:
-	'asap'
+    % As soon as possible:
+    'asap'
 
-	% When relevant/applicable (flexible start):
+    % When relevant/applicable (flexible start):
   | 'flexible'
 
-	% Preferably after this specified duration from receiving:
+    % Preferably after this specified duration from receiving:
   | dhms_duration()
   | seconds() % (not milliseconds)
 
-	% Preferably at this specified (future) time:
+    % Preferably at this specified (future) time:
   | timestamp().
 
 
@@ -94,10 +94,10 @@ internal ones (millisecond-based).
 """.
 -type user_periodicity() ::
 
-	% Just to be executed once (one shot):
-	'once'
+    % Just to be executed once (one shot):
+    'once'
 
-	% Actual period:
+    % Actual period:
   | dhms_duration()
 
   | seconds().
@@ -134,10 +134,10 @@ The PID of the process to which a task command will be sent whenever scheduled.
 -doc "The outcome of a task registration.".
 -type task_registration_outcome() ::
 
-	% The task command has been immediately and fully processed (no identifier
-	% returned, as no task entry was even created):
+    % The task command has been immediately and fully processed (no identifier
+    % returned, as no task entry was even created):
     %
-	'task_done'
+    'task_done'
 
     % Planned whenever appropriate (in the future and/or periodically):
   | { 'task_registered', task_id() }.
@@ -186,11 +186,11 @@ caller-side operations.
 
 
 -export_type([ scheduler_pid/0, task_command/0,
-			   ms_since_year_0/0, ms_since_start/0, start_time/0,
-			   user_periodicity/0, periodicity/0, schedule_count/0,
-			   requester_pid/0, actuator_pid/0,
-			   task_registration_outcome/0, task_unregistration_outcome/0,
-			   task_id/0, timer_ref/0, timer_table/0 ]).
+               ms_since_year_0/0, ms_since_start/0, start_time/0,
+               user_periodicity/0, periodicity/0, schedule_count/0,
+               requester_pid/0, actuator_pid/0,
+               task_registration_outcome/0, task_unregistration_outcome/0,
+               task_id/0, timer_ref/0, timer_table/0 ]).
 
 
 
@@ -204,39 +204,39 @@ designed to be rather small).
 % Describes a task to schedule:
 -record( task_entry, {
 
-	% Unique identifier of this task:
-	id :: task_id(),
+    % Unique identifier of this task:
+    id :: task_id(),
 
-	% The command to trigger on the actuator:
-	command :: task_command(),
+    % The command to trigger on the actuator:
+    command :: task_command(),
 
-	% The offset (relative to the start time of this scheduler) at which the
-	% next scheduling of this task shall happen:
-	%
-	next_schedule :: schedule_offset(),
+    % The offset (relative to the start time of this scheduler) at which the
+    % next scheduling of this task shall happen:
+    %
+    next_schedule :: schedule_offset(),
 
-	% The periodicity at which this task shall be scheduled:
-	periodicity :: periodicity(),
+    % The periodicity at which this task shall be scheduled:
+    periodicity :: periodicity(),
 
-	% The number of times this task shall still be scheduled:
-	count :: schedule_count(),
+    % The number of times this task shall still be scheduled:
+    count :: schedule_count(),
 
-	% The number of times this task has already been scheduled:
-	schedule_count = 0 :: schedule_count(),
+    % The number of times this task has already been scheduled:
+    schedule_count = 0 :: schedule_count(),
 
-	% The internal time offset (if any) at which this task was first scheduled:
-	started_on = undefined :: option( schedule_offset() ),
+    % The internal time offset (if any) at which this task was first scheduled:
+    started_on = undefined :: option( schedule_offset() ),
 
-	% The internal time offset (if any) at which this task was last scheduled:
-	last_schedule = undefined :: option( schedule_offset() ),
+    % The internal time offset (if any) at which this task was last scheduled:
+    last_schedule = undefined :: option( schedule_offset() ),
 
-	% The PID of the process having registered this task:
-	requester_pid :: requester_pid(),
+    % The PID of the process having registered this task:
+    requester_pid :: requester_pid(),
 
-	% The PID of the process that will be triggered whenever this task is
-	% scheduled:
-	%
-	actuator_pid :: actuator_pid() } ).
+    % The PID of the process that will be triggered whenever this task is
+    % scheduled:
+    %
+    actuator_pid :: actuator_pid() } ).
 
 
 
@@ -264,14 +264,14 @@ Schedule pairs, ordered from closest future (sooner) to most remote one (later).
 % The class-specific attributes:
 -define( class_attributes, [
 
-	{ task_table, task_table(), "a table registering all ongoing tasks" },
+    { task_table, task_table(), "a table registering all ongoing tasks" },
 
-	{ schedule_plan, schedule_plan(), "the ordered list of next schedulings" },
+    { schedule_plan, schedule_plan(), "the ordered list of next schedulings" },
 
-	{ timer_table, timer_table(), "a table registering live timers" },
+    { timer_table, timer_table(), "a table registering live timers" },
 
-	% Allows also to count all tasks that have been submitted:
-	{ next_task_id, task_id(), "identifier of the next task to register" } ] ).
+    % Allows also to count all tasks that have been submitted:
+    { next_task_id, task_id(), "identifier of the next task to register" } ] ).
 
 
 
@@ -402,13 +402,13 @@ Schedule pairs, ordered from closest future (sooner) to most remote one (later).
 -spec construct( wooper:state() ) -> wooper:state().
 construct( State ) ->
 
-	% First the direct mother classes, then this class-specific actions:
-	SrvState = class_USServer:construct( State,
-		?trace_categorize("Main US Scheduler"),
-		?us_common_scheduler_registration_name,
-		?us_common_scheduler_registration_scope ),
+    % First the direct mother classes, then this class-specific actions:
+    SrvState = class_USServer:construct( State,
+        ?trace_categorize("Main US Scheduler"),
+        ?us_common_scheduler_registration_name,
+        ?us_common_scheduler_registration_scope ),
 
-	init_common( SrvState ).
+    init_common( SrvState ).
 
 
 
@@ -416,26 +416,26 @@ construct( State ) ->
 -spec construct( wooper:state(), ustring() ) -> wooper:state().
 construct( State, SchedulerName ) ->
 
-	% First the direct mother classes, then this class-specific actions:
-	% (traps EXITs)
-	%
-	SrvState = class_USServer:construct( State,
-										 ?trace_categorize(SchedulerName) ),
+    % First the direct mother classes, then this class-specific actions:
+    % (traps EXITs)
+    %
+    SrvState = class_USServer:construct( State,
+                                         ?trace_categorize(SchedulerName) ),
 
-	init_common( SrvState ).
+    init_common( SrvState ).
 
 
 
 -doc "Constructs a (named, registered with specified scope) US scheduler.".
 -spec construct( wooper:state(), ustring(), registration_name(),
-				 registration_scope() ) -> wooper:state().
+                 registration_scope() ) -> wooper:state().
 construct( State, SchedulerName, RegistrationName, RegistrationScope ) ->
 
-	% First the direct mother classes, then this class-specific actions:
-	SrvState = class_USServer:construct( State,
-		?trace_categorize(SchedulerName), RegistrationName, RegistrationScope ),
+    % First the direct mother classes, then this class-specific actions:
+    SrvState = class_USServer:construct( State,
+        ?trace_categorize(SchedulerName), RegistrationName, RegistrationScope ),
 
-	init_common( SrvState ).
+    init_common( SrvState ).
 
 
 
@@ -443,17 +443,17 @@ construct( State, SchedulerName, RegistrationName, RegistrationScope ) ->
 -spec init_common( wooper:state() ) -> wooper:state().
 init_common( State ) ->
 
-	EmptyTable = table:new(),
+    EmptyTable = table:new(),
 
-	ReadyState = setAttributes( State, [ { task_table, EmptyTable },
-										 { schedule_plan, [] },
-										 { timer_table, EmptyTable },
-										 { next_task_id, 1 } ] ),
+    ReadyState = setAttributes( State, [ { task_table, EmptyTable },
+                                         { schedule_plan, [] },
+                                         { timer_table, EmptyTable },
+                                         { next_task_id, 1 } ] ),
 
-	trace_bridge:notice_fmt( "Scheduler ready, at ~ts.",
-							 [ get_current_timestamp_string( ReadyState ) ] ),
+    trace_bridge:notice_fmt( "Scheduler ready, at ~ts.",
+                             [ get_current_timestamp_string( ReadyState ) ] ),
 
-	ReadyState.
+    ReadyState.
 
 
 
@@ -461,13 +461,13 @@ init_common( State ) ->
 -spec destruct( wooper:state() ) -> wooper:state().
 destruct( State ) ->
 
-	?info_fmt( "Deleting ~ts", [ to_string( State ) ] ),
+    ?info_fmt( "Deleting ~ts", [ to_string( State ) ] ),
 
-	% Cancelling all still-live timers, while resisting to any error:
-	[ timer:cancel( TimerRef )
-		|| TimerRef <- table:values( ?getAttr(timer_table) ) ],
+    % Cancelling all still-live timers, while resisting to any error:
+    [ timer:cancel( TimerRef )
+        || TimerRef <- table:values( ?getAttr(timer_table) ) ],
 
-	State.
+    State.
 
 
 
@@ -486,15 +486,15 @@ it is registered for a later trigger (then its assigned task identifier is
 returned).
 """.
 -spec triggerOneshotTask( wooper:state(), task_command(), actuator_pid() ) ->
-								request_return( task_registration_outcome() ).
+                                request_return( task_registration_outcome() ).
 triggerOneshotTask( State, UserTaskCommand, UserActPid ) ->
 
-	% Note: in this case the sender could have contacted directly the actuator.
+    % Note: in this case the sender could have contacted directly the actuator.
 
-	{ NewState, Result } = registerOneshotTask( State, UserTaskCommand,
-												_StartTime=asap, UserActPid ),
+    { NewState, Result } = registerOneshotTask( State, UserTaskCommand,
+                                                _StartTime=asap, UserActPid ),
 
-	wooper:return_state_result( NewState, Result ).
+    wooper:return_state_result( NewState, Result ).
 
 
 
@@ -515,13 +515,13 @@ into account (as the respect of actual periodicities is preferred over the one
 of literal timestamps).
 """.
 -spec registerOneshotTask( wooper:state(), task_command(), start_time() ) ->
-								request_return( task_registration_outcome() ).
+                                request_return( task_registration_outcome() ).
 registerOneshotTask( State, UserTaskCommand, UserStartTime ) ->
 
-	{ NewState, Result } = registerTask( State, UserTaskCommand, UserStartTime,
-		_Periodicity=once, _Count=1, _ActPid=?getSender() ),
+    { NewState, Result } = registerTask( State, UserTaskCommand, UserStartTime,
+        _Periodicity=once, _Count=1, _ActPid=?getSender() ),
 
-	wooper:return_state_result( NewState, Result ).
+    wooper:return_state_result( NewState, Result ).
 
 
 -doc """
@@ -535,14 +535,14 @@ it is registered for a later trigger (then its assigned task identifier is
 returned).
 """.
 -spec registerOneshotTaskIn( wooper:state(), task_command(),
-		dhms_duration() | seconds() ) ->
-			request_return( task_registration_outcome() ).
+        dhms_duration() | seconds() ) ->
+            request_return( task_registration_outcome() ).
 registerOneshotTaskIn( State, UserTaskCommand, AfterDuration ) ->
-	StartTime = time_utils:timestamp_in( AfterDuration ),
-	{ NewState, Result } = registerTask( State, UserTaskCommand, StartTime,
-		_Periodicity=once, _Count=1, _ActPid=?getSender() ),
+    StartTime = time_utils:timestamp_in( AfterDuration ),
+    { NewState, Result } = registerTask( State, UserTaskCommand, StartTime,
+        _Periodicity=once, _Count=1, _ActPid=?getSender() ),
 
-	wooper:return_state_result( NewState, Result ).
+    wooper:return_state_result( NewState, Result ).
 
 
 
@@ -563,13 +563,13 @@ into account (as the respect of actual periodicities is preferred over the one
 of literal timestamps).
 """.
 -spec registerOneshotTask( wooper:state(), task_command(), start_time(),
-			actuator_pid() ) -> request_return( task_registration_outcome() ).
+            actuator_pid() ) -> request_return( task_registration_outcome() ).
 registerOneshotTask( State, UserTaskCommand, UserStartTime, UserActPid ) ->
 
-	{ NewState, Result } = registerTask( State, UserTaskCommand, UserStartTime,
-		_Periodicity=once, _Count=1, UserActPid ),
+    { NewState, Result } = registerTask( State, UserTaskCommand, UserStartTime,
+        _Periodicity=once, _Count=1, UserActPid ),
 
-	wooper:return_state_result( NewState, Result ).
+    wooper:return_state_result( NewState, Result ).
 
 
 
@@ -585,14 +585,14 @@ since it is fully completed), or `{'task_registered', TaskId}` if it is
 registered for a later trigger (then its assigned task identifier is returned).
 """.
 -spec registerTask( wooper:state(), task_command(), user_periodicity() ) ->
-							request_return( task_registration_outcome() ).
+                            request_return( task_registration_outcome() ).
 registerTask( State, UserTaskCommand, UserPeriodicity ) ->
 
-	{ RegOutcome, RegState } = register_task( UserTaskCommand,
-		_StartTime=flexible, UserPeriodicity, _Count=unlimited,
-		_UserActPid=?getSender(), State ),
+    { RegOutcome, RegState } = register_task( UserTaskCommand,
+        _StartTime=flexible, UserPeriodicity, _Count=unlimited,
+        _UserActPid=?getSender(), State ),
 
-	wooper:return_state_result( RegState, RegOutcome ).
+    wooper:return_state_result( RegState, RegOutcome ).
 
 
 
@@ -608,14 +608,14 @@ since it is fully completed), or `{'task_registered', TaskId}` if it is
 registered for a later trigger (then its assigned task identifier is returned).
 """.
 -spec registerTask( wooper:state(), task_command(), user_periodicity(),
-			schedule_count() ) -> request_return( task_registration_outcome() ).
+            schedule_count() ) -> request_return( task_registration_outcome() ).
 registerTask( State, UserTaskCommand, UserPeriodicity, UserCount ) ->
 
-	{ RegOutcome, RegState } = register_task( UserTaskCommand,
-		_StartTime=flexible, UserPeriodicity, UserCount,
-		_UserActPid=?getSender(), State ),
+    { RegOutcome, RegState } = register_task( UserTaskCommand,
+        _StartTime=flexible, UserPeriodicity, UserCount,
+        _UserActPid=?getSender(), State ),
 
-	wooper:return_state_result( RegState, RegOutcome ).
+    wooper:return_state_result( RegState, RegOutcome ).
 
 
 
@@ -637,15 +637,15 @@ being taken into account at this level (as the respect of actual periodicities
 is preferred over the one of literal timestamps).
 """.
 -spec registerTask( wooper:state(), task_command(), start_time(),
-					user_periodicity(), schedule_count() ) ->
-						request_return( task_registration_outcome() ).
+                    user_periodicity(), schedule_count() ) ->
+                        request_return( task_registration_outcome() ).
 registerTask( State, UserTaskCommand, UserStartTime, UserPeriodicity,
-			  UserCount ) ->
+              UserCount ) ->
 
-	{ RegOutcome, RegState } = register_task( UserTaskCommand, UserStartTime,
-		UserPeriodicity, UserCount, _UserActPid=?getSender(), State ),
+    { RegOutcome, RegState } = register_task( UserTaskCommand, UserStartTime,
+        UserPeriodicity, UserCount, _UserActPid=?getSender(), State ),
 
-	wooper:return_state_result( RegState, RegOutcome ).
+    wooper:return_state_result( RegState, RegOutcome ).
 
 
 
@@ -663,20 +663,20 @@ being taken into account at this level (as the respect of actual periodicities
 is preferred over the one of literal timestamps).
 """.
 -spec registerTaskAsync( wooper:state(), task_command(), start_time(),
-					user_periodicity(), schedule_count() ) -> oneway_return().
+                    user_periodicity(), schedule_count() ) -> oneway_return().
 registerTaskAsync( State, UserTaskCommand, UserStartTime, UserPeriodicity,
-				   UserCount ) ->
+                   UserCount ) ->
 
-	{ RegOutcome, RegState } = register_task( UserTaskCommand, UserStartTime,
-		UserPeriodicity, UserCount, _UserActPid=?getSender(), State ),
+    { RegOutcome, RegState } = register_task( UserTaskCommand, UserStartTime,
+        UserPeriodicity, UserCount, _UserActPid=?getSender(), State ),
 
-	cond_utils:if_defined( us_common_debug_scheduling,
-		?debug_fmt( "Asynchronous registering of task '~p' resulted in "
-			"the following ignored outcome: ~p.",
-			[ UserTaskCommand, RegOutcome ] ),
-		basic_utils:ignore_unused( RegOutcome ) ),
+    cond_utils:if_defined( us_common_debug_scheduling,
+        ?debug_fmt( "Asynchronous registering of task '~p' resulted in "
+            "the following ignored outcome: ~p.",
+            [ UserTaskCommand, RegOutcome ] ),
+        basic_utils:ignore_unused( RegOutcome ) ),
 
-	wooper:return_state( RegState ).
+    wooper:return_state( RegState ).
 
 
 
@@ -698,15 +698,15 @@ being taken into account at this level (as the respect of actual periodicities
 is preferred over the one of literal timestamps).
 """.
 -spec registerTask( wooper:state(), task_command(), start_time(),
-					user_periodicity(), schedule_count(), actuator_pid() ) ->
-						request_return( task_registration_outcome() ).
+                    user_periodicity(), schedule_count(), actuator_pid() ) ->
+                        request_return( task_registration_outcome() ).
 registerTask( State, UserTaskCommand, UserStartTime, UserPeriodicity,
-			  UserCount, UserActPid ) ->
+              UserCount, UserActPid ) ->
 
-	{ RegOutcome, RegState } = register_task( UserTaskCommand, UserStartTime,
-		UserPeriodicity, UserCount, UserActPid, State ),
+    { RegOutcome, RegState } = register_task( UserTaskCommand, UserStartTime,
+        UserPeriodicity, UserCount, UserActPid, State ),
 
-	wooper:return_state_result( RegState, RegOutcome ).
+    wooper:return_state_result( RegState, RegOutcome ).
 
 
 
@@ -724,21 +724,21 @@ being taken into account at this level (as the respect of actual periodicities
 is preferred over the one of literal timestamps).
 """.
 -spec registerTaskAsync( wooper:state(), task_command(), start_time(),
-					user_periodicity(), schedule_count(), actuator_pid() ) ->
-											oneway_return().
+                    user_periodicity(), schedule_count(), actuator_pid() ) ->
+                                            oneway_return().
 registerTaskAsync( State, UserTaskCommand, UserStartTime, UserPeriodicity,
-				   UserCount, UserActPid ) ->
+                   UserCount, UserActPid ) ->
 
-	{ RegOutcome, RegState } = register_task( UserTaskCommand, UserStartTime,
-		UserPeriodicity, UserCount, UserActPid, State ),
+    { RegOutcome, RegState } = register_task( UserTaskCommand, UserStartTime,
+        UserPeriodicity, UserCount, UserActPid, State ),
 
-	cond_utils:if_defined( us_common_debug_scheduling,
-		?debug_fmt( "Asynchronous registering of task '~p' resulted in "
-			"the following ignored outcome: ~p.",
-			[ UserTaskCommand, RegOutcome ] ),
-		basic_utils:ignore_unused( RegOutcome ) ),
+    cond_utils:if_defined( us_common_debug_scheduling,
+        ?debug_fmt( "Asynchronous registering of task '~p' resulted in "
+            "the following ignored outcome: ~p.",
+            [ UserTaskCommand, RegOutcome ] ),
+        basic_utils:ignore_unused( RegOutcome ) ),
 
-	wooper:return_state( RegState ).
+    wooper:return_state( RegState ).
 
 
 
@@ -748,133 +748,133 @@ The actual registering of new tasks.
 (helper)
 """.
 -spec register_task( task_command(), start_time(), user_periodicity(),
-					 schedule_count(), actuator_pid(), wooper:state() ) ->
-							{ task_registration_outcome(), wooper:state() }.
+                     schedule_count(), actuator_pid(), wooper:state() ) ->
+                            { task_registration_outcome(), wooper:state() }.
 register_task( UserTaskCommand, UserStartTime, UserPeriodicity, UserCount,
-			   UserActPid, State ) ->
+               UserActPid, State ) ->
 
-	% Checks and canonicalises specified elements:
-	TaskCommand = vet_task_command( UserTaskCommand, State ),
-	MsDurationBeforeStart = vet_start_time( UserStartTime, State ),
-	Count = vet_count( UserCount, State ),
-	MaybePeriodicity = vet_periodicity( UserPeriodicity, Count, State ),
-	ReqPid = ?getSender(),
-	ActPid = vet_actuator_pid( UserActPid ),
+    % Checks and canonicalises specified elements:
+    TaskCommand = vet_task_command( UserTaskCommand, State ),
+    MsDurationBeforeStart = vet_start_time( UserStartTime, State ),
+    Count = vet_count( UserCount, State ),
+    MaybePeriodicity = vet_periodicity( UserPeriodicity, Count, State ),
+    ReqPid = ?getSender(),
+    ActPid = vet_actuator_pid( UserActPid ),
 
-	ActStr = case ActPid of
+    ActStr = case ActPid of
 
-		ReqPid ->
-			"which is also the requester";
+        ReqPid ->
+            "which is also the requester";
 
-		_ ->
-			text_utils:format( "whereas the requester is ~w", [ ReqPid ] )
+        _ ->
+            text_utils:format( "whereas the requester is ~w", [ ReqPid ] )
 
-	end,
+    end,
 
-	HappenStr = case MsDurationBeforeStart of
+    HappenStr = case MsDurationBeforeStart of
 
-		0 ->
-			"immediately";
+        0 ->
+            "immediately";
 
-		_ ->
-			text_utils:format( "in ~ts",
-				[ time_utils:duration_to_string( MsDurationBeforeStart ) ] )
+        _ ->
+            text_utils:format( "in ~ts",
+                [ time_utils:duration_to_string( MsDurationBeforeStart ) ] )
 
-	end,
+    end,
 
-	?info_fmt( "Registering task whose command is '~p', whose declared start "
-		"time is ~ts (hence to happen ~ts), to be triggered ~ts with ~ts "
-		"on actuator ~w (~ts).",
-		[ TaskCommand, start_time_to_string( UserStartTime ), HappenStr,
-		  schedule_count_to_string( Count ),
-		  periodicity_to_string( MaybePeriodicity ), ActPid, ActStr ] ),
+    ?info_fmt( "Registering task whose command is '~p', whose declared start "
+        "time is ~ts (hence to happen ~ts), to be triggered ~ts with ~ts "
+        "on actuator ~w (~ts).",
+        [ TaskCommand, start_time_to_string( UserStartTime ), HappenStr,
+          schedule_count_to_string( Count ),
+          periodicity_to_string( MaybePeriodicity ), ActPid, ActStr ] ),
 
-	% Immediate launch requested?
-	case MsDurationBeforeStart of
+    % Immediate launch requested?
+    case MsDurationBeforeStart of
 
-		% Immediate launch here:
-		0 ->
-			% Thus, in all cases:
-			launch_task( TaskCommand, ActPid, State ),
+        % Immediate launch here:
+        0 ->
+            % Thus, in all cases:
+            launch_task( TaskCommand, ActPid, State ),
 
-			case MaybePeriodicity of
+            case MaybePeriodicity of
 
-				undefined ->
-					% Just to be executed once (implied and checked: Count=1).
-					%
-					% Not even recording it then, it was just fire and forget:
-					% neither task entry, just updating the task count.
-					%
-					{ task_done, incrementAttribute( State, next_task_id ) };
+                undefined ->
+                    % Just to be executed once (implied and checked: Count=1).
+                    %
+                    % Not even recording it then, it was just fire and forget:
+                    % neither task entry, just updating the task count.
+                    %
+                    { task_done, incrementAttribute( State, next_task_id ) };
 
-				MsPeriod ->
-					case decrement_count( Count ) of
+                MsPeriod ->
+                    case decrement_count( Count ) of
 
-						0 ->
-							% Here also, Count was 1, same case as before, no
-							% future for this task:
-							%
-							{ task_done,
-							  incrementAttribute( State, next_task_id ) };
+                        0 ->
+                            % Here also, Count was 1, same case as before, no
+                            % future for this task:
+                            %
+                            { task_done,
+                              incrementAttribute( State, next_task_id ) };
 
-						NewCount ->
-							% The count is thus now still 1 or more, or
-							% unlimited; in all cases a next scheduling will
-							% happen, and must be recorded:
+                        NewCount ->
+                            % The count is thus now still 1 or more, or
+                            % unlimited; in all cases a next scheduling will
+                            % happen, and must be recorded:
 
-							TaskId = ?getAttr(next_task_id),
-							NowMs = get_current_schedule_offset( State ),
-							NextSchedule = NowMs + MsPeriod,
+                            TaskId = ?getAttr(next_task_id),
+                            NowMs = get_current_schedule_offset( State ),
+                            NextSchedule = NowMs + MsPeriod,
 
-							TI = #task_entry{ id=TaskId,
-											  command=TaskCommand,
-											  next_schedule=NextSchedule,
-											  periodicity=MsPeriod,
-											  count=NewCount,
-											  schedule_count=1,
-											  started_on=NowMs,
-											  last_schedule=NowMs,
-											  requester_pid=ReqPid,
-											  actuator_pid=ActPid },
+                            TI = #task_entry{ id=TaskId,
+                                              command=TaskCommand,
+                                              next_schedule=NextSchedule,
+                                              periodicity=MsPeriod,
+                                              count=NewCount,
+                                              schedule_count=1,
+                                              started_on=NowMs,
+                                              last_schedule=NowMs,
+                                              requester_pid=ReqPid,
+                                              actuator_pid=ActPid },
 
-							RegState = register_task_schedule( TaskId, TI,
-								NextSchedule, MsPeriod, State ),
+                            RegState = register_task_schedule( TaskId, TI,
+                                NextSchedule, MsPeriod, State ),
 
-							{ { task_registered, TaskId }, RegState }
+                            { { task_registered, TaskId }, RegState }
 
-					end
+                    end
 
-			end;
+            end;
 
-		% Deferred launch here (most common case):
-		_ ->
-			TaskId = ?getAttr(next_task_id),
-			NowMs = get_current_schedule_offset( State ),
-			NextSchedule = NowMs + MsDurationBeforeStart,
-			TI = #task_entry{ id=TaskId,
-							  command=TaskCommand,
-							  next_schedule=NextSchedule,
-							  periodicity=MaybePeriodicity,
-							  count=Count,
+        % Deferred launch here (most common case):
+        _ ->
+            TaskId = ?getAttr(next_task_id),
+            NowMs = get_current_schedule_offset( State ),
+            NextSchedule = NowMs + MsDurationBeforeStart,
+            TI = #task_entry{ id=TaskId,
+                              command=TaskCommand,
+                              next_schedule=NextSchedule,
+                              periodicity=MaybePeriodicity,
+                              count=Count,
 
-							  % Defaults:
-							  %schedule_count=0
-							  %started_on=undefined,
-							  %last_schedule=undefined,
+                              % Defaults:
+                              %schedule_count=0
+                              %started_on=undefined,
+                              %last_schedule=undefined,
 
-							  requester_pid=ReqPid,
-							  actuator_pid=ActPid },
+                              requester_pid=ReqPid,
+                              actuator_pid=ActPid },
 
-			RegState = register_task_schedule( TaskId, TI, NextSchedule,
-											   MsDurationBeforeStart, State ),
+            RegState = register_task_schedule( TaskId, TI, NextSchedule,
+                                               MsDurationBeforeStart, State ),
 
-			cond_utils:if_defined( us_common_debug_scheduling,
-				?debug_fmt( "Resulting scheduler state: ~ts.",
-							[ to_string( RegState ) ] ) ),
+            cond_utils:if_defined( us_common_debug_scheduling,
+                ?debug_fmt( "Resulting scheduler state: ~ts.",
+                            [ to_string( RegState ) ] ) ),
 
-			{ { task_registered, TaskId }, RegState }
+            { { task_registered, TaskId }, RegState }
 
-	end.
+    end.
 
 
 
@@ -884,13 +884,13 @@ Unregisters the specified task, based on its identifier.
 Returns a suitable outcome to the caller.
 """.
 -spec unregisterTask( wooper:state(), task_id() ) ->
-						request_return( task_unregistration_outcome() ).
+                        request_return( task_unregistration_outcome() ).
 unregisterTask( State, TaskId ) when is_integer( TaskId ) andalso TaskId > 0 ->
-	{ Outcome, NewState } = unregister_task( TaskId, State ),
-	wooper:return_state_result( NewState, Outcome );
+    { Outcome, NewState } = unregister_task( TaskId, State ),
+    wooper:return_state_result( NewState, Outcome );
 
 unregisterTask( _State, Other ) ->
-	throw( { invalid_unregister_task_id, Other } ).
+    throw( { invalid_unregister_task_id, Other } ).
 
 
 
@@ -900,99 +900,99 @@ Unregisters the specified tasks, based on their identifier.
 Returns outcomes in order to the caller.
 """.
 -spec unregisterTasks( wooper:state(), [ task_id() ] ) ->
-							request_return( [ task_unregistration_outcome() ] ).
+                            request_return( [ task_unregistration_outcome() ] ).
 unregisterTasks( State, TaskIds ) when is_list( TaskIds ) ->
 
-	{ RevOutcomes, NewState } = lists:foldl(
-		fun( TaskId, _Acc={ AccOutcomes, AccState } ) ->
-			{ Outcome, NewAccState } = unregister_task( TaskId, AccState ),
-			{ [ Outcome | AccOutcomes ], NewAccState }
-		end,
-		_Acc0={ [], State },
-		_List=TaskIds ),
+    { RevOutcomes, NewState } = lists:foldl(
+        fun( TaskId, _Acc={ AccOutcomes, AccState } ) ->
+            { Outcome, NewAccState } = unregister_task( TaskId, AccState ),
+            { [ Outcome | AccOutcomes ], NewAccState }
+        end,
+        _Acc0={ [], State },
+        _List=TaskIds ),
 
-	wooper:return_state_result( NewState, lists:reverse( RevOutcomes ) );
+    wooper:return_state_result( NewState, lists:reverse( RevOutcomes ) );
 
 unregisterTasks( _State, Other ) ->
-	throw( { invalid_unregister_task_ids, Other } ).
+    throw( { invalid_unregister_task_ids, Other } ).
 
 
 
 % (helper)
 -spec unregister_task( task_id(), wooper:state() ) ->
-							{ task_unregistration_outcome(), wooper:state() }.
+                            { task_unregistration_outcome(), wooper:state() }.
 unregister_task( TaskId, State ) when is_integer( TaskId ) andalso TaskId > 0 ->
 
-	NextTaskId = ?getAttr(next_task_id),
+    NextTaskId = ?getAttr(next_task_id),
 
-	case TaskId >= NextTaskId of
+    case TaskId >= NextTaskId of
 
-		% Could not have been allocated:
-		true ->
-			?error_fmt( "Requested to unregister task #~B, which never existed "
-				"(as the next task identifier is #~B).",
-				[ TaskId, NextTaskId ] ),
-			{ { task_unregistration_failed, never_existed, TaskId }, State };
+        % Could not have been allocated:
+        true ->
+            ?error_fmt( "Requested to unregister task #~B, which never existed "
+                "(as the next task identifier is #~B).",
+                [ TaskId, NextTaskId ] ),
+            { { task_unregistration_failed, never_existed, TaskId }, State };
 
-		false ->
-			case table:extract_entry_if_existing( TaskId,
-												  ?getAttr(task_table) ) of
+        false ->
+            case table:extract_entry_if_existing( TaskId,
+                                                  ?getAttr(task_table) ) of
 
-				% Already dropped, hence done:
-				false ->
-					?info_fmt( "Unregistered task #~B, which was actually "
-							   "already done.", [ TaskId ] ),
-					{ { task_already_done, TaskId }, State };
+                % Already dropped, hence done:
+                false ->
+                    ?info_fmt( "Unregistered task #~B, which was actually "
+                               "already done.", [ TaskId ] ),
+                    { { task_already_done, TaskId }, State };
 
-				{ TaskEntry, ShrunkTaskTable } ->
+                { TaskEntry, ShrunkTaskTable } ->
 
-					?info_fmt( "Task #~B unregistered, was: ~ts",
-						[ TaskId, task_entry_to_string( TaskEntry, State ) ] ),
+                    ?info_fmt( "Task #~B unregistered, was: ~ts",
+                        [ TaskId, task_entry_to_string( TaskEntry, State ) ] ),
 
-					SchedulePlan = ?getAttr(schedule_plan),
+                    SchedulePlan = ?getAttr(schedule_plan),
 
-					case unschedule_task( TaskId,
-							TaskEntry#task_entry.next_schedule, SchedulePlan,
-							?getAttr(timer_table) ) of
+                    case unschedule_task( TaskId,
+                            TaskEntry#task_entry.next_schedule, SchedulePlan,
+                            ?getAttr(timer_table) ) of
 
-						not_found ->
+                        not_found ->
 
-							?error_fmt( "Internal error: task id #~B not found "
-								"in schedule plan, which ~ts",
-								[ TaskId, schedule_plan_to_string( SchedulePlan,
-																   State ) ] ),
+                            ?error_fmt( "Internal error: task id #~B not found "
+                                "in schedule plan, which ~ts",
+                                [ TaskId, schedule_plan_to_string( SchedulePlan,
+                                                                   State ) ] ),
 
-							NewState = setAttribute( State, task_table,
-													 ShrunkTaskTable ),
+                            NewState = setAttribute( State, task_table,
+                                                     ShrunkTaskTable ),
 
-							{ { task_unregistration_failed, internal_error,
+                            { { task_unregistration_failed, internal_error,
                                 TaskId }, NewState };
 
 
-						{ NewPlan, NewTimerTable } ->
+                        { NewPlan, NewTimerTable } ->
 
-							NewState = setAttributes( State, [
-								{ task_table, ShrunkTaskTable },
-								{ schedule_plan, NewPlan },
-								{ timer_table, NewTimerTable } ] ),
+                            NewState = setAttributes( State, [
+                                { task_table, ShrunkTaskTable },
+                                { schedule_plan, NewPlan },
+                                { timer_table, NewTimerTable } ] ),
 
-							cond_utils:if_defined( us_common_debug_scheduling,
-								?debug_fmt( "Resulting scheduler state after "
-									"unregistering: ~ts.",
-									[ to_string( NewState ) ] ) ),
+                            cond_utils:if_defined( us_common_debug_scheduling,
+                                ?debug_fmt( "Resulting scheduler state after "
+                                    "unregistering: ~ts.",
+                                    [ to_string( NewState ) ] ) ),
 
-							{ { task_unregistered, TaskId }, NewState }
+                            { { task_unregistered, TaskId }, NewState }
 
-					end
+                    end
 
-			end
+            end
 
-	end;
+    end;
 
 unregister_task( TaskId, State ) ->
-	?error_fmt( "Task unregistering failed, invalid task identifier: '~p'.",
-				[ TaskId ] ),
-	{ { task_unregistration_failed, invalid_task_id, TaskId }, State }.
+    ?error_fmt( "Task unregistering failed, invalid task identifier: '~p'.",
+                [ TaskId ] ),
+    { { task_unregistration_failed, invalid_task_id, TaskId }, State }.
 
 
 
@@ -1003,15 +1003,15 @@ As a result, no outcome will be available to the caller.
 """.
 -spec unregisterTaskAsync( wooper:state(), task_id() ) -> oneway_return().
 unregisterTaskAsync( State, TaskId )
-						when is_integer( TaskId ) andalso TaskId > 0 ->
+                        when is_integer( TaskId ) andalso TaskId > 0 ->
 
-	% Already logged:
-	{ _Outcome, NewState } = unregister_task( TaskId, State ),
+    % Already logged:
+    { _Outcome, NewState } = unregister_task( TaskId, State ),
 
-	wooper:return_state( NewState );
+    wooper:return_state( NewState );
 
 unregisterTaskAsync( _State, Other ) ->
-	throw( { invalid_unregister_task_id, Other } ).
+    throw( { invalid_unregister_task_id, Other } ).
 
 
 
@@ -1026,53 +1026,53 @@ any process to be able to interfere by triggering schedulings.
 -spec timerTrigger( wooper:state(), schedule_offset() ) -> oneway_return().
 timerTrigger( State, ScheduleOffsetMs ) ->
 
-	NowMs = get_current_schedule_offset( State ),
+    NowMs = get_current_schedule_offset( State ),
 
-	cond_utils:if_defined( us_common_debug_scheduling,
-		begin
-			% As long as a drift is below this millisecond threshold, we do not
-			% worry:
-			%
-			OffsetThresholdMs = 250,
+    cond_utils:if_defined( us_common_debug_scheduling,
+        begin
+            % As long as a drift is below this millisecond threshold, we do not
+            % worry:
+            %
+            OffsetThresholdMs = 250,
 
-			DiffMs = NowMs - ScheduleOffsetMs,
+            DiffMs = NowMs - ScheduleOffsetMs,
 
-			erlang:abs( DiffMs ) > OffsetThresholdMs andalso
-				?warning_fmt( "Triggered for offset ~B (~ts), while being at "
-					"offset ~B (~ts), hence with a signed drift of ~ts "
-					"(thus being late iff positive).",
-					[ ScheduleOffsetMs,
-					  get_timestamp_string_for( ScheduleOffsetMs, State ),
-					  NowMs, get_timestamp_string_for( NowMs, State ),
-					  time_utils:duration_to_string( DiffMs ) ] )
-		end ),
+            erlang:abs( DiffMs ) > OffsetThresholdMs andalso
+                ?warning_fmt( "Triggered for offset ~B (~ts), while being at "
+                    "offset ~B (~ts), hence with a signed drift of ~ts "
+                    "(thus being late iff positive).",
+                    [ ScheduleOffsetMs,
+                      get_timestamp_string_for( ScheduleOffsetMs, State ),
+                      NowMs, get_timestamp_string_for( NowMs, State ),
+                      time_utils:duration_to_string( DiffMs ) ] )
+        end ),
 
-	TimerTable = ?getAttr(timer_table),
+    TimerTable = ?getAttr(timer_table),
 
-	% Resorb any pending schedule:
-	{ TriggeredPlan, TriggeredTimerTable, TriggeredTaskTable } =
-		perform_schedule( ScheduleOffsetMs, NowMs, ?getAttr(schedule_plan),
-						  TimerTable, ?getAttr(task_table), State ),
+    % Resorb any pending schedule:
+    { TriggeredPlan, TriggeredTimerTable, TriggeredTaskTable } =
+        perform_schedule( ScheduleOffsetMs, NowMs, ?getAttr(schedule_plan),
+                          TimerTable, ?getAttr(task_table), State ),
 
-	cond_utils:if_defined( us_common_debug_scheduling,
-		?debug_fmt( "After having handled the triggered tasks for offset ~B, "
-			"went from ~ts to ~ts", [ ScheduleOffsetMs,
-				timer_table_to_string( TimerTable, State ),
-				timer_table_to_string( TriggeredTimerTable, State ) ] ) ),
+    cond_utils:if_defined( us_common_debug_scheduling,
+        ?debug_fmt( "After having handled the triggered tasks for offset ~B, "
+            "went from ~ts to ~ts", [ ScheduleOffsetMs,
+                timer_table_to_string( TimerTable, State ),
+                timer_table_to_string( TriggeredTimerTable, State ) ] ) ),
 
-	% Intercept any scheduling already late and process it:
-	{ LatePlan, LateTimerTable, LateTaskTable } = piggy_back_late_schedules(
-		NowMs, TriggeredPlan, TriggeredTimerTable, TriggeredTaskTable, State ),
+    % Intercept any scheduling already late and process it:
+    { LatePlan, LateTimerTable, LateTaskTable } = piggy_back_late_schedules(
+        NowMs, TriggeredPlan, TriggeredTimerTable, TriggeredTaskTable, State ),
 
-	TrigState = setAttributes( State, [ { schedule_plan, LatePlan },
-										{ timer_table, LateTimerTable },
-										{ task_table, LateTaskTable } ] ),
+    TrigState = setAttributes( State, [ { schedule_plan, LatePlan },
+                                        { timer_table, LateTimerTable },
+                                        { task_table, LateTaskTable } ] ),
 
-	cond_utils:if_defined( us_common_debug_scheduling,
-		?debug_fmt( "Resulting scheduler state after performing trigger: ~ts.",
-					[ to_string( TrigState ) ] ) ),
+    cond_utils:if_defined( us_common_debug_scheduling,
+        ?debug_fmt( "Resulting scheduler state after performing trigger: ~ts.",
+                    [ to_string( TrigState ) ] ) ),
 
-	wooper:return_state( TrigState ).
+    wooper:return_state( TrigState ).
 
 
 
@@ -1080,41 +1080,41 @@ timerTrigger( State, ScheduleOffsetMs ) ->
 %
 % Take care of any lingering schedule:
 -spec perform_schedule( schedule_offset(), schedule_offset(), schedule_plan(),
-						timer_table(), task_table(), wooper:state() ) ->
-							{ schedule_plan(), timer_table(), task_table() }.
+                        timer_table(), task_table(), wooper:state() ) ->
+                            { schedule_plan(), timer_table(), task_table() }.
 % Abnormal case of an unhandled past schedule (we still compensate for it):
 perform_schedule( ScheduleOffsetMs, NowMs,
-				  _SchedulePlan=[ { OffMs, TaskIds } | T ], TimerTable,
-				  TaskTable, State ) when OffMs < ScheduleOffsetMs ->
+                  _SchedulePlan=[ { OffMs, TaskIds } | T ], TimerTable,
+                  TaskTable, State ) when OffMs < ScheduleOffsetMs ->
 
-	?error_fmt( "While scheduling target offset ~B (~ts), found past "
-		"non-scheduled offset ~B (~ts), triggering its delayed tasks first: "
-		"#~ts.",
-		[ ScheduleOffsetMs, get_timestamp_string_for( ScheduleOffsetMs, State ),
-		  OffMs, get_timestamp_string_for( OffMs, State ),
-		  text_utils:integers_to_listed_string( TaskIds ) ] ),
+    ?error_fmt( "While scheduling target offset ~B (~ts), found past "
+        "non-scheduled offset ~B (~ts), triggering its delayed tasks first: "
+        "#~ts.",
+        [ ScheduleOffsetMs, get_timestamp_string_for( ScheduleOffsetMs, State ),
+          OffMs, get_timestamp_string_for( OffMs, State ),
+          text_utils:integers_to_listed_string( TaskIds ) ] ),
 
-	% Using OffMs (second parameter) rather than ScheduleOffsetMs here:
-	{ NewPlan, NewTimerTable, NewTaskTable } = trigger_tasks( TaskIds,
-		OffMs, NowMs, _NewerPlan=T, TimerTable, TaskTable, State ),
+    % Using OffMs (second parameter) rather than ScheduleOffsetMs here:
+    { NewPlan, NewTimerTable, NewTaskTable } = trigger_tasks( TaskIds,
+        OffMs, NowMs, _NewerPlan=T, TimerTable, TaskTable, State ),
 
-	% Drops this offset entry:
-	perform_schedule( ScheduleOffsetMs, NowMs, NewPlan, NewTimerTable,
-					  NewTaskTable, State );
+    % Drops this offset entry:
+    perform_schedule( ScheduleOffsetMs, NowMs, NewPlan, NewTimerTable,
+                      NewTaskTable, State );
 
 
 % Matching offsets:
 perform_schedule( ScheduleOffsetMs, NowMs,
-				  _SchedulePlan=[ { ScheduleOffsetMs, TaskIds } | T ],
-				  TimerTable, TaskTable, State ) ->
+                  _SchedulePlan=[ { ScheduleOffsetMs, TaskIds } | T ],
+                  TimerTable, TaskTable, State ) ->
 
-	%?debug_fmt( "Normal scheduling of offset ~B (~ts), "
-	%   "triggering its tasks: ~w.",
-	%   [ ScheduleOffsetMs, get_timestamp_string_for( ScheduleOffsetMs, State ),
-	%     TaskIds ] ),
+    %?debug_fmt( "Normal scheduling of offset ~B (~ts), "
+    %   "triggering its tasks: ~w.",
+    %   [ ScheduleOffsetMs, get_timestamp_string_for( ScheduleOffsetMs, State ),
+    %     TaskIds ] ),
 
-	% Dropping current offset, stop recursing here, keeping the next schedules
-	% to come, returning {NewPlan, NewTimerTable, NewTaskTable}:
+    % Dropping current offset, stop recursing here, keeping the next schedules
+    % to come, returning {NewPlan, NewTimerTable, NewTaskTable}:
     %
     trigger_tasks( TaskIds, ScheduleOffsetMs, NowMs, _NewerPlan=T, TimerTable,
                    TaskTable, State );
@@ -1131,18 +1131,18 @@ perform_schedule( ScheduleOffsetMs, NowMs,
 % not trigger offsets anymore this time, we just disregard the current one:
 %
 perform_schedule( ScheduleOffsetMs, _NowMs, SchedulePlan, TimerTable, TaskTable,
-				  State ) ->
+                  State ) ->
 
-	?warning_fmt( "Triggered schedule offset ~B (~ts) not found (whereas "
-		"schedule plan ~ts), ignoring it, as supposing this is a late "
-		"scheduling already applied.",
-		[ ScheduleOffsetMs, get_timestamp_string_for( ScheduleOffsetMs, State ),
-		  schedule_plan_to_string( SchedulePlan, State ) ] ),
+    ?warning_fmt( "Triggered schedule offset ~B (~ts) not found (whereas "
+        "schedule plan ~ts), ignoring it, as supposing this is a late "
+        "scheduling already applied.",
+        [ ScheduleOffsetMs, get_timestamp_string_for( ScheduleOffsetMs, State ),
+          schedule_plan_to_string( SchedulePlan, State ) ] ),
 
-	% Hopefully this lacking timer can still be cancelled:
-	ShrunkTimerTable = remove_timer( ScheduleOffsetMs, TimerTable ),
+    % Hopefully this lacking timer can still be cancelled:
+    ShrunkTimerTable = remove_timer( ScheduleOffsetMs, TimerTable ),
 
-	{ SchedulePlan, ShrunkTimerTable, TaskTable }.
+    { SchedulePlan, ShrunkTimerTable, TaskTable }.
 
 
 
@@ -1154,26 +1154,26 @@ trigger_tasks/7, when testing whether NextScheduleMs is lower or equal to NowMs,
 should have already managed such cases.
 """.
 -spec piggy_back_late_schedules( schedule_offset(), schedule_plan(),
-						timer_table(), task_table(), wooper:state() ) ->
-							{ schedule_plan(), timer_table(), task_table() }.
+                        timer_table(), task_table(), wooper:state() ) ->
+                            { schedule_plan(), timer_table(), task_table() }.
 piggy_back_late_schedules( NowMs, _SchedulePlan=[ { OffMs, TaskIds } | T ],
-		TimerTable, TaskTable, State ) when OffMs =< NowMs ->
+        TimerTable, TaskTable, State ) when OffMs =< NowMs ->
 
-	?error_fmt( "Scheduling directly task(s) ~ts that were already "
-		"in the past (at ~B, while now is ~B).",
-		[ text_utils:integers_to_listed_string( TaskIds ), OffMs,
+    ?error_fmt( "Scheduling directly task(s) ~ts that were already "
+        "in the past (at ~B, while now is ~B).",
+        [ text_utils:integers_to_listed_string( TaskIds ), OffMs,
           NowMs ] ),
 
-	{ NewPlan, NewTimerTable, NewTaskTable } = trigger_tasks( TaskIds,
-		OffMs, NowMs, _NewerPlan=T, TimerTable, TaskTable, State ),
+    { NewPlan, NewTimerTable, NewTaskTable } = trigger_tasks( TaskIds,
+        OffMs, NowMs, _NewerPlan=T, TimerTable, TaskTable, State ),
 
-	piggy_back_late_schedules( NowMs, NewPlan, NewTimerTable, NewTaskTable,
-							   State );
+    piggy_back_late_schedules( NowMs, NewPlan, NewTimerTable, NewTaskTable,
+                               State );
 
 % Here OffMs > NowMs (normal situation):
 piggy_back_late_schedules( _NowMs, SchedulePlan, TimerTable, TaskTable,
-						   _State ) ->
-	{ SchedulePlan, TimerTable, TaskTable }.
+                           _State ) ->
+    { SchedulePlan, TimerTable, TaskTable }.
 
 
 
@@ -1191,119 +1191,119 @@ specified schedule offset removed
 (helper)
 """.
 -spec trigger_tasks( [ task_id() ], schedule_offset(), schedule_offset(),
-			schedule_plan(), timer_table(), task_table(), wooper:state() ) ->
-							{ schedule_plan(), timer_table(), task_table() }.
+            schedule_plan(), timer_table(), task_table(), wooper:state() ) ->
+                            { schedule_plan(), timer_table(), task_table() }.
 trigger_tasks( _TaskIds=[], ScheduleOffsetMs, _NowMs, SchedulePlan, TimerTable,
-			   TaskTable, _State ) ->
+               TaskTable, _State ) ->
 
     % In the final clause, as a single timer per offset is created, even if
     % multiple tasks are scheduled then:
     %
-	ShrunkTimerTable = remove_timer( ScheduleOffsetMs, TimerTable ),
+    ShrunkTimerTable = remove_timer( ScheduleOffsetMs, TimerTable ),
 
-	{ SchedulePlan, ShrunkTimerTable, TaskTable };
+    { SchedulePlan, ShrunkTimerTable, TaskTable };
 
 
 trigger_tasks( _TaskIds=[ TaskId | T ], ScheduleOffsetMs, NowMs, SchedulePlan,
-			   TimerTable, TaskTable, State ) ->
+               TimerTable, TaskTable, State ) ->
 
-	{ TaskEntry, ShrunkTaskTable } = table:extract_entry( TaskId, TaskTable ),
+    { TaskEntry, ShrunkTaskTable } = table:extract_entry( TaskId, TaskTable ),
 
-	% Check:
-	TaskId = TaskEntry#task_entry.id,
+    % Check:
+    TaskId = TaskEntry#task_entry.id,
 
-	% next_schedule shall at least roughly match.
+    % next_schedule shall at least roughly match.
 
-	cond_utils:if_defined( us_common_debug_scheduling,
-		?debug_fmt( "Triggering task #~B (difference between now and "
-			"scheduled: ~ts): ~ts.", [ TaskId,
-				time_utils:duration_to_string( NowMs - ScheduleOffsetMs ),
-				task_entry_to_string( TaskEntry, State ) ] ) ),
+    cond_utils:if_defined( us_common_debug_scheduling,
+        ?debug_fmt( "Triggering task #~B (difference between now and "
+            "scheduled: ~ts): ~ts.", [ TaskId,
+                time_utils:duration_to_string( NowMs - ScheduleOffsetMs ),
+                task_entry_to_string( TaskEntry, State ) ] ) ),
 
-	launch_task( TaskEntry#task_entry.command,
-				 TaskEntry#task_entry.actuator_pid, State ),
+    launch_task( TaskEntry#task_entry.command,
+                 TaskEntry#task_entry.actuator_pid, State ),
 
     % In all cases this timer is removed exactly once (by the final clause):
-	case decrement_count( TaskEntry#task_entry.count ) of
+    case decrement_count( TaskEntry#task_entry.count ) of
 
-		0 ->
-			?debug_fmt( "Dropping task #~B for good, as fully done.",
-						[ TaskId ] ),
-			{ SchedulePlan, TimerTable, ShrunkTaskTable };
+        0 ->
+            ?debug_fmt( "Dropping task #~B for good, as fully done.",
+                        [ TaskId ] ),
+            { SchedulePlan, TimerTable, ShrunkTaskTable };
 
-		% Possibly unlimited:
-		NewCount ->
-			% Will thus be still scheduled again afterwards.
+        % Possibly unlimited:
+        NewCount ->
+            % Will thus be still scheduled again afterwards.
 
-			% If first scheduling:
-			StartOffsetMs = case TaskEntry#task_entry.started_on of
+            % If first scheduling:
+            StartOffsetMs = case TaskEntry#task_entry.started_on of
 
-				undefined ->
-					% Now rather than scheduled (ScheduleOffsetMs):
-					NowMs;
+                undefined ->
+                    % Now rather than scheduled (ScheduleOffsetMs):
+                    NowMs;
 
-				AlreadyStartOffsetMs ->
-					AlreadyStartOffsetMs
+                AlreadyStartOffsetMs ->
+                    AlreadyStartOffsetMs
 
-			end,
+            end,
 
-			% Periodicity not expected to be 'undefined' here:
-			Periodicity = TaskEntry#task_entry.periodicity,
+            % Periodicity not expected to be 'undefined' here:
+            Periodicity = TaskEntry#task_entry.periodicity,
 
-			% Basing on planned (not actual, i.e. NowMs) offset to (attempt to)
-			% resorb any delay:
-			%
-			NextScheduleMs = ScheduleOffsetMs + Periodicity,
+            % Basing on planned (not actual, i.e. NowMs) offset to (attempt to)
+            % resorb any delay:
+            %
+            NextScheduleMs = ScheduleOffsetMs + Periodicity,
 
-			NewTaskEntry = TaskEntry#task_entry{
-				next_schedule=NextScheduleMs,
-				count=NewCount,
-				schedule_count=TaskEntry#task_entry.schedule_count+1,
-				started_on=StartOffsetMs,
-				last_schedule=NowMs },
+            NewTaskEntry = TaskEntry#task_entry{
+                next_schedule=NextScheduleMs,
+                count=NewCount,
+                schedule_count=TaskEntry#task_entry.schedule_count+1,
+                started_on=StartOffsetMs,
+                last_schedule=NowMs },
 
-			% Updating previous version thereof:
-			NewTaskTable = table:add_entry( TaskId, NewTaskEntry,
-											ShrunkTaskTable ),
+            % Updating previous version thereof:
+            NewTaskTable = table:add_entry( TaskId, NewTaskEntry,
+                                            ShrunkTaskTable ),
 
-			case NextScheduleMs > NowMs of
+            case NextScheduleMs > NowMs of
 
-				true ->
+                true ->
 
-					% Knowing that we do not program timer at absolute times but
-					% after a given duration, if DurationFromNowMs was just
-					% Periodicity, then the duration of the trigger logic would
-					% not be taken into account, and delays would accumulate
-					% (e.g. 1ms every 5s, leading quickly to too large errors)
-					%
-					% So we subtract the current error (which is
-					% Err = NowMs - ScheduleOffsetMs > 0):
-					%
-					DurationFromNowMs = Periodicity + ScheduleOffsetMs - NowMs,
+                    % Knowing that we do not program timer at absolute times but
+                    % after a given duration, if DurationFromNowMs was just
+                    % Periodicity, then the duration of the trigger logic would
+                    % not be taken into account, and delays would accumulate
+                    % (e.g. 1ms every 5s, leading quickly to too large errors)
+                    %
+                    % So we subtract the current error (which is
+                    % Err = NowMs - ScheduleOffsetMs > 0):
+                    %
+                    DurationFromNowMs = Periodicity + ScheduleOffsetMs - NowMs,
 
-					{ NewPlan, NewTimerTable } = insert_task_at( TaskId,
-						NextScheduleMs, DurationFromNowMs, SchedulePlan,
-						TimerTable ),
+                    { NewPlan, NewTimerTable } = insert_task_at( TaskId,
+                        NextScheduleMs, DurationFromNowMs, SchedulePlan,
+                        TimerTable ),
 
-					cond_utils:if_defined( us_common_debug_scheduling,
-						?debug_fmt( "New plan for offset ~B after trigger "
-							"of task #~B: ~ts",
-							[ ScheduleOffsetMs, TaskId,
-							  schedule_plan_to_string( NewPlan, State ) ] ) ),
+                    cond_utils:if_defined( us_common_debug_scheduling,
+                        ?debug_fmt( "New plan for offset ~B after trigger "
+                            "of task #~B: ~ts",
+                            [ ScheduleOffsetMs, TaskId,
+                              schedule_plan_to_string( NewPlan, State ) ] ) ),
 
-					trigger_tasks( T, ScheduleOffsetMs, NowMs, NewPlan,
-						NewTimerTable, NewTaskTable, State );
+                    trigger_tasks( T, ScheduleOffsetMs, NowMs, NewPlan,
+                        NewTimerTable, NewTaskTable, State );
 
-				false ->
-					?warning_fmt( "Next scheduling of task #~B to happen in "
-						"the past (at offset ~B), forcing it now.",
-						[ TaskId, NextScheduleMs ] ),
-					trigger_tasks( [ TaskId | T ], ScheduleOffsetMs, NowMs,
-						SchedulePlan, TimerTable, NewTaskTable, State )
+                false ->
+                    ?warning_fmt( "Next scheduling of task #~B to happen in "
+                        "the past (at offset ~B), forcing it now.",
+                        [ TaskId, NextScheduleMs ] ),
+                    trigger_tasks( [ TaskId | T ], ScheduleOffsetMs, NowMs,
+                        SchedulePlan, TimerTable, NewTaskTable, State )
 
-			end
+            end
 
-	end.
+    end.
 
 
 
@@ -1311,16 +1311,16 @@ trigger_tasks( _TaskIds=[ TaskId | T ], ScheduleOffsetMs, NowMs, SchedulePlan,
 -spec launch_task( task_command(), actuator_pid(), wooper:state() ) -> void().
 launch_task( Cmd, ActuatorPid, State ) ->
 
-	% We want to let the requester be able to specify exactly any command term;
-	% otherwise we would have added automatically for example the PID of the
-	% sending scheduler and the corresponding task identifier.
+    % We want to let the requester be able to specify exactly any command term;
+    % otherwise we would have added automatically for example the PID of the
+    % sending scheduler and the corresponding task identifier.
 
-	cond_utils:if_defined( us_common_debug_scheduling,
-		?debug_fmt( "Sending command '~p' to actuator ~w.",
-					[ Cmd, ActuatorPid ] ),
-		basic_utils:ignore_unused( State ) ),
+    cond_utils:if_defined( us_common_debug_scheduling,
+        ?debug_fmt( "Sending command '~p' to actuator ~w.",
+                    [ Cmd, ActuatorPid ] ),
+        basic_utils:ignore_unused( State ) ),
 
-	ActuatorPid ! Cmd.
+    ActuatorPid ! Cmd.
 
 
 
@@ -1332,8 +1332,8 @@ Useful to check for example that there is no accumulation of lost tasks.
 -spec logState( wooper:state() ) -> const_oneway_return().
 logState( State ) ->
 
-	?info_fmt( "Reporting current state: ~ts", [ to_string( State ) ] ),
-	wooper:const_return().
+    ?info_fmt( "Reporting current state: ~ts", [ to_string( State ) ] ),
+    wooper:const_return().
 
 
 
@@ -1356,11 +1356,11 @@ live process anymore).
 -spec get_server_pid () -> static_return( scheduler_pid() ).
 get_server_pid() ->
 
-	SchedPid = class_USServer:resolve_server_pid(
+    SchedPid = class_USServer:resolve_server_pid(
         _RegName=?us_common_scheduler_registration_name,
         _RegScope=?us_common_scheduler_registration_scope ),
 
-	wooper:return_static( SchedPid ).
+    wooper:return_static( SchedPid ).
 
 
 
@@ -1373,38 +1373,38 @@ Registers a future scheduling of the specified task.
 (both ScheduleOffset and DurationFromNow specified to avoid a recomputation)
 """.
 -spec register_task_schedule( task_id(), task_entry(), schedule_offset(),
-							  ms_duration(), wooper:state() ) -> wooper:state().
+                              ms_duration(), wooper:state() ) -> wooper:state().
 register_task_schedule( TaskId, TaskEntry, ScheduleOffsetMs, DurationFromNowMs,
-						State ) ->
+                        State ) ->
 
-	%?debug_fmt
-	?notice_fmt( "Registering task #~B for schedule offset ~B (duration from "
-		"now: ~ts): ~ts.", [ TaskId, ScheduleOffsetMs,
-			time_utils:duration_to_string( DurationFromNowMs ),
-			task_entry_to_string( TaskEntry, State ) ] ),
+    %?debug_fmt
+    ?notice_fmt( "Registering task #~B for schedule offset ~B (duration from "
+        "now: ~ts): ~ts.", [ TaskId, ScheduleOffsetMs,
+            time_utils:duration_to_string( DurationFromNowMs ),
+            task_entry_to_string( TaskEntry, State ) ] ),
 
-	NewTaskTable = table:add_new_entry( TaskId, TaskEntry,
-										?getAttr(task_table) ),
+    NewTaskTable = table:add_new_entry( TaskId, TaskEntry,
+                                        ?getAttr(task_table) ),
 
-	{ NewPlan, NewTimerTable } = insert_task_at( TaskId, ScheduleOffsetMs,
-		DurationFromNowMs, ?getAttr(schedule_plan), _AccPlan=[],
-		?getAttr(timer_table) ),
+    { NewPlan, NewTimerTable } = insert_task_at( TaskId, ScheduleOffsetMs,
+        DurationFromNowMs, ?getAttr(schedule_plan), _AccPlan=[],
+        ?getAttr(timer_table) ),
 
-	RegState = setAttributes( State, [ { task_table, NewTaskTable },
-									   { schedule_plan, NewPlan },
-									   { timer_table, NewTimerTable },
-									   { next_task_id, TaskId+1 } ] ),
+    RegState = setAttributes( State, [ { task_table, NewTaskTable },
+                                       { schedule_plan, NewPlan },
+                                       { timer_table, NewTimerTable },
+                                       { next_task_id, TaskId+1 } ] ),
 
-	%cond_utils:if_defined( us_common_debug_scheduling,
-	%   ?debug_fmt( "New plan: ~p~nNew timer table: ~p.",
-	%               [ NewPlan, NewTimerTable ] ) ),
+    %cond_utils:if_defined( us_common_debug_scheduling,
+    %   ?debug_fmt( "New plan: ~p~nNew timer table: ~p.",
+    %               [ NewPlan, NewTimerTable ] ) ),
 
-	% Even more complete:
-	cond_utils:if_defined( us_common_debug_scheduling,
-		?debug_fmt( "Resulting scheduler state after registering: ~ts.",
-					[ to_string( RegState ) ] ) ),
+    % Even more complete:
+    cond_utils:if_defined( us_common_debug_scheduling,
+        ?debug_fmt( "Resulting scheduler state after registering: ~ts.",
+                    [ to_string( RegState ) ] ) ),
 
-	RegState.
+    RegState.
 
 
 
@@ -1412,144 +1412,144 @@ register_task_schedule( TaskId, TaskEntry, ScheduleOffsetMs, DurationFromNowMs,
 Inserts the specified task at the specified offset in the specified plan.
 """.
 -spec insert_task_at( task_id(), schedule_offset(), ms_duration(),
-		schedule_plan(), timer_table() ) -> { schedule_plan(), timer_table() }.
+        schedule_plan(), timer_table() ) -> { schedule_plan(), timer_table() }.
 insert_task_at( TaskId, ScheduleOffsetMs, DurationFromNowMs, Plan,
-				TimerTable ) ->
+                TimerTable ) ->
 
-	%NewP = { NewPlan, _NewTimerTable } =
-	NewP = insert_task_at( TaskId, ScheduleOffsetMs, DurationFromNowMs, Plan,
-						   _AccPlan=[], TimerTable ),
+    %NewP = { NewPlan, _NewTimerTable } =
+    NewP = insert_task_at( TaskId, ScheduleOffsetMs, DurationFromNowMs, Plan,
+                           _AccPlan=[], TimerTable ),
 
-	%trace_bridge:debug_fmt( "After having inserted task #~B at offset ~B "
-	%   "(duration from now: ~ts), new plan is:~n ~p",
-	%   [ TaskId, ScheduleOffsetMs,
-	%     time_utils:duration_to_string( DurationFromNowMs ), NewPlan ] ),
+    %trace_bridge:debug_fmt( "After having inserted task #~B at offset ~B "
+    %   "(duration from now: ~ts), new plan is:~n ~p",
+    %   [ TaskId, ScheduleOffsetMs,
+    %     time_utils:duration_to_string( DurationFromNowMs ), NewPlan ] ),
 
-	NewP.
+    NewP.
 
 
 % (helper)
 %
 % Schedule plan exhausted, adding it at end:
 insert_task_at( TaskId, ScheduleOffsetMs, DurationFromNowMs, _SchedulePlan=[],
-				AccPlan, TimeTable ) ->
+                AccPlan, TimeTable ) ->
 
-	% Not set yet:
-	NewTimeTable = add_timer( ScheduleOffsetMs, DurationFromNowMs, TimeTable ),
+    % Not set yet:
+    NewTimeTable = add_timer( ScheduleOffsetMs, DurationFromNowMs, TimeTable ),
 
-	{ lists:reverse( [ { ScheduleOffsetMs, [ TaskId ] } | AccPlan ] ),
-	  NewTimeTable };
+    { lists:reverse( [ { ScheduleOffsetMs, [ TaskId ] } | AccPlan ] ),
+      NewTimeTable };
 
 
 % Too early in plan, ScheduleOffsetMs not reached, continue:
 insert_task_at( TaskId, ScheduleOffsetMs, DurationFromNowMs,
-				_SchedulePlan=[ H={ OffMs, _Ids } | T ], AccPlan, TimeTable )
-										when OffMs < ScheduleOffsetMs ->
-	insert_task_at( TaskId, ScheduleOffsetMs, DurationFromNowMs, T,
-					[ H | AccPlan ], TimeTable );
+                _SchedulePlan=[ H={ OffMs, _Ids } | T ], AccPlan, TimeTable )
+                                        when OffMs < ScheduleOffsetMs ->
+    insert_task_at( TaskId, ScheduleOffsetMs, DurationFromNowMs, T,
+                    [ H | AccPlan ], TimeTable );
 
 % Current offset found matching ScheduleOffsetMs, registering and stopping:
 insert_task_at( TaskId, ScheduleOffsetMs, _DurationFromNowMs,
-		_SchedulePlan=[ { ScheduleOffsetMs, Ids } | T ], AccPlan, TimeTable ) ->
+        _SchedulePlan=[ { ScheduleOffsetMs, Ids } | T ], AccPlan, TimeTable ) ->
 
-	% Timer already set for that offset, so none to add:
-	{ lists:reverse( AccPlan )
-			++ [ { ScheduleOffsetMs, [ TaskId | Ids ] } | T ],
-	  TimeTable };
+    % Timer already set for that offset, so none to add:
+    { lists:reverse( AccPlan )
+            ++ [ { ScheduleOffsetMs, [ TaskId | Ids ] } | T ],
+      TimeTable };
 
 % Gone past ScheduleOffsetMs target:
 insert_task_at( TaskId, ScheduleOffsetMs, DurationFromNowMs,
-		SchedulePlan, % Implicit: SchedulePlan=[ { OffMs, Ids } | T ],
-		AccPlan, TimeTable ) -> % Implicit: when OffMs > ScheduleOffsetMS
+        SchedulePlan, % Implicit: SchedulePlan=[ { OffMs, Ids } | T ],
+        AccPlan, TimeTable ) -> % Implicit: when OffMs > ScheduleOffsetMS
 
-	% Not set yet, registering and stop recursing:
-	NewTimeTable = add_timer( ScheduleOffsetMs, DurationFromNowMs, TimeTable ),
+    % Not set yet, registering and stop recursing:
+    NewTimeTable = add_timer( ScheduleOffsetMs, DurationFromNowMs, TimeTable ),
 
-	{ lists:reverse( [ { ScheduleOffsetMs, [ TaskId ] } | AccPlan ] )
-		++ SchedulePlan, NewTimeTable }.
+    { lists:reverse( [ { ScheduleOffsetMs, [ TaskId ] } | AccPlan ] )
+        ++ SchedulePlan, NewTimeTable }.
 
 
 
 -doc "Removes the specified task from schedule plan.".
 -spec unschedule_task( task_id(), schedule_offset(), schedule_plan(),
-			timer_table() ) -> 'not_found' | { schedule_plan(), timer_table() }.
+            timer_table() ) -> 'not_found' | { schedule_plan(), timer_table() }.
 unschedule_task( TaskId, PlannedNextSchedule, SchedulePlan, TimerTable ) ->
-	unschedule_task( TaskId, PlannedNextSchedule, SchedulePlan, _AccPlan=[],
-					 TimerTable ).
+    unschedule_task( TaskId, PlannedNextSchedule, SchedulePlan, _AccPlan=[],
+                     TimerTable ).
 
 
 % (helper)
 unschedule_task( _TaskId, _PlannedNextSchedule, _SchedulePlan=[], _AccPlan,
-				 _TimerTable ) ->
-	not_found;
+                 _TimerTable ) ->
+    not_found;
 
 unschedule_task( TaskId, PlannedNextSchedule,
-		_SchedulePlan=[ { PlannedNextSchedule, TaskIds } | T ], AccPlan,
-		TimerTable ) ->
+        _SchedulePlan=[ { PlannedNextSchedule, TaskIds } | T ], AccPlan,
+        TimerTable ) ->
 
-	case lists:member( TaskId, TaskIds ) of
+    case lists:member( TaskId, TaskIds ) of
 
-		true ->
-			case lists:delete( TaskId, TaskIds ) of
+        true ->
+            case lists:delete( TaskId, TaskIds ) of
 
-				% Empty slot now, hence removed as a whole, together with the
-				% corresponding timer that is now useless:
-				%
-				[] ->
+                % Empty slot now, hence removed as a whole, together with the
+                % corresponding timer that is now useless:
+                %
+                [] ->
 
-					%trace_bridge:debug_fmt(
-					%  "Removing empty schedule slot at offset ~B.",
-					%  [ PlannedNextSchedule ] ),
+                    %trace_bridge:debug_fmt(
+                    %  "Removing empty schedule slot at offset ~B.",
+                    %  [ PlannedNextSchedule ] ),
 
-					NewSchedPlan = lists:reverse( AccPlan ) ++ T,
+                    NewSchedPlan = lists:reverse( AccPlan ) ++ T,
 
-					ShrunkTimerTable =
-						remove_timer( PlannedNextSchedule, TimerTable ),
+                    ShrunkTimerTable =
+                        remove_timer( PlannedNextSchedule, TimerTable ),
 
-					{ NewSchedPlan, ShrunkTimerTable };
+                    { NewSchedPlan, ShrunkTimerTable };
 
-				ShrunkTaskIds ->
-					{ lists:reverse( AccPlan ) ++
-						[ { PlannedNextSchedule, ShrunkTaskIds } | T ],
-					  TimerTable }
+                ShrunkTaskIds ->
+                    { lists:reverse( AccPlan ) ++
+                        [ { PlannedNextSchedule, ShrunkTaskIds } | T ],
+                      TimerTable }
 
-			end;
+            end;
 
-		false ->
-			not_found
+        false ->
+            not_found
 
-	end;
+    end;
 
 % Not the shedule offset you are looking for:
 unschedule_task( TaskId, PlannedNextSchedule, _SchedulePlan=[ P | T ], Acc,
-				 TimerTable ) ->
-	unschedule_task( TaskId, PlannedNextSchedule, T, [ P | Acc ], TimerTable ).
+                 TimerTable ) ->
+    unschedule_task( TaskId, PlannedNextSchedule, T, [ P | Acc ], TimerTable ).
 
 
 
 -doc "Adds a timer to trigger a future scheduling.".
 -spec add_timer( schedule_offset(), ms_duration(), timer_table() ) ->
-						timer_table().
+                        timer_table().
 add_timer( ScheduleOffsetMs, DurationFromNowMs, TimerTable ) ->
 
-	% WOOPER oneway to be sent to this instance:
-	Message = { timerTrigger, [ ScheduleOffsetMs ] },
+    % WOOPER oneway to be sent to this instance:
+    Message = { timerTrigger, [ ScheduleOffsetMs ] },
 
-	% Note that we cannot set an absolute timer, but one relative to the current
-	% time (be careful not to accumulate errors between planned and current
-	% times, for example by adding constant, "theoritical" durations here):
-	%
-	case timer:send_after( DurationFromNowMs, Message ) of
+    % Note that we cannot set an absolute timer, but one relative to the current
+    % time (be careful not to accumulate errors between planned and current
+    % times, for example by adding constant, "theoritical" durations here):
+    %
+    case timer:send_after( DurationFromNowMs, Message ) of
 
-		% TimerRef useful to cancel; not expected to be already existing:
-		{ ok, TimerRef } ->
-			table:add_new_entry( ScheduleOffsetMs, TimerRef, TimerTable );
+        % TimerRef useful to cancel; not expected to be already existing:
+        { ok, TimerRef } ->
+            table:add_new_entry( ScheduleOffsetMs, TimerRef, TimerTable );
 
-		{ error, Reason } ->
-			throw( { timer_setting_failed, Reason, ScheduleOffsetMs,
-					 DurationFromNowMs } )
+        { error, Reason } ->
+            throw( { timer_setting_failed, Reason, ScheduleOffsetMs,
+                     DurationFromNowMs } )
 
-	end.
+    end.
 
 
 
@@ -1557,27 +1557,27 @@ add_timer( ScheduleOffsetMs, DurationFromNowMs, TimerTable ) ->
 -spec remove_timer( schedule_offset(), timer_table() ) -> timer_table().
 remove_timer( ScheduleOffsetMs, TimerTable ) ->
 
-	%trace_bridge:debug_fmt( "Removing timer for schedule offset #~B.",
-	%   [ ScheduleOffsetMs ] ),
+    %trace_bridge:debug_fmt( "Removing timer for schedule offset #~B.",
+    %   [ ScheduleOffsetMs ] ),
 
-	{ TimerRef, ShrunkTimerTable } =
-		table:extract_entry( ScheduleOffsetMs, TimerTable ),
+    { TimerRef, ShrunkTimerTable } =
+        table:extract_entry( ScheduleOffsetMs, TimerTable ),
 
-	case timer:cancel( TimerRef ) of
+    case timer:cancel( TimerRef ) of
 
-		{ ok, cancel } ->
-			ok;
+        { ok, cancel } ->
+            ok;
 
-		{ error, Reason } ->
-			trace_bridge:error_fmt( "The cancellation of timer '~p' "
-				"failed for schedule offset ~B (reason: '~p').",
-				[ TimerRef, ScheduleOffsetMs, Reason ] )
-			%throw( { timer_cancellation_failed, Reason,
-			%         TimerRef, ScheduleOffset } )
+        { error, Reason } ->
+            trace_bridge:error_fmt( "The cancellation of timer '~p' "
+                "failed for schedule offset ~B (reason: '~p').",
+                [ TimerRef, ScheduleOffsetMs, Reason ] )
+            %throw( { timer_cancellation_failed, Reason,
+            %         TimerRef, ScheduleOffset } )
 
-	end,
+    end,
 
-	ShrunkTimerTable.
+    ShrunkTimerTable.
 
 
 
@@ -1591,15 +1591,15 @@ scheduler.
 """.
 -spec get_current_schedule_offset( wooper:state() ) -> schedule_offset().
 get_current_schedule_offset( State ) ->
-	time_utils:get_monotonic_time() - ?getAttr(server_start).
+    time_utils:get_monotonic_time() - ?getAttr(server_start).
 
 
 
 -doc "Returns the (approximate) user-level timestamp corresponding to now.".
 -spec get_current_timestamp( wooper:state() ) -> timestamp().
 get_current_timestamp( State ) ->
-	% Better (more homogeneous) than using calendar:local_time/0 for example:
-	get_timestamp_for( get_current_schedule_offset( State ), State ).
+    % Better (more homogeneous) than using calendar:local_time/0 for example:
+    get_timestamp_for( get_current_schedule_offset( State ), State ).
 
 
 
@@ -1609,7 +1609,7 @@ corresponding to now.
 """.
 -spec get_current_timestamp_string( wooper:state() ) -> ustring().
 get_current_timestamp_string( State ) ->
-	get_timestamp_string_for( get_current_schedule_offset( State ), State ).
+    get_timestamp_string_for( get_current_schedule_offset( State ), State ).
 
 
 
@@ -1618,15 +1618,15 @@ Returns the internal time offset corresponding to this user-level timestamp
 (such as `{{2020,3,23},{16,44,0}}`).
 """.
 -spec get_schedule_offset_for( timestamp(), wooper:state() ) ->
-									schedule_offset().
+                                    schedule_offset().
 get_schedule_offset_for( UserTimestamp, State ) ->
 
-	% Number of milliseconds since year 0:
-	GregorianMillisecs =
-		1000 * calendar:datetime_to_gregorian_seconds(
-			time_utils:local_to_universal_time( UserTimestamp ) ),
+    % Number of milliseconds since year 0:
+    GregorianMillisecs =
+        1000 * calendar:datetime_to_gregorian_seconds(
+            time_utils:local_to_universal_time( UserTimestamp ) ),
 
-	GregorianMillisecs - ?getAttr(server_gregorian_start).
+    GregorianMillisecs - ?getAttr(server_gregorian_start).
 
 
 
@@ -1637,11 +1637,11 @@ in VM system time (UTC), corresponding to the specified internal time offset.
 -spec get_timestamp_for( schedule_offset(), wooper:state() ) -> timestamp().
 get_timestamp_for( OffsetMs, State ) ->
 
-	GregorianSecs =
-		round( ( OffsetMs + ?getAttr(server_gregorian_start) ) / 1000 ),
+    GregorianSecs =
+        round( ( OffsetMs + ?getAttr(server_gregorian_start) ) / 1000 ),
 
-	time_utils:universal_to_local_time(
-		calendar:gregorian_seconds_to_datetime( GregorianSecs ) ).
+    time_utils:universal_to_local_time(
+        calendar:gregorian_seconds_to_datetime( GregorianSecs ) ).
 
 
 
@@ -1650,20 +1650,20 @@ Returns a textual description of the user-level timestamp corresponding to the
 specified internal time offset.
 """.
 -spec get_timestamp_string_for( schedule_offset(), wooper:state() ) ->
-										ustring().
+                                        ustring().
 get_timestamp_string_for( OffsetMs, State ) ->
-	time_utils:timestamp_to_string( get_timestamp_for( OffsetMs, State ) ).
+    time_utils:timestamp_to_string( get_timestamp_for( OffsetMs, State ) ).
 
 
 
 -doc "Registers the fact that a task has just been triggered once more.".
 -spec decrement_count( schedule_count() ) -> option( schedule_count() ).
 decrement_count( _Count=unlimited ) ->
-	unlimited;
+    unlimited;
 
 % (guard just for safety, should never be negative):
 decrement_count( Count ) when Count > 0 ->
-	Count-1.
+    Count-1.
 
 
 
@@ -1672,20 +1672,20 @@ decrement_count( Count ) when Count > 0 ->
 
 -doc "Checks and canonicalises this user-specified task command.".
 vet_task_command( UserTaskCommand=Oneway, _State ) when is_atom( Oneway ) ->
-	UserTaskCommand;
+    UserTaskCommand;
 
 % If Args is not z list, expecting that this is a single non-list element that
 % will be considered to be wrapped in a list by the callee, so both are correct
 % and they cover all cases:
 %
 vet_task_command( UserTaskCommand={ Oneway, _Args }, _State )
-							when is_atom( Oneway ) ->
-	UserTaskCommand;
+                            when is_atom( Oneway ) ->
+    UserTaskCommand;
 
 vet_task_command( UserTaskCommand, State ) ->
-	?error_fmt( "Invalid user-specified task command: '~p'.",
-				[ UserTaskCommand ] ),
-	throw( { invalid_task_command, UserTaskCommand } ).
+    ?error_fmt( "Invalid user-specified task command: '~p'.",
+                [ UserTaskCommand ] ),
+    throw( { invalid_task_command, UserTaskCommand } ).
 
 
 
@@ -1695,118 +1695,118 @@ milliseconds before starting any corresponding task (possibly zero).
 """.
 -spec vet_start_time( term(), wooper:state() ) -> ms_duration().
 vet_start_time( _UserStartTime=asap, _State ) ->
-	0;
+    0;
 
 vet_start_time( _UserStartTime=flexible, _State ) ->
     % At least currently:
-	0;
+    0;
 
 vet_start_time( StartTimeInSecs, _State ) when is_integer( StartTimeInSecs ) ->
-	case StartTimeInSecs > 0 of
+    case StartTimeInSecs > 0 of
 
-		true ->
-			1000 * StartTimeInSecs;
+        true ->
+            1000 * StartTimeInSecs;
 
-		false ->
-			throw( { non_strictly_positive_start_duration, StartTimeInSecs } )
+        false ->
+            throw( { non_strictly_positive_start_duration, StartTimeInSecs } )
 
-	end;
+    end;
 
 vet_start_time( _UserStartTime=StartTime, State ) ->
 
-	case time_utils:is_timestamp( StartTime ) of
+    case time_utils:is_timestamp( StartTime ) of
 
-		true ->
+        true ->
 
-			% We consider that this scheduler-side local time (including time
-			% zone and Daylight Saving Time) and the time received from the
-			% user obey the same conventions:
-			%
-			Now = time_utils:get_timestamp(),
+            % We consider that this scheduler-side local time (including time
+            % zone and Daylight Saving Time) and the time received from the
+            % user obey the same conventions:
+            %
+            Now = time_utils:get_timestamp(),
 
-			% So the duration (only value that will matter) shall be correct:
-			case time_utils:get_duration( Now, StartTime ) of
+            % So the duration (only value that will matter) shall be correct:
+            case time_utils:get_duration( Now, StartTime ) of
 
-				SecD when SecD > 0 ->
-					% In the future, perfect:
-					1000 * SecD;
+                SecD when SecD > 0 ->
+                    % In the future, perfect:
+                    1000 * SecD;
 
-				SecD ->
-					?warning_fmt( "Specified user start time (~p, i.e. ~ts) "
-						"is in the past (i.e. ~ts before current time, which "
-						"is ~ts), requesting immediate scheduling instead.",
-						[ StartTime,
-						  time_utils:timestamp_to_string( StartTime ),
-						  time_utils:duration_to_string( -1000 * SecD ),
-						  time_utils:timestamp_to_string( Now ) ] ),
-					0
+                SecD ->
+                    ?warning_fmt( "Specified user start time (~p, i.e. ~ts) "
+                        "is in the past (i.e. ~ts before current time, which "
+                        "is ~ts), requesting immediate scheduling instead.",
+                        [ StartTime,
+                          time_utils:timestamp_to_string( StartTime ),
+                          time_utils:duration_to_string( -1000 * SecD ),
+                          time_utils:timestamp_to_string( Now ) ] ),
+                    0
 
-			end;
+            end;
 
-		false ->
-			% Durations are more reliable:
-			case time_utils:is_dhms_duration( StartTime ) of
+        false ->
+            % Durations are more reliable:
+            case time_utils:is_dhms_duration( StartTime ) of
 
-				true ->
-					MsDuration = 1000 *
-						time_utils:dhms_to_seconds( StartTime ),
+                true ->
+                    MsDuration = 1000 *
+                        time_utils:dhms_to_seconds( StartTime ),
 
-					case MsDuration of
+                    case MsDuration of
 
-						D when D > 0 ->
-							% In the future, perfect:
-							D;
+                        D when D > 0 ->
+                            % In the future, perfect:
+                            D;
 
-						D ->
-							?warning_fmt( "Specified user duration "
-								"(~p, i.e. ~ts) is negative (i.e. in the "
-								"past), requesting immediate scheduling.",
-								[ StartTime,
-								  time_utils:duration_to_string( D ) ] ),
-							0
+                        D ->
+                            ?warning_fmt( "Specified user duration "
+                                "(~p, i.e. ~ts) is negative (i.e. in the "
+                                "past), requesting immediate scheduling.",
+                                [ StartTime,
+                                  time_utils:duration_to_string( D ) ] ),
+                            0
 
-					end;
+                    end;
 
-				false ->
-					?error_fmt( "Invalid user-specified start time (neither "
-						"timestamp nor DHMS duration):~n ~p", [ StartTime ] ),
-					throw( { invalid_start_time, StartTime } )
+                false ->
+                    ?error_fmt( "Invalid user-specified start time (neither "
+                        "timestamp nor DHMS duration):~n ~p", [ StartTime ] ),
+                    throw( { invalid_start_time, StartTime } )
 
-			end
+            end
 
-	end.
+    end.
 
 
 
 -doc "Returns the user-specified schedule count.".
 -spec vet_count( term(), wooper:state() ) -> schedule_count().
 vet_count( ScheduleCount=unlimited, _State ) ->
-	ScheduleCount;
+    ScheduleCount;
 
 vet_count( C, _State ) when is_integer( C ) andalso C > 0 ->
-	C;
+    C;
 
 vet_count( Other, State ) ->
-	?error_fmt( "Invalid user-specified schedule count: ~p.", [ Other ] ),
-	throw( { invalid_schedule_count, Other } ).
+    ?error_fmt( "Invalid user-specified schedule count: ~p.", [ Other ] ),
+    throw( { invalid_schedule_count, Other } ).
 
 
 
 -doc "Returns any user-specified periodicity.".
 -spec vet_periodicity( term(), term(), wooper:state() ) ->
-								option( periodicity() ).
+                                option( periodicity() ).
 vet_periodicity( _UserPeriodicity=once, _Count=1, _State ) ->
-	undefined;
+    undefined;
 
 vet_periodicity( UserPeriodicity=once, Count, State ) ->
 
-	?error_fmt( "Task periodicity is 'once', whereas specified schedule count "
-				"is ~p.", [ Count ] ),
+    ?error_fmt( "Task periodicity is 'once', whereas specified schedule count "
+                "is ~p.", [ Count ] ),
 
-	throw( { periodicity_count_mismatch, UserPeriodicity, Count } );
+    throw( { periodicity_count_mismatch, UserPeriodicity, Count } );
 
 vet_periodicity( UserPeriodicity, _Count, State ) ->
-	vet_user_periodicity( UserPeriodicity, State ).
+    vet_user_periodicity( UserPeriodicity, State ).
 
 
 
@@ -1818,47 +1818,47 @@ Returns a vetted, internal periodicity.
 -spec vet_user_periodicity( term(), wooper:state() ) -> ms_duration().
 vet_user_periodicity( UserPeriodicity, State ) ->
 
-	case time_utils:is_dhms_duration( UserPeriodicity ) of
+    case time_utils:is_dhms_duration( UserPeriodicity ) of
 
-		true ->
-			case 1000 * time_utils:dhms_to_seconds( UserPeriodicity ) of
+        true ->
+            case 1000 * time_utils:dhms_to_seconds( UserPeriodicity ) of
 
-				D when D > 0 ->
-					D;
+                D when D > 0 ->
+                    D;
 
-				D ->
-					?error_fmt( "Invalid user-specified non strictly positive "
-						"task periodicity ~p, i.e. ~ts).",
-						[ UserPeriodicity,
-						  time_utils:duration_to_string( D ) ] ),
-					throw( { non_strictly_positive_user_periodicity,
-							 UserPeriodicity } )
+                D ->
+                    ?error_fmt( "Invalid user-specified non strictly positive "
+                        "task periodicity ~p, i.e. ~ts).",
+                        [ UserPeriodicity,
+                          time_utils:duration_to_string( D ) ] ),
+                    throw( { non_strictly_positive_user_periodicity,
+                             UserPeriodicity } )
 
-			end;
+            end;
 
-		false ->
-			case is_integer( UserPeriodicity ) andalso UserPeriodicity > 0 of
+        false ->
+            case is_integer( UserPeriodicity ) andalso UserPeriodicity > 0 of
 
-				% Then are seconds:
-				true ->
-					1000 * UserPeriodicity;
+                % Then are seconds:
+                true ->
+                    1000 * UserPeriodicity;
 
-				false ->
-					throw( { invalid_user_periodicity, UserPeriodicity } )
+                false ->
+                    throw( { invalid_user_periodicity, UserPeriodicity } )
 
-			end
+            end
 
-	end.
+    end.
 
 
 
 -doc "Returns the user-specified actuator PID.".
 -spec vet_actuator_pid( term() ) -> actuator_pid().
 vet_actuator_pid( Pid ) when is_pid( Pid ) ->
-	Pid;
+    Pid;
 
 vet_actuator_pid( Other ) ->
-	throw( { invalid_actuator_pid, Other } ).
+    throw( { invalid_actuator_pid, Other } ).
 
 
 
@@ -1870,48 +1870,48 @@ vet_actuator_pid( Other ) ->
 -spec to_string( wooper:state() ) -> ustring().
 to_string( State ) ->
 
-	TaskStr = case table:enumerate( ?getAttr(task_table) ) of
+    TaskStr = case table:enumerate( ?getAttr(task_table) ) of
 
-		[] ->
-			"no task";
+        [] ->
+            "no task";
 
-		TaskPairs ->
-			TaskDescs = [ text_utils:format( "task #~B: ~ts",
-				[ TId, task_entry_to_string( TE, State ) ] )
-							|| { TId, TE } <- lists:sort( TaskPairs ) ],
-			text_utils:format( "~B tasks: ~ts", [ length( TaskPairs ),
-				text_utils:strings_to_string( TaskDescs ) ] )
+        TaskPairs ->
+            TaskDescs = [ text_utils:format( "task #~B: ~ts",
+                [ TId, task_entry_to_string( TE, State ) ] )
+                            || { TId, TE } <- lists:sort( TaskPairs ) ],
+            text_utils:format( "~B tasks: ~ts", [ length( TaskPairs ),
+                text_utils:strings_to_string( TaskDescs ) ] )
 
-	end,
+    end,
 
-	SchedStr = schedule_plan_to_string( ?getAttr(schedule_plan), State ),
+    SchedStr = schedule_plan_to_string( ?getAttr(schedule_plan), State ),
 
-	TimerStr = timer_table_to_string( ?getAttr(timer_table), State ),
+    TimerStr = timer_table_to_string( ?getAttr(timer_table), State ),
 
-	TotalTaskCount = ?getAttr(next_task_id) - 1,
+    TotalTaskCount = ?getAttr(next_task_id) - 1,
 
-	text_utils:format( "US scheduler, a ~ts; "
-		"registering ~ts (with a total of ~B task(s) already declared); "
-		"current schedule ~ts; with ~ts",
-		[ class_USServer:to_string( State ), TaskStr, TotalTaskCount,
-		  SchedStr, TimerStr ] ).
+    text_utils:format( "US scheduler, a ~ts; "
+        "registering ~ts (with a total of ~B task(s) already declared); "
+        "current schedule ~ts; with ~ts",
+        [ class_USServer:to_string( State ), TaskStr, TotalTaskCount,
+          SchedStr, TimerStr ] ).
 
 
 
 -doc "Returns a textual description of the specified schedule plan.".
 -spec schedule_plan_to_string( schedule_plan(), wooper:state() ) -> ustring().
 schedule_plan_to_string( _SchedulePlan=[], _State ) ->
-	"is empty";
+    "is empty";
 
 schedule_plan_to_string( SchedulePlan, State ) ->
 
-	NowOffset = get_current_schedule_offset( State ),
-	text_utils:format( "registers ~B trigger(s) (while being at offset ~B, "
-		"i.e. ~ts): ~ts",
-		[ length( SchedulePlan ), NowOffset,
-		  get_timestamp_string_for( NowOffset, State ),
-		  text_utils:strings_to_string(
-			[ trigger_to_string( P, State ) || P <- SchedulePlan ] ) ] ).
+    NowOffset = get_current_schedule_offset( State ),
+    text_utils:format( "registers ~B trigger(s) (while being at offset ~B, "
+        "i.e. ~ts): ~ts",
+        [ length( SchedulePlan ), NowOffset,
+          get_timestamp_string_for( NowOffset, State ),
+          text_utils:strings_to_string(
+            [ trigger_to_string( P, State ) || P <- SchedulePlan ] ) ] ).
 
 
 
@@ -1919,89 +1919,89 @@ schedule_plan_to_string( SchedulePlan, State ) ->
 -spec timer_table_to_string( timer_table(), wooper:state() ) -> ustring().
 timer_table_to_string( TimerTable, State ) ->
 
-	case table:keys( TimerTable ) of
+    case table:keys( TimerTable ) of
 
-		[] ->
-			"no timer set";
+        [] ->
+            "no timer set";
 
-		[ Offset ] ->
-			text_utils:format( "a single timer set, at offset ~B (~ts)",
-				[ Offset, get_timestamp_string_for( Offset, State ) ] );
+        [ Offset ] ->
+            text_utils:format( "a single timer set, at offset ~B (~ts)",
+                [ Offset, get_timestamp_string_for( Offset, State ) ] );
 
-		Offsets ->
-			text_utils:format( "~B timers set, at: ~ts", [ length( Offsets ),
-				text_utils:strings_to_string(
-					[ text_utils:format( "offset ~B (~ts)",
-						[ Off, get_timestamp_string_for( Off, State ) ] )
-							|| Off <- Offsets ] ) ] )
+        Offsets ->
+            text_utils:format( "~B timers set, at: ~ts", [ length( Offsets ),
+                text_utils:strings_to_string(
+                    [ text_utils:format( "offset ~B (~ts)",
+                        [ Off, get_timestamp_string_for( Off, State ) ] )
+                            || Off <- Offsets ] ) ] )
 
-	end.
+    end.
 
 
 
 -doc "Returns a textual description of the specified schedule pair.".
 -spec trigger_to_string( schedule_pair(), wooper:state() ) -> ustring().
 trigger_to_string( { Offset, TaskIds }, State ) ->
-	text_utils:format( "at offset ~B (~ts), ~B task(s) registered: ~w",
-		[ Offset, get_timestamp_string_for( Offset, State ),
-		  length( TaskIds ), TaskIds ] ).
+    text_utils:format( "at offset ~B (~ts), ~B task(s) registered: ~w",
+        [ Offset, get_timestamp_string_for( Offset, State ),
+          length( TaskIds ), TaskIds ] ).
 
 
 
 -doc "Returns a textual description of the specified task entry.".
 -spec task_entry_to_string( task_entry(), wooper:state() ) -> ustring().
 task_entry_to_string( #task_entry{ id=_TaskId,
-							 command=Cmd,
-							 next_schedule=NextSchedOffset,
-							 periodicity=Periodicity,
-							 count=Count,
-							 schedule_count=SchedCount,
-							 started_on=MaybeStartOffset,
-							 last_schedule=MaybeLastOffset,
-							 requester_pid=RequesterPid,
-							 actuator_pid=ActuatorPid }, State ) ->
+                             command=Cmd,
+                             next_schedule=NextSchedOffset,
+                             periodicity=Periodicity,
+                             count=Count,
+                             schedule_count=SchedCount,
+                             started_on=MaybeStartOffset,
+                             last_schedule=MaybeLastOffset,
+                             requester_pid=RequesterPid,
+                             actuator_pid=ActuatorPid }, State ) ->
 
-	ExecStr = case MaybeStartOffset of
+    ExecStr = case MaybeStartOffset of
 
-		undefined ->
-			SchedCount = 0,
-			"never executed yet";
+        undefined ->
+            SchedCount = 0,
+            "never executed yet";
 
-		StartOffset ->
-			case SchedCount of
+        StartOffset ->
+            case SchedCount of
 
-				1 ->
-					% First and last are the same here:
-					MaybeStartOffset = MaybeLastOffset,
-					text_utils:format(
-						"already executed a single time, at offset ~B (~ts)",
-						[ StartOffset,
-						  get_timestamp_string_for( StartOffset, State ) ] );
+                1 ->
+                    % First and last are the same here:
+                    MaybeStartOffset = MaybeLastOffset,
+                    text_utils:format(
+                        "already executed a single time, at offset ~B (~ts)",
+                        [ StartOffset,
+                          get_timestamp_string_for( StartOffset, State ) ] );
 
-				% Expected higher than 1:
-				C when C > 1 ->
-					text_utils:format( "already executed ~B times, the first "
-						"at offset ~B (~ts) and the last at offset ~B (~ts)",
-						[ C, StartOffset,
-						  get_timestamp_string_for( StartOffset, State ),
-						  MaybeLastOffset,
-						  get_timestamp_string_for( MaybeLastOffset, State ) ] )
+                % Expected higher than 1:
+                C when C > 1 ->
+                    text_utils:format( "already executed ~B times, the first "
+                        "at offset ~B (~ts) and the last at offset ~B (~ts)",
+                        [ C, StartOffset,
+                          get_timestamp_string_for( StartOffset, State ),
+                          MaybeLastOffset,
+                          get_timestamp_string_for( MaybeLastOffset, State ) ] )
 
-			end
+            end
 
-	end,
+    end,
 
-	NextSchedTime = get_timestamp_string_for( NextSchedOffset, State ),
+    NextSchedTime = get_timestamp_string_for( NextSchedOffset, State ),
 
-	PeriodStr = periodicity_to_string( Periodicity ),
+    PeriodStr = periodicity_to_string( Periodicity ),
 
-	CountStr = schedule_count_to_string( Count ),
+    CountStr = schedule_count_to_string( Count ),
 
-	text_utils:format( "task to trigger command '~p' on actuator ~w, ~ts, "
-		"to be scheduled next at offset ~B (~ts) according to ~ts, "
-		"and for ~ts; it was declared by ~w",
-		[ Cmd, ActuatorPid, ExecStr, NextSchedOffset, NextSchedTime, PeriodStr,
-		  CountStr, RequesterPid ] ).
+    text_utils:format( "task to trigger command '~p' on actuator ~w, ~ts, "
+        "to be scheduled next at offset ~B (~ts) according to ~ts, "
+        "and for ~ts; it was declared by ~w",
+        [ Cmd, ActuatorPid, ExecStr, NextSchedOffset, NextSchedTime, PeriodStr,
+          CountStr, RequesterPid ] ).
 
 
 
@@ -2009,48 +2009,48 @@ task_entry_to_string( #task_entry{ id=_TaskId,
 -spec periodicity_to_string( periodicity() ) -> ustring().
 % Should never happen:
 periodicity_to_string( _Periodicity=undefined ) ->
-	"no periodicity";
+    "no periodicity";
 
 periodicity_to_string( Periodicity ) ->
-	text_utils:format( "a periodicity of ~ts",
-					   [ time_utils:duration_to_string( Periodicity ) ] ).
+    text_utils:format( "a periodicity of ~ts",
+                       [ time_utils:duration_to_string( Periodicity ) ] ).
 
 
 
 -doc "Returns a textual description of the specified schedule count.".
 -spec schedule_count_to_string( schedule_count() ) -> ustring().
 schedule_count_to_string( _Count=unlimited ) ->
-	"an unlimited number of times";
+    "an unlimited number of times";
 
 schedule_count_to_string( _Count=1 ) ->
-	"a single time";
+    "a single time";
 
 schedule_count_to_string( Count ) ->
-	text_utils:format( "~B times", [ Count ] ).
+    text_utils:format( "~B times", [ Count ] ).
 
 
 
 -doc "Returns a textual description of the specified start time information.".
 -spec start_time_to_string( start_time() ) -> ustring().
 start_time_to_string( _StartTime=asap ) ->
-	"as soon as possible";
+    "as soon as possible";
 
 start_time_to_string( _StartTime=flexible ) ->
-	"flexible";
+    "flexible";
 
 start_time_to_string( _StartTime=Seconds ) when is_integer( Seconds ) ->
-	text_utils:format( "in ~ts",
-					   [ time_utils:duration_to_string( 1000 * Seconds ) ] );
+    text_utils:format( "in ~ts",
+                       [ time_utils:duration_to_string( 1000 * Seconds ) ] );
 
 start_time_to_string( StartTime ) ->
-	case time_utils:is_timestamp( StartTime ) of
+    case time_utils:is_timestamp( StartTime ) of
 
-		true ->
-			time_utils:timestamp_to_string( StartTime );
+        true ->
+            time_utils:timestamp_to_string( StartTime );
 
-		false ->
-			% By elimination, a DHMS:
-			Secs = time_utils:dhms_to_seconds( StartTime ),
-			start_time_to_string( Secs )
+        false ->
+            % By elimination, a DHMS:
+            Secs = time_utils:dhms_to_seconds( StartTime ),
+            start_time_to_string( Secs )
 
-	end.
+    end.

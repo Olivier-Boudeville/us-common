@@ -65,11 +65,11 @@ the application initialisation.
 -spec start_link() -> supervisor:startlink_ret().
 start_link() ->
 
-	trace_bridge:debug( "Starting the US-Common root supervisor." ),
+    trace_bridge:debug( "Starting the US-Common root supervisor." ),
 
-	% Local registration is better, to avoid clashes:
-	supervisor:start_link( _Reg={ local, ?root_supervisor_name },
-						   _Mod=?MODULE, _Args=[] ).
+    % Local registration is better, to avoid clashes:
+    supervisor:start_link( _Reg={ local, ?root_supervisor_name },
+                           _Mod=?MODULE, _Args=[] ).
 
 
 
@@ -80,36 +80,36 @@ answer to start_link/0 above being executed.
 -spec init( list() ) -> { 'ok', { supervisor:sup_flags(), [ child_spec() ] } }.
 init( Args=[] ) ->
 
-	ExecTarget = class_USConfigServer:get_execution_target(),
+    ExecTarget = class_USConfigServer:get_execution_target(),
 
-	trace_bridge:debug_fmt( "Initialising the US-Common root supervisor "
-		"(args: ~p; execution target: ~ts).", [ Args, ExecTarget ] ),
+    trace_bridge:debug_fmt( "Initialising the US-Common root supervisor "
+        "(args: ~p; execution target: ~ts).", [ Args, ExecTarget ] ),
 
-	% We always create a US configuration server and a scheduler that are
-	% specific to the current US application so that they can all be started,
-	% stopped, upgraded, etc., independently.
+    % We always create a US configuration server and a scheduler that are
+    % specific to the current US application so that they can all be started,
+    % stopped, upgraded, etc., independently.
 
-	% Restart only children that terminate, and enforces intensity and periods
-	% corresponding to the execution target this layer was compiled with:
-	%
-	SupSettings = otp_utils:get_supervisor_settings(
-		_RestartStrategy=one_for_one, ExecTarget ),
+    % Restart only children that terminate, and enforces intensity and periods
+    % corresponding to the execution target this layer was compiled with:
+    %
+    SupSettings = otp_utils:get_supervisor_settings(
+        _RestartStrategy=one_for_one, ExecTarget ),
 
     % With a significant child, cannot be left to the 'never' default :
     SigSupSettings = SupSettings#{ auto_shutdown => any_significant },
 
-	% First child, a bridge in charge of the US configuration server:
-	CfgBridgeChildSpec = get_config_bridge_spec( ExecTarget ),
+    % First child, a bridge in charge of the US configuration server:
+    CfgBridgeChildSpec = get_config_bridge_spec( ExecTarget ),
 
-	% Second child, a bridge in charge of the US-Common base scheduler:
-	SchedBridgeChildSpec = get_scheduler_bridge_spec( ExecTarget ),
+    % Second child, a bridge in charge of the US-Common base scheduler:
+    SchedBridgeChildSpec = get_scheduler_bridge_spec( ExecTarget ),
 
-	ChildSpecs = [ CfgBridgeChildSpec, SchedBridgeChildSpec ],
+    ChildSpecs = [ CfgBridgeChildSpec, SchedBridgeChildSpec ],
 
-	%trace_bridge:debug_fmt( "Supervisor settings: ~p~nChild spec: ~p",
-	%                        [ SupSettings, ChildSpecs ] ),
+    %trace_bridge:debug_fmt( "Supervisor settings: ~p~nChild spec: ~p",
+    %                        [ SupSettings, ChildSpecs ] ),
 
-	{ ok, { SigSupSettings, ChildSpecs } }.
+    { ok, { SigSupSettings, ChildSpecs } }.
 
 
 
@@ -117,33 +117,33 @@ init( Args=[] ) ->
 -spec get_config_bridge_spec( execution_target() ) -> child_spec().
 get_config_bridge_spec( _ExecTarget ) ->
 
-	#{ id => us_common_config_bridge_id,
+    #{ id => us_common_config_bridge_id,
 
-	   start => { _Mod=us_common_config_bridge_sup, _Fun=start_link, _Args=[] },
+       start => { _Mod=us_common_config_bridge_sup, _Fun=start_link, _Args=[] },
 
-	   % Was always restarted in production, by being set to
-	   % otp_utils:get_restart_setting(ExecTarget), yet now that is a
-	   % significant child, so must be set to:
+       % Was always restarted in production, by being set to
+       % otp_utils:get_restart_setting(ExecTarget), yet now that is a
+       % significant child, so must be set to:
        %
-	   restart => temporary,
+       restart => temporary,
 
        % So that an orderly shutdown can be triggered by
        % class_USCentralServer:stop/1:
        %
        significant => true,
 
-	   % This child process is of the 'supervisor' type, and, in
-	   % https://erlang.org/doc, the
-	   % design_principles/sup_princ.html#child-specification page explains that
-	   % 'infinity' is required here (rather than, say, a 2-second termination
-	   % was allowed before brutal killing):
-	   %
-	   shutdown => infinity,
+       % This child process is of the 'supervisor' type, and, in
+       % https://erlang.org/doc, the
+       % design_principles/sup_princ.html#child-specification page explains that
+       % 'infinity' is required here (rather than, say, a 2-second termination
+       % was allowed before brutal killing):
+       %
+       shutdown => infinity,
 
-	   % As it is a WOOPER instance (not for example a gen_server):
-	   type => supervisor,
+       % As it is a WOOPER instance (not for example a gen_server):
+       type => supervisor,
 
-	   modules => [ us_common_config_bridge_sup ] }.
+       modules => [ us_common_config_bridge_sup ] }.
 
 
 
@@ -151,17 +151,17 @@ get_config_bridge_spec( _ExecTarget ) ->
 -spec get_scheduler_bridge_spec( execution_target() ) -> child_spec().
 get_scheduler_bridge_spec( ExecTarget ) ->
 
-	% See get_config_bridge_spec/0 for comments:
+    % See get_config_bridge_spec/0 for comments:
 
-	#{ id => us_common_scheduler_bridge_id,
+    #{ id => us_common_scheduler_bridge_id,
 
-	   start =>
-			{ _Mod=us_common_scheduler_bridge_sup, _Fun=start_link, _Args=[] },
+       start =>
+            { _Mod=us_common_scheduler_bridge_sup, _Fun=start_link, _Args=[] },
 
-	   restart => otp_utils:get_restart_setting( ExecTarget ),
+       restart => otp_utils:get_restart_setting( ExecTarget ),
 
-	   shutdown => infinity,
+       shutdown => infinity,
 
-	   type => supervisor,
+       type => supervisor,
 
-	   modules => [ us_common_scheduler_bridge_sup ] }.
+       modules => [ us_common_scheduler_bridge_sup ] }.

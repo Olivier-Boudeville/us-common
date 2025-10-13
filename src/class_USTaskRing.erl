@@ -29,8 +29,8 @@ synchronously a set of tasks, as a series (i.e. sequentially).
 
 
 -define( class_description,
-		 "Ring to schedule evenly and synchronously a set of tasks, as a "
-		 "series (i.e. sequentially)." ).
+         "Ring to schedule evenly and synchronously a set of tasks, as a "
+         "series (i.e. sequentially)." ).
 
 
 % Design notes:
@@ -84,29 +84,29 @@ synchronously a set of tasks, as a series (i.e. sequentially).
 % The class-specific attributes:
 -define( class_attributes, [
 
-	{ actuator_ring, actuator_ring(),
-	  "the actuators, cycling in a round-robin manner" },
+    { actuator_ring, actuator_ring(),
+      "the actuators, cycling in a round-robin manner" },
 
-	{ task_periodicity, ms_duration(),
-	  "the periodicity at which each task will be triggered" },
+    { task_periodicity, ms_duration(),
+      "the periodicity at which each task will be triggered" },
 
-	% Not useful to record:
-	%{ ring_periodicity, ms_duration(),
-	%  "the periodicity at which this ring will be triggered, i.e. the duration"
-	%  " between two successive task triggers" },
+    % Not useful to record:
+    %{ ring_periodicity, ms_duration(),
+    %  "the periodicity at which this ring will be triggered, i.e. the duration"
+    %  " between two successive task triggers" },
 
-	{ task_call, task_sync_command(),
-	  "the task synchronous command (oneway triggering in turn a callback) to "
-	  "be sent to each actuator in a row" },
+    { task_call, task_sync_command(),
+      "the task synchronous command (oneway triggering in turn a callback) to "
+      "be sent to each actuator in a row" },
 
-	{ scheduler_pid, scheduler_pid(),
-	  "the PID of the scheduler used by this ring" },
+    { scheduler_pid, scheduler_pid(),
+      "the PID of the scheduler used by this ring" },
 
-	{ waited_actuator_pid, option( actuator_pid() ),
-	  "the PID of any waited actuator" },
+    { waited_actuator_pid, option( actuator_pid() ),
+      "the PID of any waited actuator" },
 
-	{ task_id, task_id(),
-	  "the task identifier of that ring as set by its scheduler" } ] ).
+    { task_id, task_id(),
+      "the task identifier of that ring as set by its scheduler" } ] ).
 
 
 % Implementation notes:
@@ -156,53 +156,53 @@ at the specified overall periodicity, for the specified number of times, by the
 specified scheduler.
 """.
 -spec construct( wooper:state(), ustring(), [ actuator_pid() ],
-		wooper:oneway_name(), wooper:method_arguments(), user_periodicity(),
-		schedule_count(), scheduler_pid() ) -> wooper:state().
+        wooper:oneway_name(), wooper:method_arguments(), user_periodicity(),
+        schedule_count(), scheduler_pid() ) -> wooper:state().
 construct( _State, _RingName, _Actuators=[], _TaskOnewayName, _TaskOnewayArgs,
-		   _TaskPeriodicity, _ScheduleCount, _SchedulerPid ) ->
-	throw( no_actuator_defined );
+           _TaskPeriodicity, _ScheduleCount, _SchedulerPid ) ->
+    throw( no_actuator_defined );
 
 construct( State, RingName, Actuators, TaskOnewayName, TaskOnewayArgs,
-		   UserTaskPeriodicity, ScheduleCount, SchedulerPid )
+           UserTaskPeriodicity, ScheduleCount, SchedulerPid )
                                         when is_list( TaskOnewayArgs ) ->
 
-	% First the direct mother classes, then this class-specific actions:
-	SrvState = class_USServer:construct( State, ?trace_categorize(RingName) ),
+    % First the direct mother classes, then this class-specific actions:
+    SrvState = class_USServer:construct( State, ?trace_categorize(RingName) ),
 
-	TaskPeriodicity = class_USScheduler:vet_user_periodicity(
-		UserTaskPeriodicity, SrvState ),
+    TaskPeriodicity = class_USScheduler:vet_user_periodicity(
+        UserTaskPeriodicity, SrvState ),
 
-	TaskCall = { TaskOnewayName,
-				 list_utils:append_at_end( self(), TaskOnewayArgs ) },
+    TaskCall = { TaskOnewayName,
+                 list_utils:append_at_end( self(), TaskOnewayArgs ) },
 
-	SetState = setAttributes( SrvState, [
-		{ task_periodicity, TaskPeriodicity },
-		{ task_call, TaskCall },
-		{ scheduler_pid, SchedulerPid },
-		{ waited_actuator_pid, undefined } ] ),
+    SetState = setAttributes( SrvState, [
+        { task_periodicity, TaskPeriodicity },
+        { task_call, TaskCall },
+        { scheduler_pid, SchedulerPid },
+        { waited_actuator_pid, undefined } ] ),
 
-	{ RingPeriodicity, ActState } =
-		set_actuators( Actuators, TaskPeriodicity, SetState ),
+    { RingPeriodicity, ActState } =
+        set_actuators( Actuators, TaskPeriodicity, SetState ),
 
-	% No need to perform immediately the first trigger here: the scheduler will
-	% by itself ensure that.
+    % No need to perform immediately the first trigger here: the scheduler will
+    % by itself ensure that.
 
-	% Self-registering:
-	SchedulerPid ! { registerTask, [ _Cmd=triggerNextTask, _StartTime=flexible,
-						RingPeriodicity, ScheduleCount, _ActPid=self() ],
-					 self() },
+    % Self-registering:
+    SchedulerPid ! { registerTask, [ _Cmd=triggerNextTask, _StartTime=flexible,
+                        RingPeriodicity, ScheduleCount, _ActPid=self() ],
+                     self() },
 
-	FinalState = receive
+    FinalState = receive
 
-		% No other result expected:
-		{ wooper_result, { task_registered, TaskId } } ->
-			setAttribute( ActState, task_id, TaskId )
+        % No other result expected:
+        { wooper_result, { task_registered, TaskId } } ->
+            setAttribute( ActState, task_id, TaskId )
 
-	end,
+    end,
 
-	?send_info_fmt( FinalState, "Started ~ts.", [ to_string( FinalState ) ] ),
+    ?send_info_fmt( FinalState, "Started ~ts.", [ to_string( FinalState ) ] ),
 
-	FinalState.
+    FinalState.
 
 
 
@@ -210,34 +210,34 @@ construct( State, RingName, Actuators, TaskOnewayName, TaskOnewayArgs,
 -spec destruct( wooper:state() ) -> wooper:state().
 destruct( State ) ->
 
-	TaskId = ?getAttr(task_id),
+    TaskId = ?getAttr(task_id),
 
-	SchedPid = ?getAttr(scheduler_pid),
+    SchedPid = ?getAttr(scheduler_pid),
 
-	SchedPid ! { unregisterTask, [ TaskId ], self() },
+    SchedPid ! { unregisterTask, [ TaskId ], self() },
 
-	?info_fmt( "Being destructed, unregistering from scheduler ~w "
-			   "(task: #~B).", [ SchedPid, TaskId ] ),
+    ?info_fmt( "Being destructed, unregistering from scheduler ~w "
+               "(task: #~B).", [ SchedPid, TaskId ] ),
 
-	receive
+    receive
 
-		{ task_unregistered, TaskId } ->
-			ok;
+        { task_unregistered, TaskId } ->
+            ok;
 
-		{ task_already_done, TaskId } ->
-			ok;
+        { task_already_done, TaskId } ->
+            ok;
 
-		{ task_unregistration_failed, Error, TaskId } ->
-			?error_fmt( "Unregistration of task #~B failed "
-						"at deletion: ~p.", [ TaskId, Error ] )
+        { task_unregistration_failed, Error, TaskId } ->
+            ?error_fmt( "Unregistration of task #~B failed "
+                        "at deletion: ~p.", [ TaskId, Error ] )
 
-	end,
+    end,
 
-	% Nothing to be done for actuators.
+    % Nothing to be done for actuators.
 
-	?info( "Deleted." ),
+    ?info( "Deleted." ),
 
-	State.
+    State.
 
 
 
@@ -254,36 +254,36 @@ Expects this task, triggered synchronously, to call back `notifyTaskDone/2`.
 -spec triggerNextTask( wooper:state() ) -> oneway_return().
 triggerNextTask( State ) ->
 
-	case ?getAttr(waited_actuator_pid) of
+    case ?getAttr(waited_actuator_pid) of
 
-		% Normal case:
-		undefined ->
-			{ ThisActuatorPid, NewRing } =
-				ring_utils:head( ?getAttr(actuator_ring) ),
+        % Normal case:
+        undefined ->
+            { ThisActuatorPid, NewRing } =
+                ring_utils:head( ?getAttr(actuator_ring) ),
 
-			TaskCall = ?getAttr(task_call),
+            TaskCall = ?getAttr(task_call),
 
-			ThisActuatorPid ! TaskCall,
+            ThisActuatorPid ! TaskCall,
 
-			%?debug_fmt( "Triggered actuator ~w with ~p.",
-			%            [ ThisActuatorPid, TaskCall ] ),
+            %?debug_fmt( "Triggered actuator ~w with ~p.",
+            %            [ ThisActuatorPid, TaskCall ] ),
 
-			TrigState = setAttributes( State, [
-				{ actuator_ring, NewRing },
-				{ waited_actuator_pid, ThisActuatorPid } ] ),
+            TrigState = setAttributes( State, [
+                { actuator_ring, NewRing },
+                { waited_actuator_pid, ThisActuatorPid } ] ),
 
-			wooper:return_state( TrigState );
+            wooper:return_state( TrigState );
 
-		% A task is supposedly still in progress:
-		LingeringActPid ->
-			% No other measure really possible (no task overlapping):
-			?error_fmt( "Next task triggered whereas current actuator (~w) "
-				"was not reported as having finished. Not triggering "
-				"a new task, skipping this period as a whole "
-				"to wait for the lingering actuator.", [ LingeringActPid ] ),
-			wooper:const_return()
+        % A task is supposedly still in progress:
+        LingeringActPid ->
+            % No other measure really possible (no task overlapping):
+            ?error_fmt( "Next task triggered whereas current actuator (~w) "
+                "was not reported as having finished. Not triggering "
+                "a new task, skipping this period as a whole "
+                "to wait for the lingering actuator.", [ LingeringActPid ] ),
+            wooper:const_return()
 
-	end.
+    end.
 
 
 
@@ -291,15 +291,15 @@ triggerNextTask( State ) ->
 -spec notifyTaskDone( wooper:state(), actuator_pid() ) -> oneway_return().
 notifyTaskDone( State, ActuatorPid ) ->
 
-	% Check:
-	ActuatorPid = ?getAttr(waited_actuator_pid),
+    % Check:
+    ActuatorPid = ?getAttr(waited_actuator_pid),
 
-	%?debug_fmt( "Actuator ~w reported as having operated.",
-	%            [ ActuatorPid ] ),
+    %?debug_fmt( "Actuator ~w reported as having operated.",
+    %            [ ActuatorPid ] ),
 
-	DoneState = setAttribute( State, waited_actuator_pid, undefined ),
+    DoneState = setAttribute( State, waited_actuator_pid, undefined ),
 
-	wooper:return_state( DoneState ).
+    wooper:return_state( DoneState ).
 
 
 
@@ -308,29 +308,29 @@ notifyTaskDone( State, ActuatorPid ) ->
 
 -doc "Sets new actuators (no interaction done with the scheduler).".
 -spec set_actuators( [ actuator_pid() ], ms_duration(), wooper:state() ) ->
-							{ unit_utils:seconds(), wooper:state() }.
+                            { unit_utils:seconds(), wooper:state() }.
 set_actuators( _NewActuators=[], _TaskPeriodicity, _State ) ->
-	throw( no_actuator_defined );
+    throw( no_actuator_defined );
 
 set_actuators( NewActuators, TaskPeriodicity, State ) ->
 
-	NewActuatorRing = ring_utils:from_list( NewActuators ),
+    NewActuatorRing = ring_utils:from_list( NewActuators ),
 
-	ActuatorCount = length( NewActuators ),
+    ActuatorCount = length( NewActuators ),
 
-	% By design not a division by zero; seconds wanted for the scheduler:
-	RingPeriodicity = erlang:round( TaskPeriodicity / ActuatorCount ),
+    % By design not a division by zero; seconds wanted for the scheduler:
+    RingPeriodicity = erlang:round( TaskPeriodicity / ActuatorCount ),
 
-	?debug_fmt( "This ring is to be triggered by its scheduler every ~ts, as "
-		"task-level periodicity is ~ts, and ~B actuators are being "
-		"synchronised.",
-		[ time_utils:duration_to_string( RingPeriodicity ),
-		  time_utils:duration_to_string( TaskPeriodicity ), ActuatorCount ] ),
+    ?debug_fmt( "This ring is to be triggered by its scheduler every ~ts, as "
+        "task-level periodicity is ~ts, and ~B actuators are being "
+        "synchronised.",
+        [ time_utils:duration_to_string( RingPeriodicity ),
+          time_utils:duration_to_string( TaskPeriodicity ), ActuatorCount ] ),
 
-	SetState = setAttribute( State, actuator_ring, NewActuatorRing ),
+    SetState = setAttribute( State, actuator_ring, NewActuatorRing ),
 
-	% Seconds wanted for the scheduler:
-	{ RingPeriodicity div 1000, SetState }.
+    % Seconds wanted for the scheduler:
+    { RingPeriodicity div 1000, SetState }.
 
 
 
@@ -338,19 +338,19 @@ set_actuators( NewActuators, TaskPeriodicity, State ) ->
 -spec to_string( wooper:state() ) -> ustring().
 to_string( State ) ->
 
-	Ring = ?getAttr(actuator_ring),
+    Ring = ?getAttr(actuator_ring),
 
-	RingSize = ring_utils:size( Ring ),
+    RingSize = ring_utils:size( Ring ),
 
-	TaskPeriodicity = ?getAttr(task_periodicity),
+    TaskPeriodicity = ?getAttr(task_periodicity),
 
-	text_utils:format( "task ring '~ts' alternating between ~B actuators (~ts) "
-		"each with a periodicity of ~ts (hence ~ts between triggers; "
-		"using for that task id ~B, assigned by scheduler ~w) for the sending "
-		"of following synchronised call:~n'~p'",
-		[ ?getAttr(name), RingSize,
-		  text_utils:pids_to_short_string( ring_utils:to_list( Ring ) ),
-		  time_utils:duration_to_string( TaskPeriodicity ),
-		  % Not a division by zero:
-		  time_utils:duration_to_string( TaskPeriodicity / RingSize ),
-		  ?getAttr(task_id), ?getAttr(scheduler_pid), ?getAttr(task_call) ] ).
+    text_utils:format( "task ring '~ts' alternating between ~B actuators (~ts) "
+        "each with a periodicity of ~ts (hence ~ts between triggers; "
+        "using for that task id ~B, assigned by scheduler ~w) for the sending "
+        "of following synchronised call:~n'~p'",
+        [ ?getAttr(name), RingSize,
+          text_utils:pids_to_short_string( ring_utils:to_list( Ring ) ),
+          time_utils:duration_to_string( TaskPeriodicity ),
+          % Not a division by zero:
+          time_utils:duration_to_string( TaskPeriodicity / RingSize ),
+          ?getAttr(task_id), ?getAttr(scheduler_pid), ?getAttr(task_call) ] ).

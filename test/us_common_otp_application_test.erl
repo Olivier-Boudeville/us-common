@@ -61,167 +61,167 @@ Returns US-level configuration information.
 Used by tests in child libraries (e.g. US-Web).
 """.
 -spec get_us_information() -> { bin_directory_path(), file_path(),
-			us_config_table(), registration_name(), registration_scope() }.
+            us_config_table(), registration_name(), registration_scope() }.
 get_us_information() ->
 
-	% We have to link notably to the upcoming US-Common configuration
-	% server. However starting an application does not provide a means of
-	% knowing its PID (none returned) and this server is not registered under a
-	% fixed name, as it may be read from the US configuration file. So this test
-	% has also to locate and read that file in order to determine the name to
-	% query:
+    % We have to link notably to the upcoming US-Common configuration
+    % server. However starting an application does not provide a means of
+    % knowing its PID (none returned) and this server is not registered under a
+    % fixed name, as it may be read from the US configuration file. So this test
+    % has also to locate and read that file in order to determine the name to
+    % query:
 
-	BinCfgDir = case class_USConfigServer:get_us_config_directory() of
+    BinCfgDir = case class_USConfigServer:get_us_config_directory() of
 
-		{ undefined, CfgDirMsg } ->
-			trace_bridge:error_fmt( "Test is unable to determine the US "
-				"configuration directory; ~ts", [ CfgDirMsg ] ),
+        { undefined, CfgDirMsg } ->
+            trace_bridge:error_fmt( "Test is unable to determine the US "
+                "configuration directory; ~ts", [ CfgDirMsg ] ),
 
-			% CfgDirMsg too verbose for:
-			throw( us_configuration_directory_not_found );
+            % CfgDirMsg too verbose for:
+            throw( us_configuration_directory_not_found );
 
-		{ BinFoundCfgDir, CfgDirMsg } ->
-			trace_bridge:info( CfgDirMsg ),
-			BinFoundCfgDir
+        { BinFoundCfgDir, CfgDirMsg } ->
+            trace_bridge:info( CfgDirMsg ),
+            BinFoundCfgDir
 
     end,
 
-	{ ConfigTable, CfgFilePath } = case
-			class_USConfigServer:get_configuration_table( BinCfgDir ) of
+    { ConfigTable, CfgFilePath } = case
+            class_USConfigServer:get_configuration_table( BinCfgDir ) of
 
-		{ ok, P } ->
-			P;
+        { ok, P } ->
+            P;
 
-		{ error, DiagnosedReason } ->
-			basic_utils:throw_diagnosed( DiagnosedReason )
+        { error, DiagnosedReason } ->
+            basic_utils:throw_diagnosed( DiagnosedReason )
 
-	end,
+    end,
 
-	test_facilities:display( "Read US configuration from '~ts'.",
-							 [ CfgFilePath ] ),
+    test_facilities:display( "Read US configuration from '~ts'.",
+                             [ CfgFilePath ] ),
 
-	{ CfgRegName, CfgRegScope, CfgNamingMsg } =
-		case class_USConfigServer:get_registration_info( ConfigTable ) of
+    { CfgRegName, CfgRegScope, CfgNamingMsg } =
+        case class_USConfigServer:get_registration_info( ConfigTable ) of
 
-			{ ok, T } ->
-				T;
+            { ok, T } ->
+                T;
 
-			{ error, { InvalidThisRegName, CfgRefNameKey } } ->
-				trace_bridge:error_fmt( "Read invalid user-configured "
-					"registration name for this US configuration server "
-					"(key: '~ts'): '~p'.",
-					[ CfgRefNameKey, InvalidThisRegName ] ),
-				throw( { invalid_us_config_registration_name,
-						 InvalidThisRegName, CfgRefNameKey } )
+            { error, { InvalidThisRegName, CfgRefNameKey } } ->
+                trace_bridge:error_fmt( "Read invalid user-configured "
+                    "registration name for this US configuration server "
+                    "(key: '~ts'): '~p'.",
+                    [ CfgRefNameKey, InvalidThisRegName ] ),
+                throw( { invalid_us_config_registration_name,
+                         InvalidThisRegName, CfgRefNameKey } )
 
-	end,
+    end,
 
-	trace_bridge:info( CfgNamingMsg ),
+    trace_bridge:info( CfgNamingMsg ),
 
-	% Now we are able to link to the future US configuration server.
+    % Now we are able to link to the future US configuration server.
 
-	{ BinCfgDir, CfgFilePath, ConfigTable, CfgRegName, CfgRegScope }.
+    { BinCfgDir, CfgFilePath, ConfigTable, CfgRegName, CfgRegScope }.
 
 
 
 % Actual test:
 test_us_common_application( OrderedAppNames ) ->
 
-	test_facilities:display( "Starting the US-Common OTP active application." ),
+    test_facilities:display( "Starting the US-Common OTP active application." ),
 
-	% We did not trap EXIT messages, as we wanted this test to crash (thanks to
-	% the links below) in case of problem (and not to receive an EXIT message
-	% bound not to be read, as it happened when no US configuration file was
-	% found).
-	%
-	% However such tests may crash even when stopping (normally) applications,
-	% as apparently an OTP application has its child processes terminated with
-	% reason 'shutdown' (not 'normal').
-	%
-	% So now this test process traps EXIT messages, and ensures that none
-	% besides {'EXIT',P,shutdown}, P being the PID of a US-Common process, is
-	% received (actually for US-Common no such message is received, unlike for
-	% the WOOPER counterpart test case).
-	%
-	false = erlang:process_flag( trap_exit, true ),
+    % We did not trap EXIT messages, as we wanted this test to crash (thanks to
+    % the links below) in case of problem (and not to receive an EXIT message
+    % bound not to be read, as it happened when no US configuration file was
+    % found).
+    %
+    % However such tests may crash even when stopping (normally) applications,
+    % as apparently an OTP application has its child processes terminated with
+    % reason 'shutdown' (not 'normal').
+    %
+    % So now this test process traps EXIT messages, and ensures that none
+    % besides {'EXIT',P,shutdown}, P being the PID of a US-Common process, is
+    % received (actually for US-Common no such message is received, unlike for
+    % the WOOPER counterpart test case).
+    %
+    false = erlang:process_flag( trap_exit, true ),
 
-	% No ?test_start/?test_stop here, as we start/stop Traces through
-	% OTP-related operations.
-	%
-	% If in batch mode (not in a release, hence no sys.config read here, so only
-	% the --batch command-line option matters here), the trace aggregator will
-	% record that a trace supervisor is wanted later (iff renamed), otherwise
-	% (not in batch mode), no trace supervisor is wanted at all.
-	%
-	otp_utils:start_applications( OrderedAppNames ),
+    % No ?test_start/?test_stop here, as we start/stop Traces through
+    % OTP-related operations.
+    %
+    % If in batch mode (not in a release, hence no sys.config read here, so only
+    % the --batch command-line option matters here), the trace aggregator will
+    % record that a trace supervisor is wanted later (iff renamed), otherwise
+    % (not in batch mode), no trace supervisor is wanted at all.
+    %
+    otp_utils:start_applications( OrderedAppNames ),
 
     { _BinCfgDir, _CfgFilePath, _ConfigTable, CfgRegName, CfgRegScope } =
         get_us_information(),
 
-	USCfgSrvPid = naming_utils:wait_for_registration_of( CfgRegName,
+    USCfgSrvPid = naming_utils:wait_for_registration_of( CfgRegName,
         naming_utils:registration_to_lookup_scope( CfgRegScope ) ),
 
 
-	% The top-level user process may not be aware that an OTP application fails
-	% (e.g. because its main process crashed), which is a problem for a test. So
-	% here we link explicitly this test process to the US configuration server,
-	% to have a chance of detecting issues:
-	%
-	erlang:link( USCfgSrvPid ),
+    % The top-level user process may not be aware that an OTP application fails
+    % (e.g. because its main process crashed), which is a problem for a test. So
+    % here we link explicitly this test process to the US configuration server,
+    % to have a chance of detecting issues:
+    %
+    erlang:link( USCfgSrvPid ),
 
-	% The same (simpler - less choices) for the US-Common scheduler:
-	SchedPid = class_USScheduler:get_server_pid(),
+    % The same (simpler - less choices) for the US-Common scheduler:
+    SchedPid = class_USScheduler:get_server_pid(),
 
-	erlang:link( class_USScheduler:get_server_pid() ),
-
-
-	% If not in batch mode, this renaming will trigger the launch of the trace
-	% supervisor whose activation was deferred until then:
-	%
-	traces_utils:name_trace_file_from( ?MODULE ),
-
-	?test_info( "Starting the US-Common OTP active application." ),
-
-	?test_info_fmt( "US-Common version: ~p.",
-					[ system_utils:get_application_version( us_common ) ] ),
+    erlang:link( class_USScheduler:get_server_pid() ),
 
 
-	% Of course shall be sent before the stopping of Traces:
-	?test_info( "Successful test (not fully ended yet) of the US-Common OTP "
-				"application." ),
+    % If not in batch mode, this renaming will trigger the launch of the trace
+    % supervisor whose activation was deferred until then:
+    %
+    traces_utils:name_trace_file_from( ?MODULE ),
 
-	% Including US-Common:
-	?test_info( "Stopping all user applications." ),
-	otp_utils:stop_user_applications( OrderedAppNames ),
+    ?test_info( "Starting the US-Common OTP active application." ),
 
-
-	% Not able to use Traces anymore:
-	trace_utils:debug_fmt( "Waiting for the termination of the US-Common "
-						   "configuration server (~w).", [ USCfgSrvPid ] ),
-
-	receive
-
-		{ 'EXIT', USCfgSrvPid, normal } ->
-			ok
-
-	end,
+    ?test_info_fmt( "US-Common version: ~p.",
+                    [ system_utils:get_application_version( us_common ) ] ),
 
 
-	trace_utils:debug_fmt( "Waiting for the termination of the US-Common "
-						   "scheduler (~w).", [ SchedPid ] ),
+    % Of course shall be sent before the stopping of Traces:
+    ?test_info( "Successful test (not fully ended yet) of the US-Common OTP "
+                "application." ),
 
-	receive
+    % Including US-Common:
+    ?test_info( "Stopping all user applications." ),
+    otp_utils:stop_user_applications( OrderedAppNames ),
 
-		{ 'EXIT', SchedPid, normal } ->
-			ok
 
-	end,
+    % Not able to use Traces anymore:
+    trace_utils:debug_fmt( "Waiting for the termination of the US-Common "
+                           "configuration server (~w).", [ USCfgSrvPid ] ),
 
-	% None expected to be left:
-	basic_utils:check_no_pending_message(),
+    receive
 
-	test_facilities:display(
-		"Successful end of test of the US-Common OTP application." ).
+        { 'EXIT', USCfgSrvPid, normal } ->
+            ok
+
+    end,
+
+
+    trace_utils:debug_fmt( "Waiting for the termination of the US-Common "
+                           "scheduler (~w).", [ SchedPid ] ),
+
+    receive
+
+        { 'EXIT', SchedPid, normal } ->
+            ok
+
+    end,
+
+    % None expected to be left:
+    basic_utils:check_no_pending_message(),
+
+    test_facilities:display(
+        "Successful end of test of the US-Common OTP application." ).
 
 
 
@@ -233,19 +233,19 @@ must be already available as prerequisite, fully-built OTP applications.
 -spec run() -> no_return().
 run() ->
 
-	test_facilities:start( ?MODULE ),
+    test_facilities:start( ?MODULE ),
 
-	% Build root directory from which sibling prerequisite applications may be
-	% found:
-	%
-	BuildRootDir = "..",
+    % Build root directory from which sibling prerequisite applications may be
+    % found:
+    %
+    BuildRootDir = "..",
 
-	OrderedAppNames =
-		otp_utils:prepare_for_execution( _ThisApp=us_common, BuildRootDir ),
+    OrderedAppNames =
+        otp_utils:prepare_for_execution( _ThisApp=us_common, BuildRootDir ),
 
-	trace_bridge:info_fmt( "Resulting applications to start, in order: ~w.",
-						   [ OrderedAppNames ] ),
+    trace_bridge:info_fmt( "Resulting applications to start, in order: ~w.",
+                           [ OrderedAppNames ] ),
 
-	test_us_common_application( OrderedAppNames ),
+    test_us_common_application( OrderedAppNames ),
 
-	test_facilities:stop().
+    test_facilities:stop().

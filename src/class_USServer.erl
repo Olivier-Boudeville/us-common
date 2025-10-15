@@ -93,7 +93,7 @@ It centralises states and behaviours on their behalf.
 -type user_action_spec() :: us_action:user_action_spec().
 -type action_id() :: us_action:action_id().
 -type action_info() :: us_action:action_info().
--type action_table() :: us_action:action_table().
+%-type action_table() :: us_action:action_table().
 -type action_token() :: us_action:action_token().
 -type action_outcome() :: us_action:action_outcome().
 
@@ -398,14 +398,16 @@ table of this server.
                                                     oneway_return().
 addAutomatedActionSpecs( State, UserActSpecs ) ->
 
-    RegActTable = us_action:register_action_specs( UserActSpecs,
-        ?getAttr(action_table), wooper:get_classname( State ) ),
+    { NewActTable, NewHdInfo } = us_action:register_action_specs( UserActSpecs,
+        ?getAttr(action_table), ?getAttr(header_info),
+        wooper:get_classname( State ) ),
 
-    %?debug_fmt( "from ~w to ~w.", [ ?getAttr(action_table), RegActTable ] ),
+    %?debug_fmt( "from ~w to ~w.", [ ?getAttr(action_table), NewActTable ] ),
 
-    RegState = setAttribute( State, action_table, RegActTable ),
+    NewState = setAttributes( State, [ { action_table, NewActTable },
+                                       { header_info, NewHdInfo } ] ),
 
-    wooper:return_state( RegState ).
+    wooper:return_state( NewState ).
 
 
 
@@ -426,29 +428,12 @@ addAutomatedActionSpecs( State, UserActSpecs ) ->
 %     wooper:const_return_result( ConcurrentRes ).
 
 
-
--doc """
-Registers the additional actions in the specified table in our internal one.
-
-Not used currently.
-""".
--spec registerAutomatedActions( wooper:state(), action_table() ) ->
-                                            oneway_return().
-registerAutomatedActions( State, AddActTable ) ->
-    MergedActTable = us_action:merge_action_table( AddActTable,
-                                                   ?getAttr(action_table) ),
-    MergedState = setAttribute( State, action_table, MergedActTable ),
-
-    wooper:return_state( MergedState ).
-
-
-
 -doc """
 Tells that this server should notify - thanks to the sending of an
 `onAutomatedActionsNotified/4` oneway call - the specified instance (generally
 the one of the caller) of the automated actions that it supports.
 
-This asynchronous form has for purpose to avoid the deadlocks that
+This asynchronous form has for purpose to avoid the deadlocks that a
 `getAutomatedActions/1` would induce.
 
 Typically called based on `class_USCentralServer:manageAutomatedActions/3`.
@@ -461,7 +446,9 @@ requestAutomatedActions( State, InstToNotifyPid ) ->
 
     OurLookupInfo =:= undefined andalso throw( no_lookup_info ),
 
-    % The local actions shall here bear a relevant, absolute lookup info:
+    % The local actions shall here bear a relevant, absolute lookup info, so
+    % that the central server can dispatch requests accordingly:
+    %
     ToSendActTable = table:map_on_values(
         fun( AI=#action_info{ server_lookup_info=undefined } ) ->
             AI#action_info{ server_lookup_info=OurLookupInfo };
@@ -477,10 +464,12 @@ requestAutomatedActions( State, InstToNotifyPid ) ->
               us_action:action_table_to_string( ToSendActTable ) ],
         State ) ),
 
-    % Classname added to be able to sort first by server:
+    % Classname added so that the receiver (generally the central server) can
+    % associate each of these answers to its server:
+    %
     InstToNotifyPid !
-        { onAutomatedActionsNotified, [ ToSendActTable,
-            ?getAttr(header_info), wooper:get_classname( State ) ] },
+        { onAutomatedActionsNotified, [ ToSendActTable, ?getAttr(header_info),
+                                        wooper:get_classname( State ) ] },
 
     wooper:const_return().
 
@@ -505,8 +494,8 @@ performActionFromTokens( State, Tokens ) ->
     % A request, so that it can be overridden (typically by
     % class_USCentralServer):
     %
-    { Outcome, ActState } = case wooper:executeConstRequest( State, getActionId,
-                                                             [ Tokens ] ) of
+    { Outcome, ActState } = case 
+            wooper:executeConstRequest( State, getActionId, [ Tokens ] ) of
 
         { ok, ActId={ _ActName, ActArity } } ->
 
@@ -515,7 +504,7 @@ performActionFromTokens( State, Tokens ) ->
 
             ActTable = ?getAttr(action_table),
 
-            case list_table:lookup_entry( _K=ActId, ActTable ) of
+            case table:lookup_entry( _K=ActId, ActTable ) of
 
                 { value, ActionInfo } ->
                     ArgTokens = tl( Tokens ),
@@ -525,10 +514,10 @@ performActionFromTokens( State, Tokens ) ->
                             execute_action( ActionInfo, ArgTokens, State );
 
                         OtherArgCount ->
-                            { _Outcome={ action_failed, _FailureReport={
-                                wrong_argument_count, text_utils:format(
-                                    "called with ~B arguments instead of ~B",
-                                    [ OtherArgCount, ActArity ] ) } }, State }
+                            { _Outcome={ action_failed,
+                                _FailureReport={ wrong_argument_count, ActArity,
+                                                 OtherArgCount } },
+                            State }
 
                     end;
 
@@ -539,11 +528,11 @@ performActionFromTokens( State, Tokens ) ->
                         [ us_action:action_id_to_string( ActId ),
                           text_utils:strings_to_string(
                             [ us_action:action_id_to_string( AId )
-                                || AId <- list_table:keys( ActTable ) ] ) ],
+                                || AId <- table:keys( ActTable ) ] ) ],
                                            State ),
 
                     ActOutcome = { action_failed,
-                                   _FailureReport=action_not_found },
+                                   _FailureReport={ action_not_found, ActId } },
 
                    { ActOutcome, State }
 
@@ -561,7 +550,6 @@ performActionFromTokens( State, Tokens ) ->
 
 
 
-
 -doc "Returns the identifier of the action deduced from the specified tokens.".
 -spec getActionId( wooper:state(), [ action_token() ] ) ->
                         const_request_return( fallible( action_id() ) ).
@@ -576,7 +564,7 @@ getActionId( State, Tokens ) ->
 %
 -spec execute_action( action_info(), [ action_token() ], wooper:state() ) ->
                                         { action_outcome(), wooper:state() }.
-% No lookup information, hence action implemented locally:
+% No lookup information, hence this action is implemented locally:
 execute_action( ActInfo=#action_info{ server_lookup_info=undefined,
                                       action_name=ActName,
                                       arg_specs=ArgSpecs,
@@ -595,8 +583,8 @@ execute_action( ActInfo=#action_info{ server_lookup_info=undefined,
         { ok, ActualArgs } ->
             apply_arguments( ReqName, ActualArgs, ArgTokens, ResSpec, State );
 
-        { error, DiagStr } ->
-            Outcome= { action_failed, { wrong_argument_count, DiagStr } },
+        { error, CoerceTokenError } ->
+            Outcome = { action_failed, { invalid_argument, CoerceTokenError } },
             { Outcome, State }
 
     end;
@@ -699,14 +687,29 @@ apply_arguments( ReqName, ActualArgs, ArgTokens, ResSpec, State ) ->
 
     catch
 
-        throw:Error ->
+        throw:Error:Stacktrace ->
+
+            Arity = length( ArgTokens ) + 1,
+
+            ClassStr = case wooper_lookup_method( State, ReqName, Arity ) of
+
+                { value, ImplClassname } ->
+                    text_utils:format( " (implemented in the ~ts module)",
+                                       [ ImplClassname ] );
+
+                % Abnormal:
+                key_not_found ->
+                    ""
+
+            end,
 
             send_action_trace_fmt( error, "Exception thrown when executing "
-                "the action-implementation ~ts/~B request, based on "
-                "the following non-state argument tokens:~n ~p~n"
-                "The triggered exception is:~n ~p",
-                [ ReqName, length( ArgTokens )+1, ArgTokens, Error ],
-                State ),
+                "the action-implementation ~ts/~B request~ts, based on "
+                "the following non-state argument tokens:~n ~p~n~n"
+                "The triggered exception is:~n ~p~n~n"
+                "The corresponding stacktrace is: ~ts",
+                [ ReqName, Arity, ClassStr, ArgTokens, Error,
+                  code_utils:interpret_stacktrace( Stacktrace ) ], State ),
 
             FailureReport = { exception_thrown, Error },
 

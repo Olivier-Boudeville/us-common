@@ -162,7 +162,12 @@ For example: `start_alarm`.
 
 
 -doc "Tells whether an action argument is to be statically or dynamically set.".
--type arg_kind() :: 'static' | 'dynamic'.
+-type argument_kind() :: 'static' | 'dynamic'.
+
+
+-doc "The name of an argument.".
+-type argument_name() :: ustring().
+
 
 
 -doc """
@@ -272,11 +277,20 @@ This describes a failure at the level of the action system; this is not a term
 to be directly returned by an implementation request.
 """.
 -type failure_report() ::
+
     { 'implementation_server_not_found', lookup_info() }
-  | 'action_not_found'
-  | 'timed_out'
-  | { 'wrong_argument_count', DiagStr :: ustring() }
+
+  | { 'action_not_found', action_id() }
+
+  | { 'timed_out', milliseconds() }
+
+  | { 'wrong_argument_count', Expected :: action_arity(),
+      Seen :: action_arity() }
+
+  | { 'invalid_argument', coerce_token_error() }
+
   | 'invalid_result_type'
+
   | { 'exception_thrown', term() }. % When executing said request
 
 
@@ -291,9 +305,10 @@ of answers to asynchronous calls.
 
 An action being done (and thus not failed) means that its implementation request
 could be executed as intended - this does not imply that it reports any success;
-indeed the implementation code may have reported (its own way) an error. Yet in
-both cases its actual result shall be of the `ReturnT` type, which shall be the
-one reported by that request (typically with `request_return(ReturnT)`).
+indeed the implementation code may have reported (through its own way) an
+error. Yet in both cases its actual result shall be of the `ReturnT` type, which
+shall be the one reported by that request (typically with
+`request_return(ReturnT)`).
 
 An action being reported as failed means that the corresponding request was not
 even executed.
@@ -340,7 +355,7 @@ their identifiers (which correspond to the keys of the action table).
 Actions that are declared within no specific header are listed separately.
 """.
 -type header_info() ::
-    % A list_table, to preserve order in headers:
+    % A list_table, to preserve order among headers:
     { HdTable :: list_table( action_header(), [ action_id() ] ),
       HeaderLessActIds :: [ action_id() ] }.
 
@@ -371,6 +386,14 @@ a value of an `action_table/0`.
 -type action_token() :: any_string().
 
 
+-doc "An error in terms of token coercion.".
+-type coerce_token_error() ::
+
+    { 'invalid_argument_type', argument_name(),
+      type_utils:type_coercion_error(), action_id() }.
+
+
+
 -doc """
 Specifies the actual WOOPER request call induced by an action.
 
@@ -386,7 +409,7 @@ synchronisation.
                user_action_spec/0, user_action_specs/0,
                action_spec/0, action_name/0,
 
-               arg_kind/0, static_value/0,
+               argument_kind/0, argument_name/0, static_value/0,
                user_arg_spec/0,
                arg_spec/0, static_arg_spec/0, dynamic_arg_spec/0,
                arg_name/0, argument/0,
@@ -399,8 +422,9 @@ synchronisation.
 
 -export([ register_action_specs/4, init_header_info/0, merge_action_tables/4,
           perform_action/2, perform_action/3,
-          get_action_id/1, coerce_token_arguments/3, is_result_matching_spec/2,
-          action_id_to_string/1,
+          get_action_id/1, coerce_token_arguments/3, interpret_failure_report/1,
+          is_result_matching_spec/2,
+          action_id_to_string/1, action_id_to_detailed_string/1,
           action_table_to_string/1, action_tables_to_string/2,
           header_to_string/3,
           args_to_string/1, arg_spec_to_string/1,
@@ -426,6 +450,8 @@ synchronisation.
 -type any_string() :: text_utils:any_string().
 
 -type list_table( K, V ) :: list_table:list_table( K, V ).
+
+-type milliseconds() :: time_utils:milliseconds().
 
 -type lookup_info() :: naming_utils:lookup_info().
 
@@ -470,8 +496,8 @@ register_action_specs( _UserActSpecs=[ { UAHAnyStr, UASs } | T ], ActTable,
     HdBinStr = text_utils:ensure_binary( UAHAnyStr ),
 
     % Creates that entry if not already existing:
-    NewHdInfo = { list_table:append_list_to_entry( _K=HdBinStr, _Elem=ActIds,
-                                                   HdTable ), HdLessActIds },
+    NewHdInfo = { list_table:append_list_to_entry( _K=HdBinStr,
+        _Elem=lists:reverse( ActIds ), HdTable ), HdLessActIds },
 
     register_action_specs( T, NewActTable, NewHdInfo, SrvClassname );
 
@@ -767,6 +793,8 @@ perform_action( ActionName, Args, ServerPid ) ->
 
     ServerPid ! { performAction, [ ActionName, Args ], ServerPid },
 
+    TimeOutMs = 5000,
+
     receive
 
         { wooper_result, { action_outcome, Outcome } } ->
@@ -775,10 +803,10 @@ perform_action( ActionName, Args, ServerPid ) ->
                                         [ Outcome ] ) ),
             Outcome
 
-    after 5000 ->
+    after TimeOutMs ->
 
         trace_bridge:error_fmt( "Action '~ts' with arguments ~p timed-out." ),
-        { error, timed_out }
+        { action_failed, { timed_out, TimeOutMs } }
 
     end.
 
@@ -813,19 +841,26 @@ Tries to coerce any arguments obtained from the specified tokens into the
 expected ones, as they were specified, and to produce the expected final list of
 actual arguments.
 
+The caller is expected to have check that the number of tokens is correct.
+
 Throws an exception on failure.
 """.
 -spec coerce_token_arguments( [ action_token() ], [ arg_spec() ],
-        action_name() ) -> fallible( [ argument() ], ustring() ).
+        action_name() ) -> fallible( [ argument() ], coerce_token_error() ).
 coerce_token_arguments( ArgTokens, ArgSpecs, ActName ) ->
-    coerce_token_arguments( ArgTokens, ArgSpecs, ActName, _Args=[] ).
+    coerce_token_arguments( ArgTokens, ArgSpecs, ActName,
+        % Second, kept-as-is ArgTokens to compute action arity if needed:
+        ArgTokens, _Args=[] ).
 
 
 % (helper)
-coerce_token_arguments( _ArgsTokens=[], _ArgSpecs=[], _ActName, Args ) ->
+coerce_token_arguments( _ArgsTokens=[], _ArgSpecs=[], _ActName, _FullArgTokens,
+                        Args ) ->
     { ok, lists:reverse( Args ) };
 
-coerce_token_arguments( ExtraArgsTokens, _ArgSpecs=[], ActName, _Args ) ->
+% Not expected to happen:
+coerce_token_arguments( ExtraArgsTokens, _ArgSpecs=[], ActName, _FullArgTokens,
+                        _Args ) ->
 
     DiagStr = text_utils:format( "~B extraneous argument(s) received "
         "for action '~ts':~n ~p",
@@ -837,32 +872,75 @@ coerce_token_arguments( ExtraArgsTokens, _ArgSpecs=[], ActName, _Args ) ->
 % Insert literally, in-place, any static argument:
 coerce_token_arguments( ArgsTokens,
                         _ArgSpecs=[ { static, Arg, _MaybeBinDesc } | T ],
-                        ActName, Args ) ->
-    coerce_token_arguments( ArgsTokens, T, ActName, [ Arg | Args ] );
+                        ActName, FullArgTokens, Args ) ->
+    coerce_token_arguments( ArgsTokens, T, ActName, FullArgTokens,
+                            [ Arg | Args ] );
 
 
 % Associate a dynamic argument to its type:
 coerce_token_arguments( _ArgsTokens=[ ArgToken | TTokens ],
         _ArgSpecs=[ { dynamic, ArgName, ArgType, _MaybeBinDesc } | TArgSpecs ],
-        ActName, Args ) ->
+        ActName, FullArgTokens, Args ) ->
 
     case type_utils:coerce_stringified_to_type( ArgToken, ArgType ) of
 
         { ok, ActualArg } ->
             coerce_token_arguments( TTokens, TArgSpecs, ActName,
-                                    [ ActualArg | Args ] );
+                                    FullArgTokens, [ ActualArg | Args ] );
 
-        { error, Reason } ->
-            { error, { argument_coercing_failed, ArgName, Reason, ActName } }
+        % Argument coercing failed, all information returned:
+        { error, TypeCoercionError } ->
+            { error, { invalid_argument_type, ArgName, TypeCoercionError,
+                       { ActName, _ActArity=length( FullArgTokens ) } } }
 
     end;
 
-coerce_token_arguments( _ArgsTokens=[], ArgSpecs, ActName, _Args ) ->
+% Not expected to happen:
+coerce_token_arguments( _ArgsTokens=[], ArgSpecs, ActName, _FullArgTokens,
+                        _Args ) ->
 
     DiagStr = text_utils:format( "~B argument(s) lacking for action '~ts'.",
                                  [ length( ArgSpecs ), ActName ] ),
 
     { error, DiagStr }.
+
+
+
+-doc """
+Interprets the specified failure report resulting from the execution of an
+action.
+""".
+-spec interpret_failure_report( failure_report() ) -> ustring().
+interpret_failure_report(
+        _FailureReport={ implementation_server_not_found, LookupInfo } ) ->
+    text_utils:format( "the action implementation server could not be found "
+                       "based on a ~ts.",
+                       [ naming_utils:lookup_info_to_string( LookupInfo ) ] );
+
+interpret_failure_report( _FailureReport={ action_not_found, ActId } ) ->
+    text_utils:format( "no ~ts available; run the 'help' action for more "
+        "information.", [ us_action:action_id_to_detailed_string( ActId )] );
+
+interpret_failure_report( _FailureReport={ timed_out, TimeOutMs } ) ->
+    text_utils:format( "action timed-out after ~ts",
+                       [ time_utils:duration_to_string( TimeOutMs ) ] );
+
+interpret_failure_report( _FailureReport={ wrong_argument_count,
+                                           ExpectedActArity, SeenActArity } ) ->
+    text_utils:format( "wrong number of arguments for action: expected ~B of "
+                       "them, got ~B.", [ ExpectedActArity, SeenActArity ] );
+
+interpret_failure_report(
+        _FailureReport={ invalid_argument, CoerceTokenError } ) ->
+    text_utils:format( "failed to coerce action argument: ~ts.",
+        [ type_utils:interpret_type_coercion_error( CoerceTokenError ) ] );
+
+interpret_failure_report( _FailureReport=invalid_result_type ) ->
+    "invalid type returned by the action implementation.";
+
+interpret_failure_report( _FailureReport={ exception_thrown, Exception } ) ->
+    text_utils:format( "action resulting in the following exception being "
+                       "thrown: ~p.", [ Exception ] ).
 
 
 
@@ -885,6 +963,21 @@ is_result_matching_spec( Res, _ResSpec={ CtxtType, _MaybeBinDesc } ) ->
 action_id_to_string( _ActionInfo={ ActName, ActArity } ) ->
     text_utils:format( "~ts/~B", [ ActName, ActArity ] ).
 
+
+-doc """
+Returns a detailed textual description of the specified action identifier.
+""".
+-spec action_id_to_detailed_string( action_id() ) -> ustring().
+action_id_to_detailed_string( _ActId={ ActName, _ActArity=0 } ) ->
+    text_utils:format( "argument-less action named '~ts'", [ ActName ] );
+
+action_id_to_detailed_string( _ActId={ ActName, _ActArity=1 } ) ->
+    text_utils:format( "action named '~ts' and taking a single argument",
+                       [ ActName ] );
+
+action_id_to_detailed_string( _ActId={ ActName, ActArity } ) ->
+    text_utils:format( "action named '~ts' and taking ~B arguments",
+                        [ ActName, ActArity ] ).
 
 
 -doc "Returns a textual description of the specified action information.".
@@ -954,6 +1047,7 @@ action_table_to_string( ActTable ) ->
 
 -doc "Returns a textual description of the specified action-related tables.".
 -spec action_tables_to_string( header_info(), action_table() ) -> ustring().
+% No headerless actions here:
 action_tables_to_string( _HdInfo={ HdTable, _HeaderLessActIds=[] },
                          ActTable ) ->
     text_utils:format( "~B headers defined: ~ts~n; and ~ts",
@@ -962,6 +1056,7 @@ action_tables_to_string( _HdInfo={ HdTable, _HeaderLessActIds=[] },
                 || { HdBinStr, ActIds } <- list_table:enumerate( HdTable ) ] ),
           action_table_to_string( ActTable ) ] );
 
+% Headerless actions here:
 action_tables_to_string( _HdInfo={ HdTable, HeaderLessActIds }, ActTable ) ->
     text_utils:format( "~B headers defined: ~ts~n"
         "with ~B header-less actions: ~w; and ~ts",
@@ -997,8 +1092,8 @@ header.
 header_to_help_string( ActHeaderBinStr, ActIds, ActTable ) ->
      text_utils:format( "'~ts', with ~B actions: ~ts",
          [ ActHeaderBinStr, length( ActIds ), text_utils:strings_to_string( [
-            action_info_to_string( table:get_value( ActId, ActTable ) )
-                || ActId <- ActIds ] ) ] ).
+            action_info_to_help_string( table:get_value( ActId, ActTable ) )
+                || ActId <- ActIds ], _IndentationLevel=1 ) ] ).
 
 
 
@@ -1070,49 +1165,50 @@ mapping_to_string( ReqName, Arity ) ->
 action_tables_to_help_string( ActTable, _HdInfo={ HdTable, HeaderLessActIds },
                               AppName ) ->
 
-    case table:enumerate( HdTable ) of
+    BaseStr = text_utils:format( "This ~ts application on ~ts",
+                                 [ AppName, net_utils:localhost() ] ),
+
+    case list_table:enumerate( HdTable ) of
 
         % No actual header, so just headerless actions:
         [] ->
-            % "enumerate" (no-op):
-            case list_utils:enumerate( HeaderLessActIds ) of
+            case HeaderLessActIds of
 
                 [] ->
-                    text_utils:format( "This ~ts application does not support "
-                        "any specific automated action.", [ AppName ] );
+                    text_utils:format( "~ts does not support any specific "
+                                       "automated action.", [ BaseStr ] );
 
                 [ SingleActId ] ->
                     SingleActInfo =
                         table:get_value( _K=SingleActId, ActTable ),
 
-                    text_utils:format( "This ~ts application supports a single "
-                        "automated action: ~ts ~ts", [ AppName,
+                    text_utils:format( "~ts supports a single automated "
+                        "action, ~ts ~ts.", [ BaseStr,
                             action_info_to_help_string( SingleActInfo ),
                             explain_splitter() ] );
 
-                ActInfos ->
-                    text_utils:format( "This ~ts application supports ~B "
-                        "automated actions: ~ts~n~ts",
-                        [ AppName, length( ActInfos ),
+                ActIds ->
+                    text_utils:format( "~ts supports ~B automated actions: "
+                        "~ts~n~ts",
+                        [ BaseStr, length( ActIds ),
                           text_utils:strings_to_string(
-                              [ action_info_to_help_string( AI )
-                                || AI <- ActInfos ] ), explain_splitter() ] )
+                            [ action_info_to_help_string(
+                               table:get_value( AId, ActTable ) )
+                                || AId <- ActIds ] ), explain_splitter() ] )
 
                 end;
 
 
         % Single header:
         [ { HdBinStr, ActIds } ] ->
-            text_utils:format( "This ~ts application manages a single topic: "
-                "~ts~n~ts", [ AppName,
-                    header_to_help_string( HdBinStr, ActIds, ActTable ),
-                    headerless_actions_to_help_string( HeaderLessActIds,
-                                                       ActTable ) ] );
+            text_utils:format( "~ts manages a single topic, ~ts~n~ts",
+                [ BaseStr, header_to_help_string( HdBinStr, ActIds, ActTable ),
+                  headerless_actions_to_help_string( HeaderLessActIds,
+                                                     ActTable ) ] );
 
         HdActIdsPairs ->
-            text_utils:format( "This ~ts application manages ~B topics: "
-                "~ts~ts",
-                [ AppName, length( HdActIdsPairs ),
+            text_utils:format( "~ts manages ~B topics: ~ts~ts",
+                [ BaseStr, length( HdActIdsPairs ),
                   text_utils:strings_to_string(
                       [ header_to_help_string( Hd, Ids, ActTable )
                             || { Hd, Ids } <- HdActIdsPairs ] ),
@@ -1137,14 +1233,13 @@ headerless_actions_to_help_string( _ActIds=[], _ActTable ) ->
 headerless_actions_to_help_string( _ActIds=[ ActId ], ActTable ) ->
     text_utils:format( "A single action belongs to no specific topic: ~ts",
         [ action_info_to_help_string(
-            list_table:get_value( ActId, ActTable ) ) ] );
+            table:get_value( ActId, ActTable ) ) ] );
 
 headerless_actions_to_help_string( ActIds, ActTable ) ->
     text_utils:format( "~B actions belong to no specific topic:~ts",
-        [ length( ActIds ),
-          [ text_utils:strings_to_string( action_info_to_help_string(
-                list_table:get_value( ActId, ActTable ) ) )
-                    || ActId <- ActIds ] ] ).
+        [ length( ActIds ), text_utils:strings_to_string(
+            [ action_info_to_help_string( table:get_value( ActId, ActTable ) )
+                    || ActId <- ActIds ] ) ] ).
 
 
 

@@ -332,7 +332,7 @@ onWOOPERExitReceived( State, CrashedPid, ExitType ) ->
 
 
 -doc """
-Centralises all automated actions, supported directly by this server or by the
+Centralises all automasted actions, supported directly by this server or by the
 other servers of this US application, as specified by their (ordered)
 classnames.
 
@@ -425,7 +425,6 @@ finalise_action_setup( State ) ->
     StopDesc = text_utils:format( "stops this ~ts instance",
         [ get_us_app_name( ?getAttr(app_short_name) ) ] ),
 
-    %StopUserActSpec = { stop, StopDesc },
 
     % To test result checking (should be "successful(string())"):
     StopUserActSpec = { stop, StopDesc, _ReqName=stop, _UserArgSpecs=[],
@@ -436,8 +435,6 @@ finalise_action_setup( State ) ->
     { FullActTable, FullHdInfo } = us_action:register_action_specs(
         ExtraActSpecs, ?getAttr(action_table), ?getAttr(header_info),
         wooper:get_classname( State ) ),
-
-    %?debug_fmt( "FullActTable: ~p.", [ FullActTable ] ),
 
     % To auto-complete requested actions:
     ActSpellTree = spell_tree:create( [ text_utils:atom_to_string( ActName )
@@ -581,7 +578,7 @@ onAutomatedActionsNotified( State, AddActTable, AddHdInfo, SrvClassname ) ->
 help( State ) ->
 
     HelpStr = us_action:action_tables_to_help_string( ?getAttr(action_table),
-        get_us_app_name( ?getAttr(app_short_name) ) ),
+        ?getAttr(header_info), get_us_app_name( ?getAttr(app_short_name) ) ),
 
     wooper:const_return_result( { ok, HelpStr } ).
 

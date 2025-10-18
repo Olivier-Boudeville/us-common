@@ -494,7 +494,7 @@ performActionFromTokens( State, Tokens ) ->
     % A request, so that it can be overridden (typically by
     % class_USCentralServer):
     %
-    { Outcome, ActState } = case 
+    { Outcome, ActState } = case
             wooper:executeConstRequest( State, getActionId, [ Tokens ] ) of
 
         { ok, ActId={ _ActName, ActArity } } ->
@@ -538,11 +538,14 @@ performActionFromTokens( State, Tokens ) ->
 
             end;
 
-        { error, ErrorTerm } ->
+        { error, ActionIdErrorTerm } ->
             send_action_trace_fmt( warning, "No action identifier could be "
-                "determined from tokens '~p':~n ~p", [ Tokens, ErrorTerm ],
-                State ),
-            { { action_failed, action_not_found }, State }
+                "determined from tokens '~p':~n ~p",
+                [ Tokens, ActionIdErrorTerm ], State ),
+
+            FailureReport = { action_not_resolved, ActionIdErrorTerm },
+
+            { { action_failed, FailureReport }, State }
 
     end,
 
@@ -584,7 +587,7 @@ execute_action( ActInfo=#action_info{ server_lookup_info=undefined,
             apply_arguments( ReqName, ActualArgs, ArgTokens, ResSpec, State );
 
         { error, CoerceTokenError } ->
-            Outcome = { action_failed, { invalid_argument, CoerceTokenError } },
+            Outcome = { action_failed, CoerceTokenError },
             { Outcome, State }
 
     end;

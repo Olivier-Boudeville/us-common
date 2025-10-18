@@ -105,11 +105,12 @@ comprises.
       "servers if it sent (blocking) requests to them" },
 
     { action_spell_tree, option( spell_tree() ),
-      "any spell tree used to resolve action prefixes" }
+      "any spell tree used to resolve action prefixes" },
 
     % (action_table and all inherited for class_USServer)
 
-                           ] ).
+    { halt_node_on_deletion, boolean(), "tells whether the current node shall "
+      "be stopped when this instance terminates" } ] ).
 
 
 % Used by the trace_categorize/1 macro to use the right emitter:
@@ -247,7 +248,8 @@ construct( State, USAppShortName, ServerInit, AppRunContext ) ->
         { data_directory, undefined },
         { log_directory, undefined },
         { remaining_servers, [] },
-        { action_spell_tree, undefined } ] ),
+        { action_spell_tree, undefined },
+        { halt_node_on_deletion, false } ] ),
 
     % Better disabled, as a mother class:
     %?send_info_fmt( SetState, "Constructed: ~ts.", [ to_string( SetState ) ] ),
@@ -263,6 +265,8 @@ construct( State, USAppShortName, ServerInit, AppRunContext ) ->
 -spec destruct( wooper:state() ) -> wooper:state().
 destruct( State ) ->
     ?debug( "Deletion initiated." ),
+
+    ?getAttr(halt_node_on_deletion) andalso basic_utils:stop(),
 
     ?info( "Deleted." ),
     State.
@@ -584,7 +588,12 @@ help( State ) ->
 
 
 
--doc "Built-in `stop` action.".
+-doc """
+Built-in `stop` action: stops not only the US server but also its full node,
+supposing it is alone on its node.
+
+Of course to be used cautiously.
+""".
 -spec stop( wooper:state() ) -> request_return( successful( ustring() ) ).
 stop( State ) ->
 
@@ -602,7 +611,10 @@ stop( State ) ->
     % So:
     self() ! delete,
 
-    wooper:return_state_result( CfgState, { ok, "Stopping immediately" } ).
+    % So after this command we want to halt the current node as well:
+    StopState = setAttribute( CfgState, halt_node_on_deletion, true ),
+
+    wooper:return_state_result( StopState, { ok, "Stopping immediately" } ).
 
 
 

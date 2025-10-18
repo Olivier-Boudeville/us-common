@@ -280,20 +280,37 @@ to be directly returned by an implementation request.
 
     { 'implementation_server_not_found', lookup_info() }
 
-  | { 'action_not_found', action_id() }
+  | action_not_resolved_error()
 
-  | { 'timed_out', milliseconds() }
+  | { 'action_not_found', action_id() }
 
   | { 'wrong_argument_count', Expected :: action_arity(),
       Seen :: action_arity() }
 
-  | { 'invalid_argument', coerce_token_error() }
+  | coerce_token_error()
 
   | 'invalid_result_type'
 
-  | { 'exception_thrown', term() }. % When executing said request
+  | { 'exception_thrown', term() } % Happening when executing said request
+
+  | { 'timed_out', milliseconds() }.
 
 
+
+% Second element of the pair is a error returned by any getActionId/2
+% implementation:
+%
+-type action_not_resolved_error() :: { 'action_not_resolved',
+    { 'invalid_action_tokens', InvalidTokens :: any() }
+  | 'action_service_not_ready'
+  | { 'unresolved_action_name_prefix', bin_string() } }.
+
+
+
+% Defined as used more than once:
+-doc "Error when type-coercing an argument value.".
+-type coerce_token_error() :: { 'invalid_argument_type', argument_name(),
+                                type_utils:type_coercion_error(), action_id() }.
 
 
 -doc """
@@ -384,13 +401,6 @@ a value of an `action_table/0`.
 
 -doc "A token describing a dynamic argument in a call to an action.".
 -type action_token() :: any_string().
-
-
--doc "An error in terms of token coercion.".
--type coerce_token_error() ::
-
-    { 'invalid_argument_type', argument_name(),
-      type_utils:type_coercion_error(), action_id() }.
 
 
 
@@ -890,8 +900,7 @@ coerce_token_arguments( _ArgsTokens=[ ArgToken | TTokens ],
 
         % Argument coercing failed, all information returned:
         { error, TypeCoercionError } ->
-            { error, { invalid_argument_type, ArgName, TypeCoercionError,
-                       { ActName, _ActArity=length( FullArgTokens ) } } }
+            { error, { invalid_argument_type, ArgName, TypeCoercionError } }
 
     end;
 
@@ -917,9 +926,23 @@ interpret_failure_report(
                        "based on a ~ts.",
                        [ naming_utils:lookup_info_to_string( LookupInfo ) ] );
 
+interpret_failure_report( _FailureReport={ action_not_resolved,
+        { invalid_action_tokens, InvalidTokens } } ) ->
+    text_utils:format( "the specified tokens, '~p', cannot be resolved "
+                       "into an action.", [ InvalidTokens ] );
+
+interpret_failure_report(
+        _FailureReport={ action_not_resolved, action_service_not_ready } ) ->
+    "the action cannot be resolved, as the action service is not ready.";
+
+interpret_failure_report( _FailureReport={ action_not_resolved,
+        { unresolved_action_name_prefix, PfxBinStr } } ) ->
+    text_utils:format( "failed to resolve the specified prefix, '~ts', "
+                       "into any known action.", [ PfxBinStr ] );
+
 interpret_failure_report( _FailureReport={ action_not_found, ActId } ) ->
     text_utils:format( "no ~ts available; run the 'help' action for more "
-        "information.", [ us_action:action_id_to_detailed_string( ActId )] );
+        "information.", [ action_id_to_detailed_string( ActId )] );
 
 interpret_failure_report( _FailureReport={ timed_out, TimeOutMs } ) ->
     text_utils:format( "action timed-out after ~ts",
@@ -930,19 +953,23 @@ interpret_failure_report( _FailureReport={ wrong_argument_count,
     text_utils:format( "wrong number of arguments for action: expected ~B of "
                        "them, got ~B.", [ ExpectedActArity, SeenActArity ] );
 
-interpret_failure_report(
-        _FailureReport={ invalid_argument, CoerceTokenError } ) ->
-    text_utils:format( "failed to coerce action argument: ~ts.",
-        [ type_utils:interpret_type_coercion_error( CoerceTokenError ) ] );
+interpret_failure_report( _FailureReport={ invalid_argument_type, ArgName,
+                                           TypeCoercionError } ) ->
+    text_utils:format(
+        "unable to interpret the action argument named '~ts': ~ts.",
+        [ ArgName,
+          type_utils:interpret_type_coercion_error( TypeCoercionError ) ] );
 
 interpret_failure_report( _FailureReport=invalid_result_type ) ->
     "invalid type returned by the action implementation.";
 
 interpret_failure_report( _FailureReport={ exception_thrown, Exception } ) ->
     text_utils:format( "action resulting in the following exception being "
-                       "thrown: ~p.", [ Exception ] ).
+                       "thrown: ~p.", [ Exception ] );
 
-
+interpret_failure_report( FailureReport ) ->
+    text_utils:format( "unexpected action failure report:~n ~p",
+                       [ FailureReport ] ).
 
 
 -doc """

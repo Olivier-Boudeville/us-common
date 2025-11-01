@@ -386,8 +386,8 @@ getUSWebRuntimeSettings( State ) ->
 Notifies this US server of a presumably current EPMD port, so that the right
 information is known.
 
-Called by US-* applications (e.g. US-{Main,Web}) whose configuration file allows
-to override any US-level setting.
+Called by `US-*` applications (e.g. `US-{Main,Web}`) whose configuration file
+allows to override any US-level setting.
 """.
 -spec notifyEPMDPort( wooper:state(), tcp_port(), epmd_origin(), module_name(),
                       server_pid() ) -> oneway_return().
@@ -1759,10 +1759,11 @@ to_string( State ) ->
     end,
 
     text_utils:format( "US overall configuration server, ~ts, running in "
-        "the ~ts execution context, presumably on a VM "
-        "with an EPMD daemon ~ts, "
+        "the ~ts execution context as user '~ts' of group '~ts', "
+        "presumably on a VM with an EPMD daemon ~ts, "
         "using configuration directory '~ts' and log directory '~ts', "
         "having found ~ts and ~ts",
-        [ RegStr, ?getAttr(execution_context), EPMDStr,
-          ?getAttr(config_base_directory), ?getAttr(log_directory),
+        [ RegStr, ?getAttr(execution_context),
+          system_utils:get_user_name_safe(), system_utils:get_group_name_safe(),
+          EPMDStr, ?getAttr(config_base_directory), ?getAttr(log_directory),
           MainCfgStr, WebCfgStr ] ).

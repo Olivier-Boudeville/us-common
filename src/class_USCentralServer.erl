@@ -438,7 +438,7 @@ finalise_action_setup( State ) ->
 
     { FullActTable, FullHdInfo } = us_action:register_action_specs(
         ExtraActSpecs, ?getAttr(action_table), ?getAttr(header_info),
-        wooper:get_classname( State ) ),
+        ?getAttr(typedef_table), wooper:get_classname( State ) ),
 
     % To auto-complete requested actions:
     ActSpellTree = spell_tree:create( [ text_utils:atom_to_string( ActName )
@@ -547,10 +547,10 @@ onAutomatedActionsNotified( State, AddActTable, AddHdInfo, SrvClassname ) ->
 
     cond_utils:if_defined( us_common_debug_actions,
         class_USServer:send_action_trace_fmt( debug,
-            "Notified from US ~ts server of its ~ts and ~ts"
+            "Notified from US ~ts server that ~ts "
             "(whereas was waiting for servers ~w).",
-            [ SrvClassname, us_action:action_table_to_string( AddActTable ),
-              us_action:header_info_to_string( AddHdInfo ),
+            [ SrvClassname,
+              us_action:action_tables_to_string( AddHdInfo, AddActTable ),
               RemainingSrvs ], State ),
             basic_utils:ignore_unused( SrvClassname ) ),
 

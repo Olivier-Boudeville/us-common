@@ -78,6 +78,8 @@ It centralises states and behaviours on their behalf.
 -type trace_format() :: text_utils:trace_format().
 -type trace_values() :: text_utils:trace_values().
 
+-type typedef_table() :: type_utils:typedef_table().
+
 -type registration_name() :: naming_utils:registration_name().
 -type registration_scope() :: naming_utils:registration_scope().
 -type lookup_info() :: naming_utils:lookup_info().
@@ -146,6 +148,10 @@ It centralises states and behaviours on their behalf.
 
     { action_table, action_table(),
       "the table recording all the actions supported by this server" },
+
+    { typedef_table, typedef_table(),
+      "The type definition table to resolve contextual types into explicit "
+      "ones, typically for actions" },
 
     { header_info, header_info(), "records the headers defined with their "
       "actions, and the headerlesss actions" } ] ).
@@ -243,7 +249,7 @@ Parameters are:
 - TrapExits, whether EXIT messages shall be trapped
 - MaybeUserName, the name of any user under which this server is expected to run
 
-(most complete constructor)
+(only actual constructor)
 """.
 -spec construct( wooper:state(), emitter_init(), option( registration_name() ),
         option( registration_scope() ), boolean(), option( user_name() ) ) ->
@@ -272,7 +278,7 @@ construct( State, ServerInit, MaybeRegistrationName, MaybeRegistrationScope,
     % console):
     %
     %TrapExits =:= true andalso
-    %    trace_bridge:debug( "Will be trapping EXIT messages." ),
+    %    trace_bridge:debug( "Will be trapping EXIT messages." ),_
 
     % Constant based on the number of milliseconds of the EPOCH, since year 0;
     % used in order to compute the most complete offset (in UTC):
@@ -290,6 +296,8 @@ construct( State, ServerInit, MaybeRegistrationName, MaybeRegistrationScope,
         { username, text_utils:maybe_string_to_binary( MaybeUserName ) },
 
         { action_table, table:new() },
+
+        { typedef_table, get_base_typedef_table() },
 
         { header_info, us_action:init_header_info() } ] ),
 
@@ -399,7 +407,7 @@ table of this server.
 addAutomatedActionSpecs( State, UserActSpecs ) ->
 
     { NewActTable, NewHdInfo } = us_action:register_action_specs( UserActSpecs,
-        ?getAttr(action_table), ?getAttr(header_info),
+        ?getAttr(action_table), ?getAttr(header_info), ?getAttr(typedef_table),
         wooper:get_classname( State ) ),
 
     %?debug_fmt( "from ~w to ~w.", [ ?getAttr(action_table), NewActTable ] ),
@@ -499,7 +507,7 @@ performActionFromTokens( State, Tokens ) ->
 
         { ok, ActId={ _ActName, ActArity } } ->
 
-            send_action_trace_fmt( debug, "Tokens resolved as ~ts.",
+            send_action_trace_fmt( debug, "Action tokens resolved as ~ts.",
                 [ us_action:action_id_to_string( ActId ) ], State ),
 
             ActTable = ?getAttr(action_table),
@@ -722,6 +730,27 @@ apply_arguments( ReqName, ActualArgs, ArgTokens, ResSpec, State ) ->
 
 
 
+-doc "Returns any naming lookup information of this server.".
+-spec getLookupInformation( wooper:state() ) ->
+                                const_request_return( option( lookup_info() ) ).
+getLookupInformation( State ) ->
+
+    MaybeLI = case ?getAttr(registration_name) of
+
+        undefined ->
+            undefined;
+
+        RegName ->
+            LookupScope = naming_utils:registration_to_lookup_scope(
+                ?getAttr(registration_scope) ),
+            { RegName, LookupScope }
+
+    end,
+
+    wooper:const_return_result( MaybeLI ).
+
+
+
 -doc """
 Callback triggered, if this server enabled the trapping of exits, whenever a
 linked process terminates.
@@ -792,27 +821,6 @@ get_lookup_info() ->
 
 
 
--doc "Returns any naming lookup information of this server.".
--spec getLookupInformation( wooper:state() ) ->
-                                const_request_return( option( lookup_info() ) ).
-getLookupInformation( State ) ->
-
-    MaybeLI = case ?getAttr(registration_name) of
-
-        undefined ->
-            undefined;
-
-        RegName ->
-            LookupScope = naming_utils:registration_to_lookup_scope(
-                ?getAttr(registration_scope) ),
-            { RegName, LookupScope }
-
-    end,
-
-    wooper:const_return_result( MaybeLI ).
-
-
-
 -doc """
 Returns the PID of the current server, possibly waiting for it.
 
@@ -834,6 +842,13 @@ get_server_pid() ->
 
     throw( not_implemented ).
 
+
+
+-doc "Returns the base, US-level type definition table.".
+-spec get_base_typedef_table() -> static_return( typedef_table() ).
+get_base_typedef_table() ->
+    % Currently not adding US-specific types:
+    wooper:return_static( type_utils:get_base_typedef_table() ).
 
 
 

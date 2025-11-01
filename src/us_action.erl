@@ -215,7 +215,7 @@ meters">>}`.
 
 -doc "The internal specification of a dynamic action argument.".
 -type dynamic_arg_spec() ::
-    { 'dynamic', arg_name(), contextual_type(), option( description() ) }.
+    { 'dynamic', arg_name(), explicit_type(), option( description() ) }.
 
 
 -doc """
@@ -260,13 +260,14 @@ request may have little interest.
 -doc """
 The internal specification of a result.
 
-The (contextual) type corresponds to the returned type of the corresponding
-implementation request (for example `ReturnT :: basic_utils:fallible/2`).
+The (explicit, generally derived from a user-defined contextual one) type
+corresponds to the returned type of the corresponding implementation request
+(for example `ReturnT :: basic_utils:fallible/2`).
 
 If controlling the return type, we recommend relying on fallible-like types (for
 example `ReturnT :: basic_utils:fallible/2`, or `successful/1`).
 """.
--type result_spec() :: option( { contextual_type(), option( description() ) } ).
+-type result_spec() :: option( { explicit_type(), option( description() ) } ).
 
 
 
@@ -430,7 +431,7 @@ synchronisation.
                action_token/0, action_request/0 ]).
 
 
--export([ register_action_specs/4, init_header_info/0, merge_action_tables/4,
+-export([ register_action_specs/5, init_header_info/0, merge_action_tables/4,
           perform_action/2, perform_action/3,
           get_action_id/1, coerce_token_arguments/3, interpret_failure_report/1,
           is_result_matching_spec/2,
@@ -442,13 +443,6 @@ synchronisation.
           action_info_to_string/1,
           action_tables_to_help_string/3, headerless_actions_to_help_string/2,
           action_info_to_help_string/1 ]).
-
-
-% Local types:
-
--type text_type() :: type_utils:text_type().
--type contextual_type() :: type_utils:contextual_type().
-
 
 
 % Type shorthands:
@@ -464,6 +458,11 @@ synchronisation.
 -type milliseconds() :: time_utils:milliseconds().
 
 -type lookup_info() :: naming_utils:lookup_info().
+
+-type text_type() :: type_utils:text_type().
+-type explicit_type() :: type_utils:explicit_type().
+-type typedef_table() :: type_utils:typedef_table().
+
 
 -type classname() :: wooper:classname().
 
@@ -483,21 +482,23 @@ Note that the specified classname is just used for checking at
 registration-time, and is not stored.
 """.
 -spec register_action_specs( [ user_action_spec() ], action_table(),
-    header_info(), classname() ) -> { action_table(), header_info() }.
-register_action_specs( _UserActSpecs=[], ActTable, HdInfo, _SrvClassname ) ->
+        header_info(), typedef_table(), classname() ) ->
+                                        { action_table(), header_info() }.
+register_action_specs( _UserActSpecs=[], ActTable, HdInfo, _TypedefTable,
+                       _SrvClassname ) ->
     { ActTable, HdInfo };
 
 
 % Here actions with an header:
 register_action_specs( _UserActSpecs=[ { UAHAnyStr, UASs } | T ], ActTable,
-        _HdInfo={ HdTable, HdLessActIds }, SrvClassname ) when
+        _HdInfo={ HdTable, HdLessActIds }, TypedefTable, SrvClassname ) when
             ( is_list( UAHAnyStr ) orelse is_binary( UAHAnyStr ) )
             andalso is_list( UASs ) -> % (actual list)
 
     { ActIds, NewActTable } = lists:foldl(
         fun( UAS, _Acc={ AccIds, AccActTable } ) ->
             { ActId, NewAccAccTable } = register_action_spec( UAS,
-                AccActTable, SrvClassname ),
+                AccActTable, TypedefTable, SrvClassname ),
             { [ ActId | AccIds ], NewAccAccTable }
         end,
         _Acc0={ _AccIds0=[], ActTable },
@@ -509,20 +510,22 @@ register_action_specs( _UserActSpecs=[ { UAHAnyStr, UASs } | T ], ActTable,
     NewHdInfo = { list_table:append_list_to_entry( _K=HdBinStr,
         _Elem=lists:reverse( ActIds ), HdTable ), HdLessActIds },
 
-    register_action_specs( T, NewActTable, NewHdInfo, SrvClassname );
+    register_action_specs( T, NewActTable, NewHdInfo, TypedefTable,
+                           SrvClassname );
 
 
 % No header, just a standalone action:
 register_action_specs( _UserActSpecs=[ UAS | T ], ActTable,
-                       _HdInfo={ HdTable, HdLessActIds }, SrvClassname ) ->
+        _HdInfo={ HdTable, HdLessActIds }, TypedefTable, SrvClassname ) ->
 
     { ActId, NewActTable } =
-        register_action_spec( UAS, ActTable, SrvClassname ),
+        register_action_spec( UAS, ActTable, TypedefTable, SrvClassname ),
 
     NewHdInfo = { HdTable,
                   list_utils:append_at_end( _Elem=ActId, HdLessActIds ) },
 
-    register_action_specs( T, NewActTable, NewHdInfo, SrvClassname ).
+    register_action_specs( T, NewActTable, NewHdInfo, TypedefTable,
+                           SrvClassname ).
 
 
 
@@ -532,11 +535,11 @@ Registers the specified user action specification in the specified action table.
 Note that the specified classname is used just for checking at
 registration-time, and is not stored.
 """.
--spec register_action_spec( user_action_spec(), action_table(), classname() ) ->
-                                { action_id(), action_table() }.
+-spec register_action_spec( user_action_spec(), action_table(),
+        typedef_table(), classname() ) -> { action_id(), action_table() }.
 % Full spec:
 register_action_spec( UserActSpec={ ActName, MaybeDesc, RequestName,
-        ArgSpecs, ResSpec }, ActTable, SrvClassname ) ->
+        ArgSpecs, ResSpec }, ActTable, TypedefTable, SrvClassname ) ->
 
     is_atom( ActName ) orelse begin
 
@@ -544,15 +547,15 @@ register_action_spec( UserActSpec={ ActName, MaybeDesc, RequestName,
             "in user action specification ~p (not an atom).",
             [ ActName, UserActSpec ] ),
 
-       throw( { invalid_action_name, ActName, UserActSpec } )
+        throw( { invalid_action_name, ActName, UserActSpec } )
 
                               end,
 
     MaybeBinDesc = text_utils:ensure_maybe_binary( MaybeDesc ),
 
-    CanonArgSpecs = canonicalise_arg_specs( ArgSpecs, ActName ),
+    CanonArgSpecs = canonicalise_arg_specs( ArgSpecs, ActName, TypedefTable ),
 
-    CanonResSpec = canonicalise_result_spec( ResSpec, ActName ),
+    CanonResSpec = canonicalise_result_spec( ResSpec, ActName, TypedefTable ),
 
     ArgCount = length( CanonArgSpecs ),
 
@@ -588,26 +591,27 @@ register_action_spec( UserActSpec={ ActName, MaybeDesc, RequestName,
 % No request spec specified, so the 'unchecked_result' policy will apply:
 register_action_spec(
         _UserActSpec={ ActName, MaybeDesc, RequestName, ArgSpecs },
-        ActTable, SrvClassname ) ->
+        ActTable, TypedefTable, SrvClassname ) ->
     register_action_spec( { ActName, MaybeDesc, RequestName, ArgSpecs,
-        _UsrResSpec=unchecked_result }, ActTable, SrvClassname );
+        _UsrResSpec=unchecked_result }, ActTable, TypedefTable, SrvClassname );
 
 % No argument spec:
 register_action_spec( _UserActSpec={ ActName, MaybeDesc, ReqName },
-                       ActTable, SrvClassname ) ->
+                       ActTable, TypedefTable, SrvClassname ) ->
     register_action_spec( { ActName, MaybeDesc, ReqName, _ArgSpecs=[] },
-                          ActTable, SrvClassname );
+                          ActTable, TypedefTable, SrvClassname );
 
 % No request name, using the action one:
 register_action_spec( _UserActSpec={ ActName, MaybeDesc }, ActTable,
-                      SrvClassname ) ->
+                      TypedefTable, SrvClassname ) ->
     register_action_spec( { ActName, MaybeDesc, _ReqName=ActName }, ActTable,
-                          SrvClassname );
+                          TypedefTable, SrvClassname );
 
 % Not even a description:
-register_action_spec( _UserActSpec=ActName, ActTable, SrvClassname ) ->
+register_action_spec( _UserActSpec=ActName, ActTable, TypedefTable,
+                      SrvClassname ) ->
     register_action_spec( { ActName, _MaybeDesc=undefined }, ActTable,
-                           SrvClassname ).
+                          TypedefTable, SrvClassname ).
 
 % (no catch-all error clause useful here)
 
@@ -677,11 +681,13 @@ check_action_mapping( ReqName, ReqArity, SrvClassname ) ->
 Returns an internal, canonicalised version of the specified user argument
 specifications of the specified action.
 """.
--spec canonicalise_arg_specs( term(), action_name() ) -> [ arg_spec() ].
-canonicalise_arg_specs( ArgSpecs, ActName ) when is_list( ArgSpecs )->
-    [ canonicalise_arg_spec( AS, ActName ) || AS <- ArgSpecs ];
+-spec canonicalise_arg_specs( term(), action_name(), typedef_table() ) ->
+                                            [ arg_spec() ].
+canonicalise_arg_specs( ArgSpecs, ActName, TypedefTable )
+                                        when is_list( ArgSpecs )->
+    [ canonicalise_arg_spec( AS, ActName, TypedefTable ) || AS <- ArgSpecs ];
 
-canonicalise_arg_specs( Other, ActName ) ->
+canonicalise_arg_specs( Other, ActName, _TypedefTable ) ->
     throw( { invalid_action_argument_specs, non_list, Other, ActName } ).
 
 
@@ -691,21 +697,23 @@ Returns an internal, canonicalised version of the specified user argument
 specification of the specified action.
 """.
 % term() expected to be user_action_spec():
--spec canonicalise_arg_spec( term(), action_name() ) -> arg_spec().
+-spec canonicalise_arg_spec( term(), action_name(), typedef_table() ) ->
+                                        arg_spec().
 % Full static arg spec:
 canonicalise_arg_spec( _ArgSpec={ static, ArgValue, MaybeUserDesc },
-                       _ActName ) ->
+                       _ActName, _TypedefTable ) ->
     MaybeBinDesc = text_utils:ensure_maybe_binary( MaybeUserDesc ),
     { static, ArgValue, MaybeBinDesc };
 
 
 % No description static arg spec:
-canonicalise_arg_spec( _ArgSpec={ static, ArgValue }, _ActName ) ->
+canonicalise_arg_spec( _ArgSpec={ static, ArgValue }, _ActName,
+                       _TypedefTable ) ->
     { static, ArgValue, _MaybeBinDesc=undefined };
 
 % Full dynamic arg spec:
 canonicalise_arg_spec( ArgSpec={ dynamic, ArgName, ArgTypeStr, MaybeUserDesc },
-                       ActName ) ->
+                       ActName, TypedefTable ) ->
 
     is_atom( ArgName ) orelse
         throw( { invalid_argument_name, ArgName, ArgSpec, ActName } ),
@@ -725,19 +733,27 @@ canonicalise_arg_spec( ArgSpec={ dynamic, ArgName, ArgTypeStr, MaybeUserDesc },
 
     end,
 
+    ArgExplType = type_utils:resolve_type( ArgCtxtType, TypedefTable ),
+
+    cond_utils:if_defined( us_common_debug_actions, trace_bridge:debug_fmt(
+        "Argument type specified as '~ts' translated to contextual type ~p, "
+        "and resolved as explicit type ~p.",
+        [ ArgTypeStr, ArgCtxtType, ArgExplType ] ) ),
+
     MaybeBinDesc = text_utils:ensure_maybe_binary( MaybeUserDesc ),
 
-    { dynamic, ArgName, ArgCtxtType, MaybeBinDesc };
+    { dynamic, ArgName, ArgExplType, MaybeBinDesc };
 
-canonicalise_arg_spec( _ArgSpec={ dynamic, ArgName, ArgTypeStr }, ActName ) ->
+canonicalise_arg_spec( _ArgSpec={ dynamic, ArgName, ArgTypeStr }, ActName,
+                       TypedefTable ) ->
     canonicalise_arg_spec( { dynamic, ArgName, ArgTypeStr,
-                             _MaybeUserDesc=undefined }, ActName );
+        _MaybeUserDesc=undefined }, ActName, TypedefTable );
 
-canonicalise_arg_spec( _ArgSpec={ dynamic, ArgName }, ActName ) ->
+canonicalise_arg_spec( _ArgSpec={ dynamic, ArgName }, ActName, TypedefTable ) ->
     canonicalise_arg_spec( { dynamic, ArgName, _ArgTypeStr="string()" },
-                           ActName );
+                           ActName, TypedefTable );
 
-canonicalise_arg_spec( Other, ActName ) ->
+canonicalise_arg_spec( Other, ActName, _TypedefTable ) ->
     throw( { invalid_argument_spec, Other, ActName } ).
 
 
@@ -747,12 +763,14 @@ Returns an internal, canonicalised version of the specified user result
 specification of the specified action.
 """.
 % term() expected to be user_result_spec():
--spec canonicalise_result_spec( term(), action_name() ) ->
+-spec canonicalise_result_spec( term(), action_name(), typedef_table() ) ->
                                             option( result_spec() ).
-canonicalise_result_spec( _ResSpec=unchecked_result, _ActName ) ->
+canonicalise_result_spec( _ResSpec=unchecked_result, _ActName,
+                          _TypedefTable ) ->
     undefined;
 
-canonicalise_result_spec( ResSpec={ ResTypeStr, MaybeUserDesc }, ActName ) ->
+canonicalise_result_spec( ResSpec={ ResTypeStr, MaybeUserDesc }, ActName,
+                          TypedefTable ) ->
 
     ResCtxtType = case type_utils:parse_type( ResTypeStr ) of
 
@@ -769,13 +787,20 @@ canonicalise_result_spec( ResSpec={ ResTypeStr, MaybeUserDesc }, ActName ) ->
 
     end,
 
+    ResExplType = type_utils:resolve_type( ResCtxtType, TypedefTable ),
+
+    cond_utils:if_defined( us_common_debug_actions, trace_bridge:debug_fmt(
+        "Result type specified as '~ts' translated to contextual type ~p, "
+        "and resolved as explicit type ~p.",
+        [ ResTypeStr, ResCtxtType, ResExplType ] ) ),
+
     MaybeBinDesc = text_utils:ensure_maybe_binary( MaybeUserDesc ),
 
-    { ResCtxtType, MaybeBinDesc };
+    { ResExplType, MaybeBinDesc };
 
-canonicalise_result_spec( _ResSpec=ResTypeStr, ActName ) ->
+canonicalise_result_spec( _ResSpec=ResTypeStr, ActName, TypedefTable ) ->
     canonicalise_result_spec( { ResTypeStr, _MaybeUserDesc=undefined },
-                              ActName ).
+                              ActName, TypedefTable ).
 
 
 
@@ -892,7 +917,34 @@ coerce_token_arguments( _ArgsTokens=[ ArgToken | TTokens ],
         _ArgSpecs=[ { dynamic, ArgName, ArgType, _MaybeBinDesc } | TArgSpecs ],
         ActName, FullArgTokens, Args ) ->
 
-    case type_utils:coerce_stringified_to_type( ArgToken, ArgType ) of
+    trace_bridge:debug_fmt( "Coercing argument token '~p' into type '~p'.",
+                            [ ArgToken, ArgType ] ),
+
+    % For most types, there is no problem; for example specifying on the
+    % command-line "1.23" will be translated in 1.23, as expected by {float,[]}.
+    %
+    % However, if an argument (e.g. 'dev_designator' of type string()) is
+    % expected, "my_smart_plug" may be specified, but it will then be translated
+    % into the my_smart_plug atom, which does not correspond to the expected
+    % explicit type (namely {list,{integer,[]}}, for string()); the root of the
+    % problem is that we would have needed here "\"my_smart_plug\"" instead, but
+    % we cannot request the user to enter such a quoted string (note that "my
+    % smart plug" would have resulted in a parsing error, but anyway this should
+    % not happen, as words must have been split before).
+    %
+    % So now we auto-quote tokens whose expected (explicit) type is string:
+    QuoteFreeArgToken = case ArgType of
+
+        { list, {integer,[]} } -> % i.e. string()
+            % Also a switch from binary to plain string:
+            text_utils:format( "\"~ts\"", [ ArgToken ] );
+
+        _ ->
+            ArgToken
+
+    end,
+
+    case type_utils:coerce_stringified_to_type( QuoteFreeArgToken, ArgType ) of
 
         { ok, ActualArg } ->
             coerce_token_arguments( TTokens, TArgSpecs, ActName,

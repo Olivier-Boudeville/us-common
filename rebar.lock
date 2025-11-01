@@ -1,6 +1,6 @@
 [{<<"myriad">>,
   {git,"https://github.com/Olivier-Boudeville/Ceylan-Myriad.git",
-       {ref,"14135bdb1b5f4680d96f7e10ddc858908136795c"}},
+       {ref,"161007025c27f0e4944969274da733a61b6042e0"}},
   0},
  {<<"traces">>,
   {git,"https://github.com/Olivier-Boudeville/Ceylan-Traces.git",

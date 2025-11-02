@@ -1024,6 +1024,7 @@ interpret_failure_report( FailureReport ) ->
                        [ FailureReport ] ).
 
 
+
 -doc """
 Tells whether the specified result conforms to the specified result
 specification.

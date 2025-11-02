@@ -710,7 +710,7 @@ apply_arguments( ReqName, ActualArgs, ArgTokens, ResSpec, State ) ->
 
                 % Abnormal:
                 key_not_found ->
-                    ""
+                    " (no request module identified)"
 
             end,
 

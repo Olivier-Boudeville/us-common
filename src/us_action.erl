@@ -183,8 +183,7 @@ For example: `{14, top}`.
 The user-level specification of an action argument, either statically-defined
 (i.e. at action definition time) or dynamically-supplied (i.e. at call time).
 
-For example: `{dynamic, lengths, "[float()]", "The rod lengths, in
-meters"}`.
+For example: `{dynamic, lengths, "[float()]", "The rod lengths, in meters"}`.
 """.
 -type user_arg_spec() ::
 
@@ -202,8 +201,8 @@ meters"}`.
 -doc """
 The internal specification of an action argument.
 
-For example: `{dynamic, lengths, {list, {float,[]}}, <<"The rod lengths, in
-meters">>}`.
+For example: `{dynamic, lengths, "[float()]", {list, {float,[]}},
+<<"The rod lengths, in meters">>}`.
 """.
 -type arg_spec() :: static_arg_spec() | dynamic_arg_spec().
 
@@ -213,10 +212,15 @@ meters">>}`.
     { 'static', static_value(), option( description() ) }.
 
 
--doc "The internal specification of a dynamic action argument.".
--type dynamic_arg_spec() ::
-    { 'dynamic', arg_name(), explicit_type(), option( description() ) }.
+-doc """
+The internal specification of a dynamic action argument.
 
+The user-specified text type is kept for any user-level interaction - in which
+higher-level types (like "string()") shall be used, rather than lower-level,
+more explicit ones like "[integer()]".
+""".
+-type dynamic_arg_spec() :: { 'dynamic', arg_name(), text_type(),
+                              explicit_type(), option( description() ) }.
 
 -doc """
 Describes, as a name, an argument of an action.
@@ -260,6 +264,9 @@ request may have little interest.
 -doc """
 The internal specification of a result.
 
+We keep here also the user-specified text type, for the clarity of any next user
+interaction.
+
 The (explicit, generally derived from a user-defined contextual one) type
 corresponds to the returned type of the corresponding implementation request
 (for example `ReturnT :: basic_utils:fallible/2`).
@@ -267,7 +274,8 @@ corresponds to the returned type of the corresponding implementation request
 If controlling the return type, we recommend relying on fallible-like types (for
 example `ReturnT :: basic_utils:fallible/2`, or `successful/1`).
 """.
--type result_spec() :: option( { explicit_type(), option( description() ) } ).
+-type result_spec() ::
+    option( { text_type(), explicit_type(), option( description() ) } ).
 
 
 
@@ -742,7 +750,7 @@ canonicalise_arg_spec( ArgSpec={ dynamic, ArgName, ArgTypeStr, MaybeUserDesc },
 
     MaybeBinDesc = text_utils:ensure_maybe_binary( MaybeUserDesc ),
 
-    { dynamic, ArgName, ArgExplType, MaybeBinDesc };
+    { dynamic, ArgName, ArgTypeStr, ArgExplType, MaybeBinDesc };
 
 canonicalise_arg_spec( _ArgSpec={ dynamic, ArgName, ArgTypeStr }, ActName,
                        TypedefTable ) ->
@@ -796,7 +804,7 @@ canonicalise_result_spec( ResSpec={ ResTypeStr, MaybeUserDesc }, ActName,
 
     MaybeBinDesc = text_utils:ensure_maybe_binary( MaybeUserDesc ),
 
-    { ResExplType, MaybeBinDesc };
+    { ResTypeStr, ResExplType, MaybeBinDesc };
 
 canonicalise_result_spec( _ResSpec=ResTypeStr, ActName, TypedefTable ) ->
     canonicalise_result_spec( { ResTypeStr, _MaybeUserDesc=undefined },
@@ -852,8 +860,8 @@ perform_action( ActionName, Args, ServerPid ) ->
 -doc "Returns the number of dynamic arguments among the specified arguments.".
 -spec count_dynamic_arguments( [ arg_spec() ] ) -> count().
 count_dynamic_arguments( ArgSpecs ) ->
-    length( [ DynArgSpec || DynArgSpec={ dynamic, _ArgName, _ArgTypeStr,
-                                         _MaybeUserDesc } <- ArgSpecs ] ).
+    length( [ DynArgSpec || DynArgSpec={ dynamic, _ArgName, _ArgTextType,
+                                _ArgExplType, _MaybeBinDesc } <- ArgSpecs ] ).
 
 
 -doc """
@@ -914,11 +922,14 @@ coerce_token_arguments( ArgsTokens,
 
 % Associate a dynamic argument to its type:
 coerce_token_arguments( _ArgsTokens=[ ArgToken | TTokens ],
-        _ArgSpecs=[ { dynamic, ArgName, ArgType, _MaybeBinDesc } | TArgSpecs ],
+        _ArgSpecs=[ { dynamic, ArgName, ArgTextType, ArgExplType,
+                      _MaybeBinDesc } | TArgSpecs ],
         ActName, FullArgTokens, Args ) ->
 
-    trace_bridge:debug_fmt( "Coercing argument token '~p' into type '~p'.",
-                            [ ArgToken, ArgType ] ),
+    cond_utils:if_defined( us_common_debug_actions, trace_bridge:debug_fmt(
+        "Coercing argument token '~p' into type '~p' (obtained from '~ts').",
+        [ ArgToken, ArgExplType, ArgTextType ] ),
+        basic_utils:ignore_unused( ArgTextType ) ),
 
     % For most types, there is no problem; for example specifying on the
     % command-line "1.23" will be translated in 1.23, as expected by {float,[]}.
@@ -933,7 +944,7 @@ coerce_token_arguments( _ArgsTokens=[ ArgToken | TTokens ],
     % not happen, as words must have been split before).
     %
     % So now we auto-quote tokens whose expected (explicit) type is string:
-    QuoteFreeArgToken = case ArgType of
+    QuoteFreeArgToken = case ArgExplType of
 
         { list, {integer,[]} } -> % i.e. string()
             % Also a switch from binary to plain string:
@@ -944,7 +955,8 @@ coerce_token_arguments( _ArgsTokens=[ ArgToken | TTokens ],
 
     end,
 
-    case type_utils:coerce_stringified_to_type( QuoteFreeArgToken, ArgType ) of
+    case type_utils:coerce_stringified_to_type( QuoteFreeArgToken,
+                                                ArgExplType ) of
 
         { ok, ActualArg } ->
             coerce_token_arguments( TTokens, TArgSpecs, ActName,
@@ -1033,7 +1045,8 @@ specification.
 is_result_matching_spec( _Res, _ResSpec=undefined ) ->
    true;
 
-is_result_matching_spec( Res, _ResSpec={ CtxtType, _MaybeBinDesc } ) ->
+is_result_matching_spec( Res,
+                         _ResSpec={ _TextType, CtxtType, _MaybeBinDesc } ) ->
    type_utils:is_of_type( Res, CtxtType ).
 
 
@@ -1198,21 +1211,24 @@ args_to_string( ArgSpecs ) ->
 
 -doc "Returns a textual description of the specified argument specification.".
 -spec arg_spec_to_string( arg_spec() ) -> ustring().
-arg_spec_to_string( { static, ArgValue, _MaybeDesc=undefined } ) ->
+arg_spec_to_string( { static, ArgValue, _MaybeBinDesc=undefined } ) ->
     text_utils:format( "static argument of value '~p'", [ ArgValue ] );
 
 arg_spec_to_string( { static, ArgValue, BinDesc } ) ->
     text_utils:format( "static argument of value '~p', described as '~ts'",
                        [ ArgValue, BinDesc ] );
 
-arg_spec_to_string( { dynamic, ArgName, ArgCtxtType, _MaybeDesc=undefined } ) ->
-    text_utils:format( "dynamic argument named '~ts', of contextual type ~ts",
-                       [ ArgName, type_utils:type_to_string( ArgCtxtType ) ] );
+arg_spec_to_string( { dynamic, ArgName, ArgTextType, ArgExplType,
+                      _MaybeBinDesc=undefined } ) ->
+    text_utils:format( "dynamic argument named '~ts', of user-level type '~ts' "
+        "(explicit type: ~ts)",
+        [ ArgName, ArgTextType, type_utils:type_to_string( ArgExplType ) ] );
 
-arg_spec_to_string( { dynamic, ArgName, ArgCtxtType, BinDesc } ) ->
-    text_utils:format( "dynamic argument named '~ts', of contextual type ~ts, "
-        "described as '~ts'",
-        [ ArgName, type_utils:type_to_string( ArgCtxtType ), BinDesc ] ).
+arg_spec_to_string( { dynamic, ArgName, ArgTextType, ArgExplType, BinDesc } ) ->
+    text_utils:format( "dynamic argument named '~ts', of user-level type '~ts' "
+        "(explicit type: ~ts), described as '~ts'",
+        [ ArgName, ArgTextType, type_utils:type_to_string( ArgExplType ),
+          BinDesc ] ).
 
 
 
@@ -1221,13 +1237,15 @@ arg_spec_to_string( { dynamic, ArgName, ArgCtxtType, BinDesc } ) ->
 result_spec_to_string( _ResSpec=undefined ) ->
     "a value whose type will not be checked";
 
-result_spec_to_string( _ResSpec={ ResCtxtType, _MaybeDescBinStr=undefined } ) ->
-    text_utils:format( "a value of type ~ts",
-                       [ type_utils:type_to_string( ResCtxtType ) ] );
+result_spec_to_string(
+        _ResSpec={ ResTextType, ResExplType, _MaybeDescBinStr=undefined } ) ->
+    text_utils:format( "a value of user-level type '~ts' (explicit type: ~ts)",
+        [ ResTextType, type_utils:type_to_string( ResExplType ) ] );
 
-result_spec_to_string( _ResSpec={ ResCtxtType, DescBinStr } ) ->
-    text_utils:format( "a value of type ~ts, described as '~ts'",
-        [ type_utils:type_to_string( ResCtxtType ), DescBinStr ] ).
+result_spec_to_string( _ResSpec={ ResTextType, ResExplType, DescBinStr } ) ->
+    text_utils:format( "a value of user-level type '~ts' (explicit type: ~ts), "
+                       "described as '~ts'",
+        [ ResTextType, type_utils:type_to_string( ResExplType ), DescBinStr ] ).
 
 
 
@@ -1375,8 +1393,8 @@ action_info_to_help_string( #action_info{ splitter=ActSplitter,
 describe_dynamic_arguments( ArgSpecs ) ->
 
     % Filter out static arguments:
-    DynamicArgSpec = [ DArgS
-        || DArgS={ dynamic, _ArgName, _ArgCtxtType, _BinDesc } <- ArgSpecs ],
+    DynamicArgSpec = [ DArgS || DArgS={ dynamic, _ArgName, _ArgTextType,
+                                        _ArgExplType, _BinDesc } <- ArgSpecs ],
 
     case DynamicArgSpec of
 
@@ -1401,10 +1419,10 @@ describe_dynamic_arguments( ArgSpecs ) ->
 -doc "Returns a textual help for the specified dynamic argument specification.".
 -spec arg_spec_to_help_string( dynamic_arg_spec() ) -> ustring().
 arg_spec_to_help_string(
-        { dynamic, ArgName, CtxtType, _MaybeBinDesc=undefined } ) ->
-    text_utils:format( "'~ts' of type ~ts",
-                       [ ArgName, type_utils:type_to_string( CtxtType )] );
+        { dynamic, ArgName, TextType, _ExplType, _MaybeBinDesc=undefined } ) ->
+    % User type (not explicit one):
+    text_utils:format( "'~ts' of type ~ts", [ ArgName, TextType ] );
 
-arg_spec_to_help_string( { dynamic, ArgName, CtxtType, BinDesc } ) ->
+arg_spec_to_help_string( { dynamic, ArgName, TextType, _ExplType, BinDesc } ) ->
     text_utils:format( "~ts: '~ts' of type ~ts",
-        [ BinDesc, ArgName, type_utils:type_to_string( CtxtType ) ] ).
+        [ BinDesc, ArgName, TextType ] ).

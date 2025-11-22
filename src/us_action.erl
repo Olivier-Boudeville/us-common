@@ -1081,24 +1081,22 @@ action_info_to_string( #action_info{ server_lookup_info=SrvLookupInfo,
                                      arg_specs=ArgSpecs,
                                      result_spec=ResultSpec,
                                      request_name=ReqName,
-                                     description=undefined } ) ->
+                                     description=MaybeBinDesc } ) ->
     ArgCount = length( ArgSpecs ),
-    text_utils:format( "action ~ts/~B (splitter: ~p), ~ts and "
-        "returning ~ts, ~ts, mapped to ~ts",
-        [ ActName, ArgCount, Splitter, args_to_string( ArgSpecs ),
-          result_spec_to_string( ResultSpec ), get_impl_string( SrvLookupInfo ),
-          mapping_to_string( ReqName, ArgCount ) ] );
 
-action_info_to_string( #action_info{ server_lookup_info=SrvLookupInfo,
-                                     action_name=ActName,
-                                     arg_specs=ArgSpecs,
-                                     result_spec=ResultSpec,
-                                     request_name=ReqName,
-                                     description=BinDescStr } ) ->
-    ArgCount = length( ArgSpecs ),
-    text_utils:format( "action ~ts/~B, described as '~ts', ~ts "
-        "and returning ~ts, ~ts, mapped to ~ts",
-        [ ActName, ArgCount, BinDescStr, args_to_string( ArgSpecs ),
+    DescStr = case MaybeBinDesc of
+
+        undefined ->
+            "";
+
+        BinDesc ->
+            text_utils:format( ", described as '~ts'", [ BinDesc ] )
+
+    end,
+
+    text_utils:format( "action ~ts/~B (splitter: ~p)~ts, ~ts and "
+        "returning ~ts, ~ts, mapped to ~ts",
+        [ ActName, ArgCount, Splitter, DescStr, args_to_string( ArgSpecs ),
           result_spec_to_string( ResultSpec ), get_impl_string( SrvLookupInfo ),
           mapping_to_string( ReqName, ArgCount ) ] ).
 

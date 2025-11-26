@@ -78,7 +78,7 @@ Examples of such user action specs:
   schedulePeriodicalActionOnDevice, [{static, tv_plug, "target device short
   name"}, {static, switch_on, "Device operation"}, {static,
   {next_possible_today, {19,54,0}}, "Start time"}, {static, {1,0,0,0}, "DHMS
-  periodicity"}]}`
+  periodicity"}], true}`
 
 - `{switch_device, undefined, switchDevice, [{dynamic, string, "Device
   identifier"}, {dynamic, "atom()", "'on' or 'off'"}, {static, no_timeout}],
@@ -88,9 +88,15 @@ Examples of such user action specs:
 
     % Most complete form:
     { action_name(), option( user_description() ),
-      request_name(), [ user_arg_spec() ], user_result_spec() }
+      request_name(), [ user_arg_spec() ], user_result_spec(),
+      AutoStart :: boolean() }
 
-    % Nnote that the last element of the tuple is removed at each next new type:
+    % Note that the last element of the tuple is removed at each next new
+    % subtype:
+
+    % No auto-start:
+  | { action_name(), option( user_description() ),
+      request_name(), [ user_arg_spec() ], user_result_spec() }
 
     % No result spec specified, so the 'unchecked_result' policy will apply:
   | { action_name(), option( user_description() ),
@@ -547,7 +553,8 @@ registration-time, and is not stored.
         typedef_table(), classname() ) -> { action_id(), action_table() }.
 % Full spec:
 register_action_spec( UserActSpec={ ActName, MaybeDesc, RequestName,
-        ArgSpecs, ResSpec }, ActTable, TypedefTable, SrvClassname ) ->
+        ArgSpecs, ResSpec, AutoStart }, ActTable, TypedefTable,
+        SrvClassname ) ->
 
     is_atom( ActName ) orelse begin
 
@@ -570,7 +577,16 @@ register_action_spec( UserActSpec={ ActName, MaybeDesc, RequestName,
     % Incremented for the State:
     check_action_mapping( RequestName, _Arity=ArgCount+1, SrvClassname ),
 
-    ActId = { ActName, count_dynamic_arguments( CanonArgSpecs ) },
+    is_boolean( AutoStart ) orelse
+        throw( { invalid_autostart_setting, AutoStart, UserActSpec } ),
+
+    DynArgCount = count_dynamic_arguments( CanonArgSpecs ),
+
+    AutoStart andalso DynArgCount > 0 andalso
+        throw( { autostarted_action_cannot_have_dynamic_arguments, DynArgCount,
+                 UserActSpec } ),
+
+    ActId = { ActName, DynArgCount },
 
     table:has_entry( _K=ActId, ActTable ) andalso begin
 
@@ -585,6 +601,7 @@ register_action_spec( UserActSpec={ ActName, MaybeDesc, RequestName,
     ActInfo = #action_info{ action_name=ActName,
                             arg_specs=CanonArgSpecs,
                             result_spec=CanonResSpec,
+                            autostart=AutoStart,
                             request_name=RequestName,
                             description=MaybeBinDesc },
 
@@ -596,6 +613,15 @@ register_action_spec( UserActSpec={ ActName, MaybeDesc, RequestName,
 
     { ActId, NewActTable };
 
+
+% No AutoStart specified, defaulting to false:
+register_action_spec(
+        _UserActSpec={ ActName, MaybeDesc, RequestName, ArgSpecs, ResSpec },
+        ActTable, TypedefTable, SrvClassname ) ->
+    register_action_spec( { ActName, MaybeDesc, RequestName, ArgSpecs, ResSpec,
+        _AutoStart=false }, ActTable, TypedefTable, SrvClassname );
+
+
 % No request spec specified, so the 'unchecked_result' policy will apply:
 register_action_spec(
         _UserActSpec={ ActName, MaybeDesc, RequestName, ArgSpecs },
@@ -603,17 +629,20 @@ register_action_spec(
     register_action_spec( { ActName, MaybeDesc, RequestName, ArgSpecs,
         _UsrResSpec=unchecked_result }, ActTable, TypedefTable, SrvClassname );
 
+
 % No argument spec:
 register_action_spec( _UserActSpec={ ActName, MaybeDesc, ReqName },
                        ActTable, TypedefTable, SrvClassname ) ->
     register_action_spec( { ActName, MaybeDesc, ReqName, _ArgSpecs=[] },
                           ActTable, TypedefTable, SrvClassname );
 
+
 % No request name, using the action one:
 register_action_spec( _UserActSpec={ ActName, MaybeDesc }, ActTable,
                       TypedefTable, SrvClassname ) ->
     register_action_spec( { ActName, MaybeDesc, _ReqName=ActName }, ActTable,
                           TypedefTable, SrvClassname );
+
 
 % Not even a description:
 register_action_spec( _UserActSpec=ActName, ActTable, TypedefTable,
@@ -1053,7 +1082,7 @@ is_result_matching_spec( Res,
 
 -doc "Returns a textual description of the specified action identifier.".
 -spec action_id_to_string( action_id() ) -> ustring().
-action_id_to_string( _ActionInfo={ ActName, ActArity } ) ->
+action_id_to_string( _ActId={ ActName, ActArity } ) ->
     text_utils:format( "~ts/~B", [ ActName, ActArity ] ).
 
 
@@ -1080,6 +1109,7 @@ action_info_to_string( #action_info{ server_lookup_info=SrvLookupInfo,
                                      splitter=Splitter,
                                      arg_specs=ArgSpecs,
                                      result_spec=ResultSpec,
+                                     autostart=IsAutoStart,
                                      request_name=ReqName,
                                      description=MaybeBinDesc } ) ->
     ArgCount = length( ArgSpecs ),
@@ -1094,11 +1124,16 @@ action_info_to_string( #action_info{ server_lookup_info=SrvLookupInfo,
 
     end,
 
+    AutoStr = case IsAutoStart of
+                    true -> "";
+                    false -> "not "
+              end ++"auto-started",
+
     text_utils:format( "action ~ts/~B (splitter: ~p)~ts, ~ts and "
-        "returning ~ts, ~ts, mapped to ~ts",
+        "returning ~ts, ~ts, ~ts, mapped to ~ts",
         [ ActName, ArgCount, Splitter, DescStr, args_to_string( ArgSpecs ),
           result_spec_to_string( ResultSpec ), get_impl_string( SrvLookupInfo ),
-          mapping_to_string( ReqName, ArgCount ) ] ).
+          AutoStr, mapping_to_string( ReqName, ArgCount ) ] ).
 
 
 

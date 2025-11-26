@@ -36,7 +36,7 @@ It centralises states and behaviours on their behalf.
 
 
 % Exported helpers:
--export([ register_name/3, unregister_name/1,
+-export([ register_name/3, unregister_name/1, execute_action/3,
           send_action_trace/3, send_action_trace_fmt/4, to_string/1 ]).
 
 

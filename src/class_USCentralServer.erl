@@ -200,6 +200,7 @@ In our conventions:
 -type action_token() :: us_action:action_token().
 -type action_id() :: us_action:action_id().
 -type action_table() :: us_action:action_table().
+-type action_info() :: us_action:action_info().
 -type header_info() :: us_action:header_info().
 
 -type emitter_init() :: class_TraceEmitter:emitter_init().
@@ -455,8 +456,11 @@ finalise_action_setup( State ) ->
         "Now that all automated actions are known, ~ts",
         [ us_action:action_table_to_string( FinalActTable ) ], State ),
 
+    % And finally just start the ones that must be autostarted:
+    AutoState = auto_start_actions( FinalActTable, State ),
 
-    setAttributes( State, [ { action_table, FinalActTable },
+
+    setAttributes( AutoState, [ { action_table, FinalActTable },
                             { header_info, FullHdInfo },
                             { action_spell_tree, ActSpellTree } ] ).
 
@@ -514,6 +518,48 @@ update_for_splitter( ActName, Splitter,
 update_for_splitter( ActName, Splitter, _ActEntries=[ E | T ], AccEntries ) ->
     update_for_splitter( ActName, Splitter, T,[ E | AccEntries ] ).
 
+
+
+-doc "Triggers the actions that shall be started at startup.".
+-spec auto_start_actions( action_table(), wooper:state() ) -> wooper:state().
+auto_start_actions( ActTable, State ) ->
+
+    ToStartActInfos = [ ActInfo
+        || ActInfo=#action_info{ autostart=true } <- table:values( ActTable ) ],
+
+    case ToStartActInfos of
+
+        [] ->
+            ?info( "No autostart action found." ),
+            State;
+
+        _ ->
+            ?info_fmt( "Applying ~B autostart actions.",
+                       [ length( ToStartActInfos ) ] ),
+            lists:foldl( fun auto_start_action/2, _Acc0=State,
+                         _List=ToStartActInfos )
+
+    end.
+
+
+
+% (helper)
+-spec auto_start_action( action_info(), wooper:state() ) -> wooper:state().
+auto_start_action( ActInfo=#action_info{ action_name=ActName }, State ) ->
+    % By design with no dynamic argument:
+    case class_USServer:execute_action( ActInfo, _ArgTokens=[], State ) of
+
+        { { action_done, ActRes }, DoneState } ->
+            ?debug_fmt( "Auto-starting action ~ts done, and resulted in: ~p.",
+                        [ ActName, ActRes ] ),
+            DoneState;
+
+        { { action_failed, FailureReport }, FailState } ->
+            ?error_fmt( "Auto-starting action ~ts failed: ~p.",
+                        [ ActName, FailureReport ] ),
+            FailState
+
+    end.
 
 
 

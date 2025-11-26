@@ -31,8 +31,7 @@
     % Any naming-related lookup information for the server actually implementing
     % that action ('undefined' if directly implemented by this local server):
     %
-    server_lookup_info = 'undefined'
-        :: option( naming_utils:lookup_info() ),
+    server_lookup_info = 'undefined' :: option( naming_utils:lookup_info() ),
 
     % The name of that action:
     action_name :: us_action:action_name(),
@@ -45,6 +44,9 @@
 
     % Any type and possibly description, or no checking at all:
     result_spec :: us_action:result_spec(),
+
+    % Tells whether this action shall be automatically started at server launch:
+    autostart :: boolean(),
 
     % The actual request this action maps to:
     request_name :: wooper:request_name(),

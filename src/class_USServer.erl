@@ -37,7 +37,8 @@ It centralises states and behaviours on their behalf.
 
 % Exported helpers:
 -export([ register_name/3, unregister_name/1, execute_action/3,
-          send_action_trace/3, send_action_trace_fmt/4, to_string/1 ]).
+          apply_arguments/5, send_action_trace/3, send_action_trace_fmt/4,
+          to_string/1 ]).
 
 
 -doc "The PID of a US server.".
@@ -547,7 +548,8 @@ performActionFromTokens( State, Tokens ) ->
             end;
 
         { error, ActionIdErrorTerm } ->
-            send_action_trace_fmt( warning, "No action identifier could be "
+            % Was warning, yet user errors are too frequent:
+            send_action_trace_fmt( notice, "No action identifier could be "
                 "determined from tokens '~p':~n ~p",
                 [ Tokens, ActionIdErrorTerm ], State ),
 
@@ -651,17 +653,25 @@ execute_action( ActInfo=#action_info{ server_lookup_info=ImplSrvLookupInfo,
     end.
 
 
+                            class_USServer:apply_action( ActionInfo, ActArgs,
+                                                         AccState )
 
-% (helper)
+
+-doc """
+Applies the specified arguments to the specified request, checking the result.
+
+Any action tokens are specified only to account for indirect, token-based calls.
+""".
 -spec apply_arguments( request_name(), [ us_action:argument() ],
-    [ action_token() ], us_action:result_spec(), wooper:state() ) ->
+    option( [ action_token() ] ), us_action:result_spec(), wooper:state() ) ->
                                         { action_outcome(), wooper:state() }.
-apply_arguments( ReqName, ActualArgs, ArgTokens, ResSpec, State ) ->
+apply_arguments( ReqName, ActualArgs, MaybeArgTokens, ResSpec, State ) ->
+
+    Arity = length( ActualArgs ) + 1,
 
     cond_utils:if_defined( us_common_debug_actions, send_action_trace_fmt(
         debug, "Executing now request ~ts/~B, with the following non-state "
-        "arguments:~n ~p",
-        [ ReqName, length( ActualArgs )+1, ActualArgs ], State ) ),
+        "arguments:~n ~p", [ ReqName, Arity, ActualArgs ], State ) ),
 
     % ActualRes is opaque (possibly of the fallible/2 type):
     try executeRequest( State, ReqName, ActualArgs ) of
@@ -674,8 +684,7 @@ apply_arguments( ReqName, ActualArgs, ArgTokens, ResSpec, State ) ->
                     send_action_trace_fmt( debug, "Executed request ~ts/~B "
                         "with the following non-state arguments:~n ~p~n"
                         "This request got following result:~n ~p",
-                        [ ReqName, length( ActualArgs )+1, ActualArgs,
-                          ActualRes ], ExecState ),
+                        [ ReqName, Arity, ActualArgs, ActualRes ], ExecState ),
 
                     { _Outcome={ action_done, ActualRes }, ExecState };
 
@@ -685,7 +694,7 @@ apply_arguments( ReqName, ActualArgs, ArgTokens, ResSpec, State ) ->
                         "with the following non-state arguments:~n ~p~n"
                         "This request returned a result that "
                         "does not match its result specification (~p):~n ~p",
-                        [ ReqName, length( ActualArgs )+1, ActualArgs,
+                        [ ReqName, Arity, ActualArgs,
                           us_action:result_spec_to_string( ResSpec ),
                           ActualRes ], ExecState ),
 
@@ -700,8 +709,6 @@ apply_arguments( ReqName, ActualArgs, ArgTokens, ResSpec, State ) ->
 
         throw:Error:Stacktrace ->
 
-            Arity = length( ArgTokens ) + 1,
-
             ClassStr = case wooper_lookup_method( State, ReqName, Arity ) of
 
                 { value, ImplClassname } ->
@@ -710,16 +717,26 @@ apply_arguments( ReqName, ActualArgs, ArgTokens, ResSpec, State ) ->
 
                 % Abnormal:
                 key_not_found ->
-                    " (no request module identified)"
+                    " (whereas no request implementation module was identified)"
+
+            end,
+
+            TokenStr = case MaybeArgTokens of
+
+                undefined ->
+                    "";
+
+                 ArgTokens ->
+                    text_utils:format( ", based on the following non-state "
+                        "argument tokens:~n ~p~n", [ ArgTokens ] )
 
             end,
 
             send_action_trace_fmt( error, "Exception thrown when executing "
-                "the action-implementation ~ts/~B request~ts, based on "
-                "the following non-state argument tokens:~n ~p~n~n"
+                "the action-implementation ~ts/~B request~ts~ts.~n"
                 "The triggered exception is:~n ~p~n~n"
                 "The corresponding stacktrace is: ~ts",
-                [ ReqName, Arity, ClassStr, ArgTokens, Error,
+                [ ReqName, Arity, ClassStr, TokenStr, Error,
                   code_utils:interpret_stacktrace( Stacktrace ) ], State ),
 
             FailureReport = { exception_thrown, Error },

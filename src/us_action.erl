@@ -65,20 +65,23 @@ If no result spec is defined, the `unchecked_result` default will apply: the
 type of the result returned by the implementation request will not be checked
 against a user-specified one.
 
-Examples of such user action specs:
+Examples of such user action specs (typically specified in an
+home_automation_action_specs section):
 
 - `startAlarm` (yet we recommend defining a user-targeted, snake-cased, specific
   action name)
 
-- `{stop_room_heating, "switch off the heating of my room", actOnDevice,
-  [{static, room_heater_plug, "target device short name"}, {static, switch_off,
+- `{stop_room_heating, "switches off the heating of my room", actOnDevice, [{
+  static, room_heater_plug, "Target device short name"}, {static, switch_off,
   "Device operation"}]}`
 
-- `{start_tv, "switch on the television each day at 19h54, starting from today",
-  schedulePeriodicalActionOnDevice, [{static, tv_plug, "target device short
-  name"}, {static, switch_on, "Device operation"}, {static,
-  {next_possible_today, {19,54,0}}, "Start time"}, {static, {1,0,0,0}, "DHMS
-  periodicity"}], true}`
+- `{enable_tv_autostart, "Enables the switching on, provided somebody is at
+  home, of the television each day at 19h54, starting from today",
+  schedulePeriodicalActionOnDevice, [{static, tv_plug, "The short name of the
+  smart plug controlling the TV"}, {static, switch_on_if_at_home, "Device
+  operation"}, {static, {next_possible_day, {19,54,0}}, "Start time"}, {static,
+  {1,0,0,0}, "DHMS periodicity" }, {static, unlimited, "Schedule count"}], "{ok,
+  string()}", true}`
 
 - `{switch_device, undefined, switchDevice, [{dynamic, string, "Device
   identifier"}, {dynamic, "atom()", "'on' or 'off'"}, {static, no_timeout}],
@@ -433,7 +436,6 @@ synchronisation.
                user_action_header/0, action_header/0,
                user_action_spec/0, user_action_specs/0,
                action_spec/0, action_name/0,
-
                argument_kind/0, argument_name/0, static_value/0,
                user_arg_spec/0,
                arg_spec/0, static_arg_spec/0, dynamic_arg_spec/0,

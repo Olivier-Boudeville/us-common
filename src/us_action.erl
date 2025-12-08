@@ -327,8 +327,11 @@ to be directly returned by an implementation request.
 
 % Defined as used more than once:
 -doc "Error when type-coercing an argument value.".
--type coerce_token_error() :: { 'invalid_argument_type', argument_name(),
-                                type_utils:type_coercion_error(), action_id() }.
+-type coerce_token_error() ::
+    ustring()
+  | { 'invalid_argument_type', argument_name(),
+      type_utils:type_coercion_error(), action_id() }.
+
 
 
 -doc """
@@ -449,7 +452,9 @@ synchronisation.
 
 -export([ register_action_specs/5, init_header_info/0, merge_action_tables/4,
           perform_action/2, perform_action/3,
-          get_action_id/1, coerce_token_arguments/3, interpret_failure_report/1,
+          get_action_id/1,
+          coerce_token_arguments/3, integrate_dynamic_arguments/3,
+          interpret_failure_report/1,
           is_result_matching_spec/2,
           action_id_to_string/1, action_id_to_detailed_string/1,
           action_table_to_string/1, action_tables_to_string/2,
@@ -922,19 +927,15 @@ Throws an exception on failure.
 -spec coerce_token_arguments( [ action_token() ], [ arg_spec() ],
         action_name() ) -> fallible( [ argument() ], coerce_token_error() ).
 coerce_token_arguments( ArgTokens, ArgSpecs, ActName ) ->
-    coerce_token_arguments( ArgTokens, ArgSpecs, ActName,
-        % Second, kept-as-is ArgTokens to compute action arity if needed:
-        ArgTokens, _Args=[] ).
+    coerce_token_arguments( ArgTokens, ArgSpecs, ActName, _Args=[] ).
 
 
 % (helper)
-coerce_token_arguments( _ArgsTokens=[], _ArgSpecs=[], _ActName, _FullArgTokens,
-                        Args ) ->
+coerce_token_arguments( _ArgsTokens=[], _ArgSpecs=[], _ActName, Args ) ->
     { ok, lists:reverse( Args ) };
 
 % Not expected to happen:
-coerce_token_arguments( ExtraArgsTokens, _ArgSpecs=[], ActName, _FullArgTokens,
-                        _Args ) ->
+coerce_token_arguments( ExtraArgsTokens, _ArgSpecs=[], ActName, _Args ) ->
 
     DiagStr = text_utils:format( "~B extraneous argument(s) received "
         "for action '~ts':~n ~p",
@@ -946,16 +947,15 @@ coerce_token_arguments( ExtraArgsTokens, _ArgSpecs=[], ActName, _FullArgTokens,
 % Insert literally, in-place, any static argument:
 coerce_token_arguments( ArgsTokens,
                         _ArgSpecs=[ { static, Arg, _MaybeBinDesc } | T ],
-                        ActName, FullArgTokens, Args ) ->
-    coerce_token_arguments( ArgsTokens, T, ActName, FullArgTokens,
-                            [ Arg | Args ] );
+                        ActName, Args ) ->
+    coerce_token_arguments( ArgsTokens, T, ActName, [ Arg | Args ] );
 
 
 % Associate a dynamic argument to its type:
 coerce_token_arguments( _ArgsTokens=[ ArgToken | TTokens ],
         _ArgSpecs=[ { dynamic, ArgName, ArgTextType, ArgExplType,
                       _MaybeBinDesc } | TArgSpecs ],
-        ActName, FullArgTokens, Args ) ->
+        ActName, Args ) ->
 
     cond_utils:if_defined( us_common_debug_actions, trace_bridge:debug_fmt(
         "Coercing argument token '~p' into type '~p' (obtained from '~ts').",
@@ -991,7 +991,7 @@ coerce_token_arguments( _ArgsTokens=[ ArgToken | TTokens ],
 
         { ok, ActualArg } ->
             coerce_token_arguments( TTokens, TArgSpecs, ActName,
-                                    FullArgTokens, [ ActualArg | Args ] );
+                                    [ ActualArg | Args ] );
 
         % Argument coercing failed, all information returned:
         { error, TypeCoercionError } ->
@@ -1000,8 +1000,61 @@ coerce_token_arguments( _ArgsTokens=[ ArgToken | TTokens ],
     end;
 
 % Not expected to happen:
-coerce_token_arguments( _ArgsTokens=[], ArgSpecs, ActName, _FullArgTokens,
-                        _Args ) ->
+coerce_token_arguments( _ArgsTokens=[], ArgSpecs, ActName, _Args ) ->
+
+    DiagStr = text_utils:format( "~B argument(s) lacking for action '~ts'.",
+                                 [ length( ArgSpecs ), ActName ] ),
+
+    { error, DiagStr }.
+
+
+
+
+-doc """
+Tries to coerce any arguments obtained from the specified tokens into the
+expected ones, as they were specified, and to produce the expected final list of
+actual arguments.
+
+The caller is expected to have check that the number of tokens is correct.
+
+Throws an exception on failure.
+""".
+% Quite like coerce_token_arguments/3, yet we have already terms to integrate
+% directly instead of tokens to coerce into such terms first:
+%
+-spec integrate_dynamic_arguments( [ argument() ], [ arg_spec() ],
+        action_name() ) -> fallible( [ argument() ] ).
+integrate_dynamic_arguments( DynArgs, ArgSpecs, ActName ) ->
+    integrate_dynamic_arguments( DynArgs, ArgSpecs, ActName, _Args=[] ).
+
+
+% (helper)
+integrate_dynamic_arguments( _DynArgs=[], _ArgSpecs=[], _ActName, Args ) ->
+    { ok, lists:reverse( Args ) };
+
+% Not expected to happen:
+integrate_dynamic_arguments( DynArgs, _ArgSpecs=[], ActName, _Args ) ->
+
+    DiagStr = text_utils:format( "~B extraneous argument(s) received "
+        "for action '~ts':~n ~p",
+        [ length( DynArgs ), ActName, DynArgs ] ),
+
+    { error, DiagStr };
+
+% Insert literally, in-place, any static argument:
+integrate_dynamic_arguments( DynArgs,
+        _ArgSpecs=[ { static, Arg, _MaybeBinDesc } | T ], ActName, Args ) ->
+    integrate_dynamic_arguments( DynArgs, T, ActName, [ Arg | Args ] );
+
+% Insert also literally, in-place, any dynamic argument:
+integrate_dynamic_arguments( _DynArgs=[ DArg | TDArgs ],
+        _ArgSpecs=[ { dynamic, _ArgName, _ArgTextType, _ArgExplType,
+                      _MaybeBinDesc } | TArgSpecs ],
+        ActName, Args ) ->
+    integrate_dynamic_arguments( TDArgs, TArgSpecs, ActName, [ DArg | Args ] );
+
+% Not expected to happen:
+integrate_dynamic_arguments( _DynArgs=[], ArgSpecs, ActName, _Args ) ->
 
     DiagStr = text_utils:format( "~B argument(s) lacking for action '~ts'.",
                                  [ length( ArgSpecs ), ActName ] ),

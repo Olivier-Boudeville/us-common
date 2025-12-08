@@ -653,9 +653,6 @@ execute_action( ActInfo=#action_info{ server_lookup_info=ImplSrvLookupInfo,
     end.
 
 
-                            class_USServer:apply_action( ActionInfo, ActArgs,
-                                                         AccState )
-
 
 -doc """
 Applies the specified arguments to the specified request, checking the result.

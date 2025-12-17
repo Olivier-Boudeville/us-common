@@ -1251,11 +1251,15 @@ getActionId( State, _Tokens=[ ActionNamePfxBinStr | Args ] ) ->
             { error, action_service_not_ready };
 
         ActSpellTree ->
-            case spell_tree:resolve( ActionNamePfxBinStr, ActSpellTree ) of
+            % As for example SMS clients tend to auto-capitalise:
+            LowerActNameStr =
+                text_utils:lowercase_initial_letter( ActionNamePfxBinStr ),
+
+            case spell_tree:resolve( LowerActNameStr, ActSpellTree ) of
 
                 undefined ->
                     { error, { unresolved_action_name_prefix,
-                               ActionNamePfxBinStr } };
+                               LowerActNameStr } };
 
                 ActNameStr ->
                     ActId = { text_utils:string_to_atom( ActNameStr ),

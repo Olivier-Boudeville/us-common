@@ -76,6 +76,8 @@ It centralises states and behaviours on their behalf.
 -type count() :: basic_utils:count().
 
 -type ustring() :: text_utils:ustring().
+-type bin_string() :: text_utils:bin_string().
+
 -type trace_format() :: text_utils:trace_format().
 -type trace_values() :: text_utils:trace_values().
 
@@ -486,6 +488,26 @@ requestAutomatedActions( State, InstToNotifyPid ) ->
 
 -doc """
 Requests this server to perform the automated action (implemented locally or by
+another US server) corresponding to the specified token string.
+
+The PID of this server is returned so that callers may request multiple actions
+to be performed concurrently, yet still be able to match each outcome to each
+call.
+""".
+-spec performActionFromTokenString( wooper:state(), bin_string() ) ->
+                        request_return( { action_outcome(), server_pid() } ).
+performActionFromTokenString( State, TokenBinStr ) ->
+    TokenBinStrs = text_utils:split_at_whitespaces_non_empty( TokenBinStr ),
+
+    { PerfState, PairRes } = wooper:executeRequest( State,
+        performActionFromTokens, [ TokenBinStrs ] ),
+
+    wooper:return_state_result( PerfState, PairRes ).
+
+
+
+-doc """
+Requests this server to perform the automated action (implemented locally or by
 another US server) corresponding to the specified tokens.
 
 The PID of this server is returned so that callers may request multiple actions
@@ -497,7 +519,7 @@ call.
 performActionFromTokens( State, Tokens ) ->
 
     send_action_trace_fmt( debug,
-        "Performing action from the following ~B tokens: ~p.",
+        "Performing action from the following ~B token(s):~n ~p",
         [ length( Tokens ), Tokens ], State ),
 
     % A request, so that it can be overridden (typically by

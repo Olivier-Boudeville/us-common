@@ -53,6 +53,8 @@ For example: `us_{main,web}` or `us_foo`, the example taken here.
 -include_lib("myriad/include/myriad_script_include.hrl").
 
 
+-define( wait, 0 ).
+
 
 % Type shorthands:
 
@@ -113,10 +115,13 @@ setup( ServerPrefix, IsVerboseByDefault ) ->
         "Trying to connect to US server node '~ts', as client node '~ts'.",
         [ MainTargetNodeName, node() ] ),
 
+    % Test regarding the problem of overlapping partitions:
+    %timer:sleep( 500 ),
+
     ActualTargetNodeName = case net_adm:ping( MainTargetNodeName ) of
 
         pong ->
-            MainTargetNodeName;
+           MainTargetNodeName;
 
         pang ->
             trace_utils:warning_fmt( "Unable to connect to a target main "
@@ -376,22 +381,22 @@ teardown( IsVerbose ) ->
     IsVerbose andalso app_facilities:display( "Client terminating now "
         "(while known other nodes are ~w).", [ nodes() ] ),
 
-    % Feeble attempt of avoiding non-systematic "'global' at node us_foo@xxx
-    % requested disconnect from node 'us_foo_controller_exec-uu@yyy' in order
+    % Feeble attempt of avoiding non-systematic "'global' at node us_foo@fff
+    % requested disconnect from node 'us_foo_controller_exec-uu@mmm' in order
     % to prevent overlapping partitions":
     %
     % (far less brutal than erlang:halt/{0,1}, yet awfully slow, and
     % actually non-blocking)
     %
-    %global:disconnect(),
+    global:disconnect(),
 
-    %timer:sleep( 500 ),
+    %timer:sleep( ?wait ),
 
-    %global:sync(),
+    global:sync(),
 
     init:stop( _StatusCode=0 ),
 
-    %timer:sleep( 500 ),
+    %timer:sleep( ?wait ),
 
     % We thought that the actual reason was actually that the client host had a
     % firewall that blocked incoming EPMD (on a specific port) connections from
@@ -401,7 +406,20 @@ teardown( IsVerbose ) ->
     %
     % Finally the only solution left would be to resort to disabling this
     % prevent_overlapping_partitions options (see DIST_OPTS in Myriad's
-    % GNUmakevars.inc).
+    % GNUmakevars.inc), which is worse.
+    %
+    % Maybe that the actual reason for these overlapping warnings is in link
+    % with messages like ** Connection attempt from node us_foo@mmm
+    % rejected. Invalid challenge reply. ** and/or with the fact that sometimes
+    % us_foo@fff may be brutally killed (hence without letting its EPMD and
+    % other EPMDs know that it does not exist anymore).
+    %
+    % Or could it be that:
+    %  - another us_foo@mmm node interfere with us_foo@fff?
+    %  - or us_foo_controller_exec-uu@mmm is started, it connects directly to
+    %  us_foo@fff, which tries to contact back us_foo_controller_exec-uu@mmm
+    %  whereas the EMPD of the latter is not yet aware of its
+    %  us_foo_controller_exec-uu node?
 
 
     % ?app_stop should not be used here as its wait_for_any_trace_supervisor

@@ -163,9 +163,11 @@ prefixes, so that they get automatically abbreviated with shorter prefixes.
 Together with the action arity, it acts, in the context of an `action_id/0`, as
 a user-friendly identifier (for which no duplicates are thus allowed).
 
-The `snake_case` is preferred for them.
-
-For example: `start_alarm`.
+The `snake_case` is preferred for them; for example: `start_alarm`. They are
+indeed not supposed to start with a capital letter. However, as some
+action-related inputs (like SMS) tend to capitalise messages, an action name
+starting with a capital letter may be accepted as if it was starting in
+lowercase.
 """.
 -type action_name() :: atom().
 
@@ -558,7 +560,7 @@ registration-time, and is not stored.
 """.
 -spec register_action_spec( user_action_spec(), action_table(),
         typedef_table(), classname() ) -> { action_id(), action_table() }.
-% Full spec:
+% Full spec (only actual clause):
 register_action_spec( UserActSpec={ ActName, MaybeDesc, RequestName,
         ArgSpecs, ResSpec, AutoStart }, ActTable, TypedefTable,
         SrvClassname ) ->
@@ -572,6 +574,12 @@ register_action_spec( UserActSpec={ ActName, MaybeDesc, RequestName,
         throw( { invalid_action_name, ActName, UserActSpec } )
 
                               end,
+
+    ActNameFirstCharStr = [ hd( text_utils:atom_to_string( ActName ) ) ],
+
+    % As they are expected to start in lowercase:
+    ActNameFirstCharStr =:= string:lowercase( ActNameFirstCharStr ) orelse
+        throw( { capitalised_action_name, ActName, UserActSpec } ),
 
     MaybeBinDesc = text_utils:ensure_maybe_binary( MaybeDesc ),
 
@@ -906,7 +914,9 @@ command.
 """.
 -spec get_action_id( [ action_token() ] ) -> fallible( action_id() ).
 get_action_id( _Tokens=[ ActionNameBinStr | Args ] ) ->
-    ActName = text_utils:binary_to_atom( ActionNameBinStr ),
+    % As for example SMS clients tend to auto-capitalise:
+    LowerActNameStr = text_utils:lowercase_initial_letter( ActionNameBinStr ),
+    ActName = text_utils:string_to_atom( LowerActNameStr ),
     ActArity = length( Args ),
     { ok, _ActId={ ActName, ActArity } };
 
@@ -1085,38 +1095,38 @@ interpret_failure_report(
 
 interpret_failure_report( _FailureReport={ action_not_resolved,
         { unresolved_action_name_prefix, PfxBinStr } } ) ->
-    text_utils:format( "failed to resolve the specified prefix, '~ts', "
+    text_utils:format( "the specified prefix, '~ts', could not be resolved "
                        "into any known action.", [ PfxBinStr ] );
 
 interpret_failure_report( _FailureReport={ action_not_found, ActId } ) ->
-    text_utils:format( "no ~ts available; run the 'help' action for more "
+    text_utils:format( "no ~ts is available; run the 'help' action for more "
         "information.", [ action_id_to_detailed_string( ActId )] );
 
 interpret_failure_report( _FailureReport={ timed_out, TimeOutMs } ) ->
-    text_utils:format( "action timed-out after ~ts",
+    text_utils:format( "the action timed-out after ~ts",
                        [ time_utils:duration_to_string( TimeOutMs ) ] );
 
 interpret_failure_report( _FailureReport={ wrong_argument_count,
                                            ExpectedActArity, SeenActArity } ) ->
-    text_utils:format( "wrong number of arguments for action: expected ~B of "
-                       "them, got ~B.", [ ExpectedActArity, SeenActArity ] );
+    text_utils:format( "a wrong number of arguments was passed for action: "
+        "expected ~B of them, got ~B.", [ ExpectedActArity, SeenActArity ] );
 
 interpret_failure_report( _FailureReport={ invalid_argument_type, ArgName,
                                            TypeCoercionError } ) ->
     text_utils:format(
-        "unable to interpret the action argument named '~ts': ~ts.",
+        "the action argument named '~ts' could not be interpreted: ~ts.",
         [ ArgName,
           type_utils:interpret_type_coercion_error( TypeCoercionError ) ] );
 
 interpret_failure_report( _FailureReport=invalid_result_type ) ->
-    "invalid type returned by the action implementation.";
+    "the action implementation return an invalid type returned.";
 
 interpret_failure_report( _FailureReport={ exception_thrown, Exception } ) ->
-    text_utils:format( "action resulting in the following exception being "
+    text_utils:format( "the action resulted in the following exception being "
                        "thrown: ~p.", [ Exception ] );
 
 interpret_failure_report( FailureReport ) ->
-    text_utils:format( "unexpected action failure report:~n ~p",
+    text_utils:format( "an unexpected action failure report:~n ~p",
                        [ FailureReport ] ).
 
 

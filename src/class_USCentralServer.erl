@@ -1,4 +1,4 @@
-% Copyright (C) 2025-2025 Olivier Boudeville
+% Copyright (C) 2025-2026 Olivier Boudeville
 %
 % This file belongs to the US-Common project, a part of the Universal Server
 % framework.
@@ -550,12 +550,12 @@ auto_start_action( ActInfo=#action_info{ action_name=ActName }, State ) ->
     case class_USServer:execute_action( ActInfo, _ArgTokens=[], State ) of
 
         { { action_done, ActRes }, DoneState } ->
-            ?debug_fmt( "Auto-starting action ~ts done, and resulted in: ~p.",
+            ?debug_fmt( "Auto-starting action ~ts done, and resulted in:~n ~p",
                         [ ActName, ActRes ] ),
             DoneState;
 
         { { action_failed, FailureReport }, FailState } ->
-            ?error_fmt( "Auto-starting action ~ts failed: ~p.",
+            ?error_fmt( "Auto-starting action ~ts failed:~n ~p",
                         [ ActName, FailureReport ] ),
             FailState
 

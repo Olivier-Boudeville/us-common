@@ -1,4 +1,4 @@
-% Copyright (C) 2020-2025 Olivier Boudeville
+% Copyright (C) 2020-2026 Olivier Boudeville
 %
 % This file belongs to the US-Common project, a part of the Universal Server
 % framework.
@@ -1083,6 +1083,7 @@ timerTrigger( State, ScheduleOffsetMs ) ->
                         timer_table(), task_table(), wooper:state() ) ->
                             { schedule_plan(), timer_table(), task_table() }.
 % Abnormal case of an unhandled past schedule (we still compensate for it):
+% (possibly rather consecutive timers happened in a swapped order)
 perform_schedule( ScheduleOffsetMs, NowMs,
                   _SchedulePlan=[ { OffMs, TaskIds } | T ], TimerTable,
                   TaskTable, State ) when OffMs < ScheduleOffsetMs ->
@@ -1133,9 +1134,9 @@ perform_schedule( ScheduleOffsetMs, NowMs,
 perform_schedule( ScheduleOffsetMs, _NowMs, SchedulePlan, TimerTable, TaskTable,
                   State ) ->
 
-    ?warning_fmt( "Triggered schedule offset ~B (~ts) not found (whereas "
+    ?info_fmt( "Triggered schedule offset ~B (~ts) not found (whereas "
         "schedule plan ~ts), ignoring it, as supposing this is a late "
-        "scheduling already applied.",
+        "scheduling already applied (i.e. already cleaned up).",
         [ ScheduleOffsetMs, get_timestamp_string_for( ScheduleOffsetMs, State ),
           schedule_plan_to_string( SchedulePlan, State ) ] ),
 
@@ -1147,11 +1148,12 @@ perform_schedule( ScheduleOffsetMs, _NowMs, SchedulePlan, TimerTable, TaskTable,
 
 
 -doc """
-Flushes and executes any schedule known to be already late.
+Flushes and executes any schedule determined to be already late.
 
-This extra security should be useless, as the very last clause of
-trigger_tasks/7, when testing whether NextScheduleMs is lower or equal to NowMs,
-should have already managed such cases.
+`perform_schedule/6` caught any tasks that were scheduled before the *scheduled*
+offset (as defined in the received message; thus their schedulings were
+permuted), whereas this function catches the tasks that were scheduled before
+the current "now" offset (scheduler is just late as a whole).
 """.
 -spec piggy_back_late_schedules( schedule_offset(), schedule_plan(),
                         timer_table(), task_table(), wooper:state() ) ->
@@ -1159,10 +1161,11 @@ should have already managed such cases.
 piggy_back_late_schedules( NowMs, _SchedulePlan=[ { OffMs, TaskIds } | T ],
         TimerTable, TaskTable, State ) when OffMs =< NowMs ->
 
-    ?error_fmt( "Scheduling directly task(s) ~ts that were already "
-        "in the past (at ~B, while now is ~B).",
-        [ text_utils:integers_to_listed_string( TaskIds ), OffMs,
-          NowMs ] ),
+    ?warning_fmt( "Scheduling directly ~B task(s), of identifiers ~ts, that "
+         "were already in the past (at ~B, while now is ~B, "
+         "hence late of ~B ms).",
+        [ length( TaskIds ), text_utils:integers_to_listed_string( TaskIds ),
+          OffMs, NowMs, NowMs - OffMs ] ),
 
     { NewPlan, NewTimerTable, NewTaskTable } = trigger_tasks( TaskIds,
         OffMs, NowMs, _NewerPlan=T, TimerTable, TaskTable, State ),
@@ -1183,10 +1186,10 @@ tables.
 
 Note that:
 - the specified offset (ScheduleOffsetMs) is the planned one; if being a late
-trigger, it may be significantly in the past of the current offset
+trigger, it may still be significantly in the past of the current offset
 - the specified schedule plan is supposed to have already the entry for the
 specified schedule offset removed
-- the specified State is const (used for traces)
+- the specified State is const (used only for traces)
 
 (helper)
 """.
@@ -1263,11 +1266,12 @@ trigger_tasks( _TaskIds=[ TaskId | T ], ScheduleOffsetMs, NowMs, SchedulePlan,
                 last_schedule=NowMs },
 
             % Updating previous version thereof:
-            NewTaskTable = table:add_entry( TaskId, NewTaskEntry,
-                                            ShrunkTaskTable ),
+            NewTaskTable =
+                table:add_entry( TaskId, NewTaskEntry, ShrunkTaskTable ),
 
             case NextScheduleMs > NowMs of
 
+                % "Normal" case:
                 true ->
 
                     % Knowing that we do not program timer at absolute times but

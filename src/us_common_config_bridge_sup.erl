@@ -1,4 +1,4 @@
-% Copyright (C) 2020-2025 Olivier Boudeville
+% Copyright (C) 2020-2026 Olivier Boudeville
 %
 % This file belongs to the US-Common project, a part of the Universal Server
 % framework.
@@ -71,12 +71,12 @@ initialisation.
 -spec start_link() -> term().
 start_link() ->
 
-	% Apparently not displayed in a release context, yet executed:
-	trace_bridge:debug( "Starting the US-Common supervisor bridge for "
-						"the US configuration server." ),
+    % Apparently not displayed in a release context, yet executed:
+    trace_bridge:debug( "Starting the US-Common supervisor bridge for "
+                        "the US configuration server." ),
 
-	supervisor_bridge:start_link( { local, ?bridge_name },
-		_Module=?MODULE, _InitArgs=[] ).
+    supervisor_bridge:start_link( { local, ?bridge_name },
+        _Module=?MODULE, _InitArgs=[] ).
 
 
 
@@ -88,13 +88,13 @@ Callback to initialise this supervisor bridge, typically in answer to
                       | 'ignore' | { 'error', Error :: term() }.
 init( _Args=[] ) ->
 
-	trace_bridge:info( "Initialising the US-Common supervisor bridge for "
-					   "the US configuration server." ),
+    trace_bridge:info( "Initialising the US-Common supervisor bridge for "
+                       "the US configuration server." ),
 
-	% Registration name and all details set through the US configuration file:
-	CfgServerPid = class_USConfigServer:new_link(),
+    % Registration name and all details set through the US configuration file:
+    CfgServerPid = class_USConfigServer:new_link(),
 
-	{ ok, CfgServerPid, _InitialBridgeState=CfgServerPid }.
+    { ok, CfgServerPid, _InitialBridgeState=CfgServerPid }.
 
 
 
@@ -102,15 +102,15 @@ init( _Args=[] ) ->
 -spec terminate( Reason :: 'shutdown' | term(), State :: term() ) -> void().
 terminate( Reason, _BridgeState=CfgServerPid ) when is_pid( CfgServerPid ) ->
 
-	trace_bridge:info_fmt( "Terminating the US-Common supervisor bridge for "
-		"the US-Common configuration server (reason: ~w, "
-		"configuration server: ~w).", [ Reason, CfgServerPid ] ),
+    trace_bridge:info_fmt( "Terminating the US-Common supervisor bridge for "
+        "the US-Common configuration server (reason: ~w, "
+        "configuration server: ~w).", [ Reason, CfgServerPid ] ),
 
-	% Synchronicity needed, otherwise a potential race condition exists, leading
-	% this process to be killed by its OTP supervisor instead of being normally
-	% stopped:
-	%
-	wooper:delete_synchronously_instance( CfgServerPid ),
+    % Synchronicity needed, otherwise a potential race condition exists, leading
+    % this process to be killed by its OTP supervisor instead of being normally
+    % stopped:
+    %
+    wooper:delete_synchronously_instance( CfgServerPid ),
 
-	trace_bridge:debug_fmt( "US-Common configuration server ~w terminated.",
-						   [ CfgServerPid ] ).
+    trace_bridge:debug_fmt( "US-Common configuration server ~w terminated.",
+                           [ CfgServerPid ] ).

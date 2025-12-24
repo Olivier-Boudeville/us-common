@@ -1,4 +1,4 @@
-% Copyright (C) 2025-2025 Olivier Boudeville
+% Copyright (C) 2025-2026 Olivier Boudeville
 %
 % This file belongs to the US-Common project, a part of the Universal Server
 % framework.
@@ -31,7 +31,7 @@ comprises.
 
 
 -define( class_description,
-		 "Mother class for the **front entry point** of an actual US "
+         "Mother class for the **front entry point** of an actual US "
          "application." ).
 
 
@@ -70,30 +70,30 @@ comprises.
     { us_config_lookup_info, option( lookup_info() ),
       "the information sufficient to look up the US configuration server" },
 
-	{ execution_context, option( execution_context() ),
-	  "tells whether this server is to run in development or production mode" },
+    { execution_context, option( execution_context() ),
+      "tells whether this server is to run in development or production mode" },
 
-	% As it impacts at least various paths:
-	{ app_run_context, application_run_context(),
-	  "tells how the US application is run, natively (using the Ceylan "
+    % As it impacts at least various paths:
+    { app_run_context, application_run_context(),
+      "tells how the US application is run, natively (using the Ceylan "
       "build/run system) or as an OTP release" },
 
-	{ config_base_directory, option( bin_directory_path() ),
-	  "the base directory where all US configuration is to be found "
-	  "(not the `us_xxx/priv/conf` internal directory)" },
+    { config_base_directory, option( bin_directory_path() ),
+      "the base directory where all US configuration is to be found "
+      "(not the `us_xxx/priv/conf` internal directory)" },
 
-	{ app_base_directory, option( bin_directory_path() ),
-	  "the base directory of the US application (the root where src, priv, "
+    { app_base_directory, option( bin_directory_path() ),
+      "the base directory of the US application (the root where src, priv, "
       "ebin, etc. can be found)" },
 
-	{ conf_directory, option( bin_directory_path() ),
-	  "the US internal configuration directory, `us_xxx/priv/conf`" },
+    { conf_directory, option( bin_directory_path() ),
+      "the US internal configuration directory, `us_xxx/priv/conf`" },
 
-	{ data_directory, option( bin_directory_path() ),
-	  "the directory where the US-xxx working data is to be stored "
-	  "(typically `[...]/us_xxx/priv/data`)" },
+    { data_directory, option( bin_directory_path() ),
+      "the directory where the US-xxx working data is to be stored "
+      "(typically `[...]/us_xxx/priv/data`)" },
 
-	{ log_directory, option( bin_directory_path() ),
+    { log_directory, option( bin_directory_path() ),
       "the directory where (non-VM) US-xxx logs shall be written, "
       "notably traces" },
 
@@ -223,20 +223,20 @@ Constructs a US central server.
                  application_run_context() ) -> wooper:state().
 construct( State, USAppShortName, ServerInit, AppRunContext ) ->
 
-	% First the direct mother classes, then this class-specific actions:
-	SrvState = class_USServer:construct( State, ServerInit, _TrapExits=true ),
+    % First the direct mother classes, then this class-specific actions:
+    SrvState = class_USServer:construct( State, ServerInit, _TrapExits=true ),
 
-	?send_info_fmt( SrvState, "Creating a US central server, running ~ts.",
-		[ otp_utils:application_run_context_to_string( AppRunContext ) ] ),
+    ?send_info_fmt( SrvState, "Creating a US central server, running ~ts.",
+        [ otp_utils:application_run_context_to_string( AppRunContext ) ] ),
 
-	?send_debug_fmt( SrvState, "Running Erlang ~ts, whose ~ts",
-		[ system_utils:get_interpreter_version(),
-		  code_utils:get_code_path_as_string() ] ),
+    ?send_debug_fmt( SrvState, "Running Erlang ~ts, whose ~ts",
+        [ system_utils:get_interpreter_version(),
+          code_utils:get_code_path_as_string() ] ),
 
-	?send_debug_fmt( SrvState, "System description: ~ts",
-		[ system_utils:get_system_description() ] ),
+    ?send_debug_fmt( SrvState, "System description: ~ts",
+        [ system_utils:get_system_description() ] ),
 
-	SetState = setAttributes( SrvState, [
+    SetState = setAttributes( SrvState, [
         { app_short_name, text_utils:ensure_binary( USAppShortName ) },
         { us_config_lookup_info, undefined },
         { execution_context, undefined },
@@ -250,7 +250,7 @@ construct( State, USAppShortName, ServerInit, AppRunContext ) ->
         { action_spell_tree, undefined } ] ),
 
     % Better disabled, as a mother class:
-	%?send_info_fmt( SetState, "Constructed: ~ts.", [ to_string( SetState ) ] ),
+    %?send_info_fmt( SetState, "Constructed: ~ts.", [ to_string( SetState ) ] ),
 
     % Log directory not known yet (possibly application-specific), too early for
     % finaliseTraceSetup/1.
@@ -263,10 +263,10 @@ construct( State, USAppShortName, ServerInit, AppRunContext ) ->
 -spec destruct( wooper:state() ) -> wooper:state().
 destruct( State ) ->
 
-	?debug( "Deletion initiated." ),
+    ?debug( "Deletion initiated." ),
 
-	?info( "Deleted." ),
-	State.
+    ?info( "Deleted." ),
+    State.
 
 
 
@@ -285,22 +285,22 @@ Requires notably the `log_directory` attribute to have been set.
 -spec finaliseTraceSetup( wooper:state() ) -> const_oneway_return().
 finaliseTraceSetup( State ) ->
 
-	% Now that the log directory is known, we can properly redirect the traces.
-	% Already a trace emitter:
+    % Now that the log directory is known, we can properly redirect the traces.
+    % Already a trace emitter:
 
-	LogDirBin = basic_utils:check_defined( ?getAttr(log_directory) ),
+    LogDirBin = basic_utils:check_defined( ?getAttr(log_directory) ),
 
-	file_utils:create_directory_if_not_existing( LogDirBin, create_parents ),
+    file_utils:create_directory_if_not_existing( LogDirBin, create_parents ),
 
     TraceFilename = text_utils:format( "us_~ts.traces",
                                        [ ?getAttr(app_short_name) ] ),
 
-	NewBinTraceFilePath = file_utils:bin_join( LogDirBin, TraceFilename ),
+    NewBinTraceFilePath = file_utils:bin_join( LogDirBin, TraceFilename ),
 
-	?debug_fmt( "Requesting the renaming of trace file to '~ts'.",
+    ?debug_fmt( "Requesting the renaming of trace file to '~ts'.",
                 [ NewBinTraceFilePath ] ),
 
-	?getAttr(trace_aggregator_pid) ! { renameTraceFile, NewBinTraceFilePath },
+    ?getAttr(trace_aggregator_pid) ! { renameTraceFile, NewBinTraceFilePath },
 
     wooper:const_return().
 
@@ -309,26 +309,26 @@ finaliseTraceSetup( State ) ->
 
 -doc "Callback triggered whenever a linked process exits.".
 -spec onWOOPERExitReceived( wooper:state(), pid(),
-						basic_utils:exit_reason() ) -> const_oneway_return().
+                        basic_utils:exit_reason() ) -> const_oneway_return().
 onWOOPERExitReceived( State, _StoppedPid, _ExitType=normal ) ->
 
-	% Not even a trace sent for that, as too many of them.
-	%
-	%?notice_fmt( "Ignoring normal exit from process ~w.", [ StoppedPid ] ),
+    % Not even a trace sent for that, as too many of them.
+    %
+    %?notice_fmt( "Ignoring normal exit from process ~w.", [ StoppedPid ] ),
 
-	wooper:const_return();
+    wooper:const_return();
 
 
 onWOOPERExitReceived( State, CrashedPid, ExitType ) ->
 
-	% Typically: "Received exit message '{{nocatch,
-	%   {wooper_oneway_failed,<0.44.0>,class_XXX,
-	%       FunName,Arity,Args,AtomCause}}, [...]}"
+    % Typically: "Received exit message '{{nocatch,
+    %   {wooper_oneway_failed,<0.44.0>,class_XXX,
+    %       FunName,Arity,Args,AtomCause}}, [...]}"
 
-	?error_fmt( "Received and ignored an exit message '~p' from ~w.",
-				[ ExitType, CrashedPid ] ),
+    ?error_fmt( "Received and ignored an exit message '~p' from ~w.",
+                [ ExitType, CrashedPid ] ),
 
-	wooper:const_return().
+    wooper:const_return().
 
 
 
@@ -622,37 +622,37 @@ between multiple applications (e.g. `US-xxx` and `US-yyy`).
 manageEPMDPort( State, ConfigTable, EPMDPortKey, DefaultEPMDPort,
                 CfgSrvPid ) ->
 
-	% No simple, integrated way of checking the actual port currently in use:
-	{ Port, Origin } = case table:lookup_entry( EPMDPortKey, ConfigTable ) of
+    % No simple, integrated way of checking the actual port currently in use:
+    { Port, Origin } = case table:lookup_entry( EPMDPortKey, ConfigTable ) of
 
-		key_not_found ->
-			% No application EPMD port defined, so its default will apply unless
-			% a port was explicitly set at the US-level:
-			%
-			?info_fmt( "No EPMD TCP port configured for US application, "
-				"proposing its default one, ~B.", [ DefaultEPMDPort  ] ),
+        key_not_found ->
+            % No application EPMD port defined, so its default will apply unless
+            % a port was explicitly set at the US-level:
+            %
+            ?info_fmt( "No EPMD TCP port configured for US application, "
+                "proposing its default one, ~B.", [ DefaultEPMDPort  ] ),
 
-			{ DefaultEPMDPort, as_default };
-
-
-		{ value, AppEPMDPort } when is_integer( AppEPMDPort ) ->
-			?info_fmt( "Supposing already running using the US application "
-					   "EPMD TCP port #~B.", [ AppEPMDPort ] ),
-
-			{ AppEPMDPort, explicit_set };
+            { DefaultEPMDPort, as_default };
 
 
-		{ value, InvalidEPMDPort } ->
-			?error_fmt(
+        { value, AppEPMDPort } when is_integer( AppEPMDPort ) ->
+            ?info_fmt( "Supposing already running using the US application "
+                       "EPMD TCP port #~B.", [ AppEPMDPort ] ),
+
+            { AppEPMDPort, explicit_set };
+
+
+        { value, InvalidEPMDPort } ->
+            ?error_fmt(
                 "Read invalid EPMD port configured for US application: '~p'.",
-				[ InvalidEPMDPort ] ),
+                [ InvalidEPMDPort ] ),
 
-			throw( { invalid_us_application_epmd_port, InvalidEPMDPort,
+            throw( { invalid_us_application_epmd_port, InvalidEPMDPort,
                      EPMDPortKey } )
 
-	end,
+    end,
 
-	% For correct information; available by design:
+    % For correct information; available by design:
     CfgSrvPid ! { notifyEPMDPort, [ Port, Origin, ?MODULE, self() ] },
 
     wooper:const_return().
@@ -670,15 +670,15 @@ manageRegistrations( State, _ConfigTable, DefRegName, DefRegScope ) ->
     CfgRegName = DefRegName,
     CfgRegScope = DefRegScope,
 
-	naming_utils:register_as( CfgRegName, CfgRegScope ),
+    naming_utils:register_as( CfgRegName, CfgRegScope ),
 
-	?info_fmt( "Registered this US application central server as '~ts' "
+    ?info_fmt( "Registered this US application central server as '~ts' "
                "(scope: ~ts).", [ CfgRegName, CfgRegScope ] ),
 
-	RegState = setAttributes( State, [
-		% Inherited attributes:
-		{ registration_name, CfgRegName },
-		{ registration_scope, CfgRegScope } ] ),
+    RegState = setAttributes( State, [
+        % Inherited attributes:
+        { registration_name, CfgRegName },
+        { registration_scope, CfgRegScope } ] ),
 
     wooper:return_state( RegState ).
 
@@ -694,42 +694,42 @@ manageSystemUser( State, ConfigTable, UsernameKey ) ->
 
     ActualUsername = system_utils:get_user_name(),
 
-	% Mostly used by start/stop/kill scripts:
-	AppUsername = case table:lookup_entry( UsernameKey, ConfigTable ) of
+    % Mostly used by start/stop/kill scripts:
+    AppUsername = case table:lookup_entry( UsernameKey, ConfigTable ) of
 
-		key_not_found ->
-			?info_fmt( "No configured US application operating-system "
+        key_not_found ->
+            ?info_fmt( "No configured US application operating-system "
                 "username set for this server; runtime-detected: '~ts'.",
-				[ ActualUsername ] ),
-			ActualUsername;
+                [ ActualUsername ] ),
+            ActualUsername;
 
-		{ value, CfgUsername } when is_list( CfgUsername ) ->
+        { value, CfgUsername } when is_list( CfgUsername ) ->
 
-			% No overriding expected:
-			basic_utils:check_undefined( ?getAttr(username) ),
+            % No overriding expected:
+            basic_utils:check_undefined( ?getAttr(username) ),
 
-			case ActualUsername of
+            case ActualUsername of
 
-				CfgUsername ->
-					?info_fmt( "Using configured US application "
+                CfgUsername ->
+                    ?info_fmt( "Using configured US application "
                         "operating-system username '~ts' for this server, "
                         "which matches the current runtime user.",
                         [ CfgUsername ] ),
-					CfgUsername;
+                    CfgUsername;
 
-				OtherUsername ->
-					?error_fmt( "The configured US application "
+                OtherUsername ->
+                    ?error_fmt( "The configured US application "
                         "operating-system username '~ts' for this server "
                         "does not match the current runtime user, '~ts'.",
-						[ ActualUsername, OtherUsername ] ),
-					throw( { inconsistent_os_us_user, OtherUsername,
-							 ActualUsername, UsernameKey } )
+                        [ ActualUsername, OtherUsername ] ),
+                    throw( { inconsistent_os_us_user, OtherUsername,
+                             ActualUsername, UsernameKey } )
 
-			end
+            end
 
-	end,
+    end,
 
-	SetState = setAttribute( State, username,
+    SetState = setAttribute( State, username,
                              text_utils:string_to_binary( AppUsername ) ),
 
     wooper:return_state( SetState ).
@@ -744,100 +744,100 @@ directories.
                                 env_variable_name() ) -> oneway_return().
 manageAppBaseDirectories( State, ConfigTable, BaseDirKey, BaseDirEnvVarName ) ->
 
-	% As opposed to, say, start/stop script, the Erlang code does not care so
-	% much about these directories, so warnings, not errors, were issued if
-	% not found (the US framework being also launchable thanks to, for example,
-	% 'make debug'). We finally opted for a stricter policy, as errors could be
-	% induced afterwards.
+    % As opposed to, say, start/stop script, the Erlang code does not care so
+    % much about these directories, so warnings, not errors, were issued if
+    % not found (the US framework being also launchable thanks to, for example,
+    % 'make debug'). We finally opted for a stricter policy, as errors could be
+    % induced afterwards.
 
-	AppRunContext = ?getAttr(app_run_context),
+    AppRunContext = ?getAttr(app_run_context),
 
     AppShortName = ?getAttr(app_short_name),
 
-	MaybeConfBaseDir = case table:lookup_entry( BaseDirKey, ConfigTable ) of
+    MaybeConfBaseDir = case table:lookup_entry( BaseDirKey, ConfigTable ) of
 
-		key_not_found ->
-			undefined;
+        key_not_found ->
+            undefined;
 
-		{ value, D } when is_list( D ) ->
-			?info_fmt( "The configured US application base directory is '~ts'.",
+        { value, D } when is_list( D ) ->
+            ?info_fmt( "The configured US application base directory is '~ts'.",
                        [ D ] ),
-			D;
+            D;
 
-		{ value, InvalidDir }  ->
-			?error_fmt( "Read invalid US application base directory in "
+        { value, InvalidDir }  ->
+            ?error_fmt( "Read invalid US application base directory in "
                         "configuration: '~p'.", [ InvalidDir ] ),
-			throw( { invalid_us_app_base_directory, InvalidDir, BaseDirKey,
-					 AppRunContext } )
+            throw( { invalid_us_app_base_directory, InvalidDir, BaseDirKey,
+                     AppRunContext } )
 
-	end,
+    end,
 
-	MaybeBaseDir = case MaybeConfBaseDir of
+    MaybeBaseDir = case MaybeConfBaseDir of
 
-		undefined ->
-			case system_utils:get_environment_variable( BaseDirEnvVarName ) of
+        undefined ->
+            case system_utils:get_environment_variable( BaseDirEnvVarName ) of
 
-				false ->
-					undefined;
+                false ->
+                    undefined;
 
-				% Might be set, yet to an empty string, typically because of
-				% US_XXX_APP_BASE_DIR="${US_XXX_APP_BASE_DIR}":
-				%
-				"" ->
-					undefined;
+                % Might be set, yet to an empty string, typically because of
+                % US_XXX_APP_BASE_DIR="${US_XXX_APP_BASE_DIR}":
+                %
+                "" ->
+                    undefined;
 
-				EnvDir ->
-					?info_fmt( "No US application base directory set in "
+                EnvDir ->
+                    ?info_fmt( "No US application base directory set in "
                         "configuration file, using the value of the '~ts' "
                         "environment variable: '~ts'.",
                         [ BaseDirEnvVarName, EnvDir ] ),
-					EnvDir
+                    EnvDir
 
-			end;
+            end;
 
-		_ ->
-			MaybeConfBaseDir
+        _ ->
+            MaybeConfBaseDir
 
-	end,
+    end,
 
     USAppStrWithUnderscore = text_utils:format( "us_~ts", [ AppShortName ] ),
 
-	RawBaseDir = case MaybeBaseDir of
+    RawBaseDir = case MaybeBaseDir of
 
-		undefined ->
-			guess_app_dir( AppRunContext, USAppStrWithUnderscore,
+        undefined ->
+            guess_app_dir( AppRunContext, USAppStrWithUnderscore,
                            BaseDirEnvVarName, State );
 
-		_ ->
-			MaybeBaseDir
+        _ ->
+            MaybeBaseDir
 
-	end,
+    end,
 
-	BaseDir = file_utils:ensure_path_is_absolute( RawBaseDir ),
+    BaseDir = file_utils:ensure_path_is_absolute( RawBaseDir ),
 
-	% We check not only that this candidate app directory exists, but also that
-	% it is a right one, expecting to have a 'priv' direct subdirectory then:
+    % We check not only that this candidate app directory exists, but also that
+    % it is a right one, expecting to have a 'priv' direct subdirectory then:
 
-	MaybeBaseBinDir =
-			case file_utils:is_existing_directory_or_link( BaseDir ) of
+    MaybeBaseBinDir =
+            case file_utils:is_existing_directory_or_link( BaseDir ) of
 
-		true ->
-			BinBaseDir = text_utils:string_to_binary( BaseDir ),
+        true ->
+            BinBaseDir = text_utils:string_to_binary( BaseDir ),
 
-			case AppRunContext of
+            case AppRunContext of
 
-				as_otp_release ->
+                as_otp_release ->
 
                     USAppStrWithDash = text_utils:format( "us-~ts",
                         [ AppShortName ] ),
 
-					% As, if run as a release, it may end with a version (e.g.
-					% "us_xxx-0.0.1"), or a "us_xxx-latest" symlink thereof, or
-					% directly as "us-xxx":
-					%
+                    % As, if run as a release, it may end with a version (e.g.
+                    % "us_xxx-0.0.1"), or a "us_xxx-latest" symlink thereof, or
+                    % directly as "us-xxx":
+                    %
                     BaseDirName = filename:basename( BaseDir ),
 
-					% From a clone made with our deployment conventions:
+                    % From a clone made with our deployment conventions:
                     case text_utils:is_prefixed_with( BaseDirName,
                                 USAppStrWithUnderscore ) orelse
                             % For a clone made to a default directory (e.g. by
@@ -847,83 +847,83 @@ manageAppBaseDirectories( State, ConfigTable, BaseDirKey, BaseDirEnvVarName ) ->
                                 USAppStrWithDash ) of
 
                         true ->
-							?info_fmt( "US (release) application base "
-								"directory set to '~ts'.", [ BaseDir ] ),
-							BinBaseDir;
+                            ?info_fmt( "US (release) application base "
+                                "directory set to '~ts'.", [ BaseDir ] ),
+                            BinBaseDir;
 
                         false ->
                             %?warning_fmt( "The US application base "
-							%  "directory '~ts' does not seem legit (it "
-							%  "should start with 'us_xxx'), thus considering "
-							%  "knowing none.", [ BaseDir ] ),
-							%undefined
-							throw( { incorrect_us_application_base_directory,
-									 BaseDir, BaseDirKey, AppRunContext,
+                            %  "directory '~ts' does not seem legit (it "
+                            %  "should start with 'us_xxx'), thus considering "
+                            %  "knowing none.", [ BaseDir ] ),
+                            %undefined
+                            throw( { incorrect_us_application_base_directory,
+                                     BaseDir, BaseDirKey, AppRunContext,
                                      as_otp_release } )
 
-					end;
+                    end;
 
-				as_native ->
-					case file_utils:get_last_path_element( BaseDir ) of
+                as_native ->
+                    case file_utils:get_last_path_element( BaseDir ) of
 
-						USAppStrWithUnderscore ->
-							?info_fmt( "US (native) application base "
-									   "directory set to '~ts'.", [ BaseDir ] ),
-							BinBaseDir;
+                        USAppStrWithUnderscore ->
+                            ?info_fmt( "US (native) application base "
+                                       "directory set to '~ts'.", [ BaseDir ] ),
+                            BinBaseDir;
 
-						_Other ->
-							throw( { incorrect_us_application_base_directory,
-									 BaseDir, BaseDirKey, AppRunContext,
+                        _Other ->
+                            throw( { incorrect_us_application_base_directory,
+                                     BaseDir, BaseDirKey, AppRunContext,
                                      as_native } )
 
-					end
+                    end
 
-			end,
+            end,
 
-			% Final paranoid check:
-			PrivDir = file_utils:join( BinBaseDir, "priv" ),
-			case file_utils:is_existing_directory_or_link( PrivDir ) of
+            % Final paranoid check:
+            PrivDir = file_utils:join( BinBaseDir, "priv" ),
+            case file_utils:is_existing_directory_or_link( PrivDir ) of
 
-				true ->
-					BinBaseDir;
+                true ->
+                    BinBaseDir;
 
-				false ->
-					?error_fmt( "The determined US application base "
-						"directory '~ts' does not have a 'priv' subdirectory.",
-						[ BinBaseDir ] ),
-					throw( { no_priv_us_application_base_directory, BaseDir,
+                false ->
+                    ?error_fmt( "The determined US application base "
+                        "directory '~ts' does not have a 'priv' subdirectory.",
+                        [ BinBaseDir ] ),
+                    throw( { no_priv_us_application_base_directory, BaseDir,
                              BaseDirKey } )
 
-			end;
+            end;
 
 
-		false ->
-			%?warning_fmt( "The US application base directory '~ts' does "
-			%   "not exist, thus considering knowing none.", [ BaseDir ] ),
-			%undefined
-			throw( { non_existing_us_applocation_base_directory, BaseDir,
-					 BaseDirKey } )
+        false ->
+            %?warning_fmt( "The US application base directory '~ts' does "
+            %   "not exist, thus considering knowing none.", [ BaseDir ] ),
+            %undefined
+            throw( { non_existing_us_applocation_base_directory, BaseDir,
+                     BaseDirKey } )
 
 
-	end,
+    end,
 
-	% The internal US-xxx directory (see the conf_directory attribute) used to
-	% be derived from the app base one (as a 'conf' subdirectory thereof), yet
-	% because of that it was not included in releases. So instead this 'conf'
-	% directory is a subdirectory of 'priv':
-	%
-	% (for some reason, using this module, although it is listed in us_xxx.app,
-	% results, for code:priv_dir/1, in a bad_name exception)
-	%
-	%TargetMod = ?MODULE,
-	%TargetMod = us_xxx_app,
-	TargetMod = text_utils:atom_format( "us_~ts_sup", [ AppShortName ] ),
+    % The internal US-xxx directory (see the conf_directory attribute) used to
+    % be derived from the app base one (as a 'conf' subdirectory thereof), yet
+    % because of that it was not included in releases. So instead this 'conf'
+    % directory is a subdirectory of 'priv':
+    %
+    % (for some reason, using this module, although it is listed in us_xxx.app,
+    % results, for code:priv_dir/1, in a bad_name exception)
+    %
+    %TargetMod = ?MODULE,
+    %TargetMod = us_xxx_app,
+    TargetMod = text_utils:atom_format( "us_~ts_sup", [ AppShortName ] ),
 
-	ConfBinDir = file_utils:bin_join(
-		otp_utils:get_priv_root( TargetMod, _BeSilent=true ), "conf" ),
+    ConfBinDir = file_utils:bin_join(
+        otp_utils:get_priv_root( TargetMod, _BeSilent=true ), "conf" ),
 
-	% Set in all cases:
-	SetState = setAttributes( State, [ { app_base_directory, MaybeBaseBinDir },
+    % Set in all cases:
+    SetState = setAttributes( State, [ { app_base_directory, MaybeBaseBinDir },
                                        { conf_directory, ConfBinDir } ] ),
 
     wooper:return_state( SetState ).
@@ -936,46 +936,46 @@ manageAppBaseDirectories( State, ConfigTable, BaseDirKey, BaseDirEnvVarName ) ->
 guess_app_dir( AppRunContext, USAppStrWithUnderscore, BaseDirEnvVarName,
                State ) ->
 
-	CurrentDir = file_utils:get_current_directory(),
+    CurrentDir = file_utils:get_current_directory(),
 
-	GuessingDir = case AppRunContext of
+    GuessingDir = case AppRunContext of
 
-		as_otp_release ->
-			% In [...]/us_xxx/_build/default/rel/us_xxx, and we want the first
-			% us_xxx, so:
-			%
-			OTPPath = file_utils:normalise_path( file_utils:join(
-				[ CurrentDir, "..", "..", "..", ".." ] ) ),
+        as_otp_release ->
+            % In [...]/us_xxx/_build/default/rel/us_xxx, and we want the first
+            % us_xxx, so:
+            %
+            OTPPath = file_utils:normalise_path( file_utils:join(
+                [ CurrentDir, "..", "..", "..", ".." ] ) ),
 
-			case file_utils:get_base_path( OTPPath ) of
+            case file_utils:get_base_path( OTPPath ) of
 
-				USAppStrWithUnderscore ->
-					% Looks good:
-					OTPPath;
+                USAppStrWithUnderscore ->
+                    % Looks good:
+                    OTPPath;
 
-				% Not found; another try, if running as a test (from
-				% us_xxx/test):
-				%
-				_ ->
-					file_utils:get_base_path( CurrentDir )
+                % Not found; another try, if running as a test (from
+                % us_xxx/test):
+                %
+                _ ->
+                    file_utils:get_base_path( CurrentDir )
 
-			end;
+            end;
 
-		as_native ->
-			% In the case of a native build, running from us_xxx/src (covers
-			% also the case where a test is being run from us_xxx/test), so:
-			%
-			file_utils:get_base_path( CurrentDir )
+        as_native ->
+            % In the case of a native build, running from us_xxx/src (covers
+            % also the case where a test is being run from us_xxx/test), so:
+            %
+            file_utils:get_base_path( CurrentDir )
 
-	end,
+    end,
 
-	% Was a warning:
-	?info_fmt( "No configured US application base directory set "
-		"(neither in configuration file nor through the '~ts' environment "
-		"variable), hence trying to guess it, in a ~ts context, as '~ts'.",
-		[ BaseDirEnvVarName, AppRunContext, GuessingDir ] ),
+    % Was a warning:
+    ?info_fmt( "No configured US application base directory set "
+        "(neither in configuration file nor through the '~ts' environment "
+        "variable), hence trying to guess it, in a ~ts context, as '~ts'.",
+        [ BaseDirEnvVarName, AppRunContext, GuessingDir ] ),
 
-	GuessingDir.
+    GuessingDir.
 
 
 
@@ -986,70 +986,70 @@ Manages any user-configured data directory to rely on, creating it if necessary.
                            directory_path() ) -> oneway_return().
 manageDataDirectory( State, ConfigTable, DataDirKey, DefaultDataBaseDir ) ->
 
-	BaseDir = case table:lookup_entry( DataDirKey, ConfigTable ) of
+    BaseDir = case table:lookup_entry( DataDirKey, ConfigTable ) of
 
-		key_not_found ->
-			file_utils:ensure_path_is_absolute( DefaultDataBaseDir,
+        key_not_found ->
+            file_utils:ensure_path_is_absolute( DefaultDataBaseDir,
                                                 ?getAttr(app_base_directory) );
 
-		{ value, D } when is_list( D ) ->
-			file_utils:ensure_path_is_absolute( D,
-				?getAttr(app_base_directory) );
+        { value, D } when is_list( D ) ->
+            file_utils:ensure_path_is_absolute( D,
+                ?getAttr(app_base_directory) );
 
-		{ value, InvalidDir }  ->
-			?error_fmt(
+        { value, InvalidDir }  ->
+            ?error_fmt(
                 "Read invalid configured application data directory: '~p'.",
                 [ InvalidDir ] ),
-			throw( { invalid_data_directory, InvalidDir, DataDirKey } )
+            throw( { invalid_data_directory, InvalidDir, DataDirKey } )
 
-	end,
+    end,
 
-	file_utils:is_existing_directory( BaseDir ) orelse
-		?warning_fmt( "The base data directory '~ts' does not exist, "
-					  "creating it.", [ BaseDir ] ),
+    file_utils:is_existing_directory( BaseDir ) orelse
+        ?warning_fmt( "The base data directory '~ts' does not exist, "
+                      "creating it.", [ BaseDir ] ),
 
-	% Would lead to inconvenient paths, at least if defined as relative:
-	%DataDir = file_utils:join( BaseDir, ?app_subdir ),
-	DataDir = BaseDir,
+    % Would lead to inconvenient paths, at least if defined as relative:
+    %DataDir = file_utils:join( BaseDir, ?app_subdir ),
+    DataDir = BaseDir,
 
-	try
+    try
 
-		file_utils:create_directory_if_not_existing( DataDir, create_parents )
+        file_utils:create_directory_if_not_existing( DataDir, create_parents )
 
-	catch
+    catch
 
-		{ create_directory_failed, _DataDir, access_denied, ErrorInfo } ->
+        { create_directory_failed, _DataDir, access_denied, ErrorInfo } ->
 
-			?error_fmt( "Unable to create the directory for working data "
-				"'~ts': please ensure its parent directory can be written "
-				"by the current user, or set it to a different path thanks "
+            ?error_fmt( "Unable to create the directory for working data "
+                "'~ts': please ensure its parent directory can be written "
+                "by the current user, or set it to a different path thanks "
                 "to the '~ts' key. Detailed error information: ~p",
                 [ DataDir, DataDirKey, ErrorInfo ] ),
 
-			throw( { data_directory_creation_failed, DataDir, access_denied,
+            throw( { data_directory_creation_failed, DataDir, access_denied,
                      ErrorInfo } );
 
-		E ->
-			throw( { data_directory_creation_failed, DataDir, E } )
+        E ->
+            throw( { data_directory_creation_failed, DataDir, E } )
 
-	end,
+    end,
 
-	% Enforce security in all cases ("chmod 700"); if it fails here, the
-	% combined path/user configuration must be incorrect; however we might not
-	% be the owner of that directory (e.g. if the US application user is
-	% different from the US one). So:
-	%
-	CurrentUserId = system_utils:get_user_id(),
+    % Enforce security in all cases ("chmod 700"); if it fails here, the
+    % combined path/user configuration must be incorrect; however we might not
+    % be the owner of that directory (e.g. if the US application user is
+    % different from the US one). So:
+    %
+    CurrentUserId = system_utils:get_user_id(),
 
-	% If not owned, do nothing:
-	file_utils:get_owner_of( DataDir ) =:= CurrentUserId andalso
-		file_utils:change_permissions( DataDir,
-			[ owner_read, owner_write, owner_execute,
-			  group_read, group_write, group_execute ] ),
+    % If not owned, do nothing:
+    file_utils:get_owner_of( DataDir ) =:= CurrentUserId andalso
+        file_utils:change_permissions( DataDir,
+            [ owner_read, owner_write, owner_execute,
+              group_read, group_write, group_execute ] ),
 
-	BinDataDir = text_utils:ensure_binary( DataDir ),
+    BinDataDir = text_utils:ensure_binary( DataDir ),
 
-	SetState = setAttribute( State, data_directory, BinDataDir ),
+    SetState = setAttribute( State, data_directory, BinDataDir ),
 
     wooper:return_state( SetState ).
 
@@ -1063,67 +1063,67 @@ necessary.
                           directory_path() ) -> oneway_return().
 manageLogDirectory( State, ConfigTable, LogDirKey, DefaultLogDir ) ->
 
-	% Longer paths if defined as relative, yet finally preferred as
-	% '/var/log/universal-server/us-main' (rather than
-	% '/var/log/universal-server') as it allows separating US-Main from any
-	% other US-* services:
-	%
-	LogDir = case table:lookup_entry( LogDirKey, ConfigTable ) of
+    % Longer paths if defined as relative, yet finally preferred as
+    % '/var/log/universal-server/us-main' (rather than
+    % '/var/log/universal-server') as it allows separating US-Main from any
+    % other US-* services:
+    %
+    LogDir = case table:lookup_entry( LogDirKey, ConfigTable ) of
 
-		key_not_found ->
-			% Bound to require special permissions:
-			DefaultLogDir;
+        key_not_found ->
+            % Bound to require special permissions:
+            DefaultLogDir;
 
-		{ value, D } when is_list( D ) ->
-			file_utils:ensure_path_is_absolute( D,
-												?getAttr(app_base_directory) );
+        { value, D } when is_list( D ) ->
+            file_utils:ensure_path_is_absolute( D,
+                                                ?getAttr(app_base_directory) );
 
-		{ value, InvalidDir }  ->
-			?error_fmt( "Read invalid application configured log "
+        { value, InvalidDir }  ->
+            ?error_fmt( "Read invalid application configured log "
                         "directory: '~p'.", [ InvalidDir ] ),
-			throw( { invalid_log_directory, InvalidDir, LogDirKey } )
+            throw( { invalid_log_directory, InvalidDir, LogDirKey } )
 
-	end,
+    end,
 
-	file_utils:is_existing_directory( LogDir ) orelse
-		begin
+    file_utils:is_existing_directory( LogDir ) orelse
+        begin
 
-			%throw( { non_existing_base_us_app_log_directory, LogDir } )
+            %throw( { non_existing_base_us_app_log_directory, LogDir } )
 
-			?warning_fmt( "The base US application log directory '~ts' "
+            ?warning_fmt( "The base US application log directory '~ts' "
                           "does not exist, creating it.", [ LogDir ] ),
 
-			% As for example the default path would require to create
-			% /var/log/universal-server/us-xxx:
-			%
-			file_utils:create_directory_if_not_existing( LogDir,
-														 create_parents )
+            % As for example the default path would require to create
+            % /var/log/universal-server/us-xxx:
+            %
+            file_utils:create_directory_if_not_existing( LogDir,
+                                                         create_parents )
 
-		end,
+        end,
 
-	% Enforce security in all cases ("chmod 700"); if it fails here, the
-	% combined path/user configuration must be incorrect; however we might not
-	% be the owner of that directory (e.g. if the US application user is
-	% different from the US-Common one).
-	%
-	% So:
-	%
-	CurrentUserId = system_utils:get_user_id(),
+    % Enforce security in all cases ("chmod 700"); if it fails here, the
+    % combined path/user configuration must be incorrect; however we might not
+    % be the owner of that directory (e.g. if the US application user is
+    % different from the US-Common one).
+    %
+    % So:
+    %
+    CurrentUserId = system_utils:get_user_id(),
 
-	% If not owned, does nothing:
-	CurrentUserId =:= file_utils:get_owner_of( LogDir ) andalso
-		begin
+    % If not owned, does nothing:
+    CurrentUserId =:= file_utils:get_owner_of( LogDir ) andalso
+        begin
 
-			Perms = [ owner_read, owner_write, owner_execute,
-					  group_read, group_write, group_execute ],
+            Perms = [ owner_read, owner_write, owner_execute,
+                      group_read, group_write, group_execute ],
 
-			file_utils:change_permissions( LogDir, Perms )
+            file_utils:change_permissions( LogDir, Perms )
 
-		end,
+        end,
 
-	BinLogDir = text_utils:ensure_binary( LogDir ),
+    BinLogDir = text_utils:ensure_binary( LogDir ),
 
-	SetState = setAttribute( State, log_directory, BinLogDir ),
+    SetState = setAttribute( State, log_directory, BinLogDir ),
 
     wooper:return_state( SetState ).
 
@@ -1235,9 +1235,9 @@ to_string( State ) ->
 
     end,
 
-	text_utils:format( "~ts central ~ts.~nThis central server is running ~ts, "
-		"in ~ts execution context, relying on ~ts configuration directory "
+    text_utils:format( "~ts central ~ts.~nThis central server is running ~ts, "
+        "in ~ts execution context, relying on ~ts configuration directory "
         "and on ~ts log directory",
-		[ NameStr, class_USServer:to_string( State ),
-		  otp_utils:application_run_context_to_string(
-			?getAttr(app_run_context) ), ExecStr, ConfDirStr, LogDirStr ] ).
+        [ NameStr, class_USServer:to_string( State ),
+          otp_utils:application_run_context_to_string(
+            ?getAttr(app_run_context) ), ExecStr, ConfDirStr, LogDirStr ] ).

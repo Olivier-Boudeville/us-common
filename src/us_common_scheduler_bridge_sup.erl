@@ -1,4 +1,4 @@
-% Copyright (C) 2020-2025 Olivier Boudeville
+% Copyright (C) 2020-2026 Olivier Boudeville
 %
 % This file belongs to the US-Common project, a part of the Universal Server
 % framework.
@@ -75,12 +75,12 @@ initialisation.
 -spec start_link() -> term().
 start_link() ->
 
-	% Apparently not displaying, yet executed:
-	trace_bridge:info( "Starting the US-Common supervisor bridge for "
-					   "the US main scheduler." ),
+    % Apparently not displaying, yet executed:
+    trace_bridge:info( "Starting the US-Common supervisor bridge for "
+                       "the US main scheduler." ),
 
-	supervisor_bridge:start_link( { local, ?bridge_name },
-								  _Module=?MODULE, _Args=[] ).
+    supervisor_bridge:start_link( { local, ?bridge_name },
+                                  _Module=?MODULE, _Args=[] ).
 
 
 
@@ -89,17 +89,17 @@ Callback to initialise this supervisor bridge, typically in answer to
 `start_link/1` being executed.
 """.
 -spec init( list() ) -> { 'ok', pid(), State :: term() }
-						| 'ignore' | { 'error', Error :: term() }.
+                        | 'ignore' | { 'error', Error :: term() }.
 init( _Args=[] ) ->
 
-	trace_bridge:info( "Initialising the US-Common supervisor bridge for "
-					   "the US main scheduler." ),
+    trace_bridge:info( "Initialising the US-Common supervisor bridge for "
+                       "the US main scheduler." ),
 
-	SchedServerPid = class_USScheduler:new_link( "US-Common scheduler",
-		?us_common_scheduler_registration_name,
-		?us_common_scheduler_registration_scope ),
+    SchedServerPid = class_USScheduler:new_link( "US-Common scheduler",
+        ?us_common_scheduler_registration_name,
+        ?us_common_scheduler_registration_scope ),
 
-	{ ok, SchedServerPid, _State=SchedServerPid }.
+    { ok, SchedServerPid, _State=SchedServerPid }.
 
 
 
@@ -107,15 +107,15 @@ init( _Args=[] ) ->
 -spec terminate( Reason :: 'shutdown' | term(), State :: term() ) -> void().
 terminate( Reason, _State=SchedServerPid ) when is_pid( SchedServerPid ) ->
 
-	trace_bridge:info_fmt( "Terminating the US-Common supervisor bridge for "
-		"the US-Common scheduler (reason: ~w, scheduler: ~w).",
-		[ Reason, SchedServerPid ] ),
+    trace_bridge:info_fmt( "Terminating the US-Common supervisor bridge for "
+        "the US-Common scheduler (reason: ~w, scheduler: ~w).",
+        [ Reason, SchedServerPid ] ),
 
-	% Synchronicity needed, otherwise a potential race condition exists, leading
-	% this process to be killed by its OTP supervisor instead of being normally
-	% stopped:
-	%
-	wooper:delete_synchronously_instance( SchedServerPid ),
+    % Synchronicity needed, otherwise a potential race condition exists, leading
+    % this process to be killed by its OTP supervisor instead of being normally
+    % stopped:
+    %
+    wooper:delete_synchronously_instance( SchedServerPid ),
 
-	trace_bridge:debug_fmt( "US-Common scheduler ~w terminated.",
-							[ SchedServerPid ] ).
+    trace_bridge:debug_fmt( "US-Common scheduler ~w terminated.",
+                            [ SchedServerPid ] ).

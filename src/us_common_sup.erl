@@ -1,4 +1,4 @@
-% Copyright (C) 2019-2025 Olivier Boudeville
+% Copyright (C) 2019-2026 Olivier Boudeville
 %
 % This file belongs to the US-Common project, a part of the Universal Server
 % framework.
@@ -26,7 +26,7 @@ Module implementing the **root OTP supervisor of US-Common**.
 
 In practice, it will supervise a single process, the one of the (singleton) US
 configuration server, through a dedicated supervision bridge, defined in the
-us_common_bridge_sup module.
+`us_common_bridge_sup` module.
 """.
 
 
@@ -59,7 +59,7 @@ us_common_bridge_sup module.
 Starts and links the US-Common root supervisor, creating in turn a proper
 supervision bridge.
 
-Note: typically called by us_common_app:start/2, hence generally triggered by
+Note: typically called by `us_common_app:start/2`, hence generally triggered by
 the application initialisation.
 """.
 -spec start_link() -> supervisor:startlink_ret().
@@ -75,7 +75,7 @@ start_link() ->
 
 -doc """
 Callback to initialise this US-Common root supervisor bridge, typically in
-answer to start_link/0 above being executed.
+answer to `start_link/0` above being executed.
 """.
 -spec init( list() ) -> { 'ok', { supervisor:sup_flags(), [ child_spec() ] } }.
 init( Args=[] ) ->

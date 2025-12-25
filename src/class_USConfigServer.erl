@@ -1,4 +1,4 @@
-% Copyright (C) 2019-2025 Olivier Boudeville
+% Copyright (C) 2019-2026 Olivier Boudeville
 %
 % This file belongs to the US-Common project, a part of the Universal Server
 % framework.
@@ -658,7 +658,7 @@ get_us_config_directory() ->
             { DefaultCfgDirs, CfgDirsMsg };
 
         Paths ->
-            { Paths, text_utils:format( "paths '~ts' was obtained from "
+            { Paths, text_utils:format( "paths '~ts' were obtained from "
                 "environment variable '~ts'", [ Paths, SecondEnvVar ] ) }
 
     end,

@@ -354,7 +354,8 @@ manageAutomatedActions( State, ConfigTable, SrvClassnames ) ->
 
     wooper:check_equal( remaining_servers, [], State ),
 
-    % In any user interface, the final preferred action order is:
+    % In any user interface, the final preferred action order is first per-topic
+    % (header), then, for the topic-less:
     %
     %  1. any (ordered) actions of each (ordered) server specified, possibly
     %  with action headers, listed in the order specified by SrvClassnames
@@ -362,9 +363,11 @@ manageAutomatedActions( State, ConfigTable, SrvClassnames ) ->
     %  2. any (ordered) user-specified actions, as listed in the configuration,
     %  possibly with action headers
     %
-    %  3. 'help' (but filtered out in listing)
+    %  3. 'help'
     %
-    %  4. 'stop'
+    %  4. 'traces'
+    %
+    %  5. 'stop'
     %
     % So it is more convenient to build it backwards and only ultimately reverse
     % it; we thus finish with the 'stop' and 'help' built-in actions:
@@ -427,14 +430,21 @@ finalise_action_setup( State ) ->
 
     HelpUserActSpec = { _ActName=help, _HelpDesc="displays this help"},
 
+    UserStrResSpec = "{ok, string()}",
+
+    % Not very relevant, use monitor-us-*.sh instead:
+    %TraceUserActSpec = { traces, _TraceDesc="downloads the current traces",
+    %    _ReqName=downloadTraces, _UserArgSpecs=[], UserStrResSpec },
+
     StopDesc = text_utils:format( "stops this ~ts instance",
         [ get_us_app_name( ?getAttr(app_short_name) ) ] ),
 
 
     % To test result checking (should be "successful(string())"):
     StopUserActSpec = { stop, StopDesc, _ReqName=stop, _UserArgSpecs=[],
-                        _UserResSpec="{ok, string()}" },
+                        UserStrResSpec },
 
+    %ExtraActSpecs = [ HelpUserActSpec, TraceUserActSpec, StopUserActSpec ],
     ExtraActSpecs = [ HelpUserActSpec, StopUserActSpec ],
 
     { FullActTable, FullHdInfo } = us_action:register_action_specs(
@@ -461,8 +471,8 @@ finalise_action_setup( State ) ->
 
 
     setAttributes( AutoState, [ { action_table, FinalActTable },
-                            { header_info, FullHdInfo },
-                            { action_spell_tree, ActSpellTree } ] ).
+                                { header_info, FullHdInfo },
+                                { action_spell_tree, ActSpellTree } ] ).
 
 
 

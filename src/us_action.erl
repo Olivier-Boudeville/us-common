@@ -1,4 +1,4 @@
-% Copyright (C) 2025-2025 Olivier Boudeville
+% Copyright (C) 2025-2026 Olivier Boudeville
 %
 % This file belongs to the US-Common project, a part of the Universal Server
 % framework.
@@ -1123,7 +1123,7 @@ interpret_failure_report( _FailureReport=invalid_result_type ) ->
 
 interpret_failure_report( _FailureReport={ exception_thrown, Exception } ) ->
     text_utils:format( "the action resulted in the following exception being "
-                       "thrown: ~p.", [ Exception ] );
+                       "thrown:~n ~p", [ Exception ] );
 
 interpret_failure_report( FailureReport ) ->
     text_utils:format( "an unexpected action failure report:~n ~p",

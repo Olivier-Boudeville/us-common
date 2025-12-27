@@ -1020,7 +1020,7 @@ Triggers the specified scheduling.
 
 Expected to be called through a timer having been set beforehand.
 
-Note: a reference() or any other non-guessable element could be used to avoid
+Note: a `reference()` or any other non-guessable element could be used to avoid
 any process to be able to interfere by triggering schedulings.
 """.
 -spec timerTrigger( wooper:state(), schedule_offset() ) -> oneway_return().
@@ -1561,11 +1561,12 @@ add_timer( ScheduleOffsetMs, DurationFromNowMs, TimerTable ) ->
 -spec remove_timer( schedule_offset(), timer_table() ) -> timer_table().
 remove_timer( ScheduleOffsetMs, TimerTable ) ->
 
-    %trace_bridge:debug_fmt( "Removing timer for schedule offset #~B.",
-    %   [ ScheduleOffsetMs ] ),
-
     { TimerRef, ShrunkTimerTable } =
         table:extract_entry( ScheduleOffsetMs, TimerTable ),
+
+    cond_utils:if_defined( us_common_debug_scheduling,
+        trace_bridge:debug_fmt( "Removing timer ~w for schedule offset #~B.",
+                                [ TimerRef, ScheduleOffsetMs ] ) ),
 
     case timer:cancel( TimerRef ) of
 

@@ -1096,8 +1096,8 @@ perform_schedule( ScheduleOffsetMs, NowMs,
           text_utils:integers_to_listed_string( TaskIds ) ] ),
 
     % Using OffMs (second parameter) rather than ScheduleOffsetMs here:
-    { NewPlan, NewTimerTable, NewTaskTable } = trigger_tasks( TaskIds,
-        OffMs, NowMs, _NewerPlan=T, TimerTable, TaskTable, State ),
+    { NewPlan, NewTimerTable, NewTaskTable } = trigger_tasks( TaskIds, OffMs,
+        NowMs, _NewerPlan=T, TimerTable, TaskTable, State ),
 
     % Drops this offset entry:
     perform_schedule( ScheduleOffsetMs, NowMs, NewPlan, NewTimerTable,
@@ -1109,10 +1109,11 @@ perform_schedule( ScheduleOffsetMs, NowMs,
                   _SchedulePlan=[ { ScheduleOffsetMs, TaskIds } | T ],
                   TimerTable, TaskTable, State ) ->
 
-    %?debug_fmt( "Normal scheduling of offset ~B (~ts), "
-    %   "triggering its tasks: ~w.",
-    %   [ ScheduleOffsetMs, get_timestamp_string_for( ScheduleOffsetMs, State ),
-    %     TaskIds ] ),
+    cond_utils:if_defined( us_common_debug_scheduling,
+      ?debug_fmt( "Normal scheduling of offset ~B (~ts), "
+        "triggering its tasks: ~w.",
+        [ ScheduleOffsetMs, get_timestamp_string_for( ScheduleOffsetMs, State ),
+          TaskIds ] ) ),
 
     % Dropping current offset, stop recursing here, keeping the next schedules
     % to come, returning {NewPlan, NewTimerTable, NewTaskTable}:
@@ -1196,8 +1197,23 @@ specified schedule offset removed
 -spec trigger_tasks( [ task_id() ], schedule_offset(), schedule_offset(),
             schedule_plan(), timer_table(), task_table(), wooper:state() ) ->
                             { schedule_plan(), timer_table(), task_table() }.
-trigger_tasks( _TaskIds=[], ScheduleOffsetMs, _NowMs, SchedulePlan, TimerTable,
-               TaskTable, _State ) ->
+trigger_tasks( TaskIds, ScheduleOffsetMs, NowMs, SchedulePlan, TimerTable,
+               TaskTable, State ) ->
+
+    % Even if no order applies among the various tasks scheduled at a given
+    % offset, we find it more relevant to trigger them according to the order in
+    % which they were declared; so:
+    %
+    RevTaskIds = lists:reverse( TaskIds ),
+
+    trigger_tasks_helper( RevTaskIds, ScheduleOffsetMs, NowMs, SchedulePlan,
+                          TimerTable, TaskTable, State ).
+
+
+
+% (helper)
+trigger_tasks_helper( _TaskIds=[], ScheduleOffsetMs, _NowMs, SchedulePlan,
+                      TimerTable, TaskTable, _State ) ->
 
     % In the final clause, as a single timer per offset is created, even if
     % multiple tasks are scheduled then:
@@ -1207,8 +1223,8 @@ trigger_tasks( _TaskIds=[], ScheduleOffsetMs, _NowMs, SchedulePlan, TimerTable,
     { SchedulePlan, ShrunkTimerTable, TaskTable };
 
 
-trigger_tasks( _TaskIds=[ TaskId | T ], ScheduleOffsetMs, NowMs, SchedulePlan,
-               TimerTable, TaskTable, State ) ->
+trigger_tasks_helper( _TaskIds=[ TaskId | T ], ScheduleOffsetMs, NowMs,
+                      SchedulePlan, TimerTable, TaskTable, State ) ->
 
     { TaskEntry, ShrunkTaskTable } = table:extract_entry( TaskId, TaskTable ),
 
@@ -1226,13 +1242,16 @@ trigger_tasks( _TaskIds=[ TaskId | T ], ScheduleOffsetMs, NowMs, SchedulePlan,
     launch_task( TaskEntry#task_entry.command,
                  TaskEntry#task_entry.actuator_pid, State ),
 
-    % In all cases this timer is removed exactly once (by the final clause):
+    % In all cases, this timer is removed exactly once (by the final clause):
     case decrement_count( TaskEntry#task_entry.count ) of
 
         0 ->
             ?debug_fmt( "Dropping task #~B for good, as fully done.",
                         [ TaskId ] ),
-            { SchedulePlan, TimerTable, ShrunkTaskTable };
+
+            trigger_tasks_helper( T, ScheduleOffsetMs, NowMs, SchedulePlan,
+                TimerTable, ShrunkTaskTable, State );
+
 
         % Possibly unlimited:
         NewCount ->
@@ -1295,15 +1314,15 @@ trigger_tasks( _TaskIds=[ TaskId | T ], ScheduleOffsetMs, NowMs, SchedulePlan,
                             [ ScheduleOffsetMs, TaskId,
                               schedule_plan_to_string( NewPlan, State ) ] ) ),
 
-                    trigger_tasks( T, ScheduleOffsetMs, NowMs, NewPlan,
+                    trigger_tasks_helper( T, ScheduleOffsetMs, NowMs, NewPlan,
                         NewTimerTable, NewTaskTable, State );
 
                 false ->
                     ?warning_fmt( "Next scheduling of task #~B to happen in "
                         "the past (at offset ~B), forcing it now.",
                         [ TaskId, NextScheduleMs ] ),
-                    trigger_tasks( [ TaskId | T ], ScheduleOffsetMs, NowMs,
-                        SchedulePlan, TimerTable, NewTaskTable, State )
+                    trigger_tasks_helper( [ TaskId | T ], ScheduleOffsetMs,
+                        NowMs, SchedulePlan, TimerTable, NewTaskTable, State )
 
             end
 
@@ -1938,7 +1957,7 @@ timer_table_to_string( TimerTable, State ) ->
                 text_utils:strings_to_string(
                     [ text_utils:format( "offset ~B (~ts)",
                         [ Off, get_timestamp_string_for( Off, State ) ] )
-                            || Off <- Offsets ] ) ] )
+                            || Off <- lists:sort( Offsets ) ] ) ] )
 
     end.
 

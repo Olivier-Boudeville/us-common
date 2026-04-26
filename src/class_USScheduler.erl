@@ -81,7 +81,9 @@ verbatim to their actuators.
   | dhms_duration()
   | seconds() % (not milliseconds)
 
-    % Preferably at this specified (future) time:
+    % Preferably at this specified (future, absolute) time (expressed in local
+    % time, as of the registration of the corresponding task):
+    %
   | timestamp().
 
 
@@ -218,6 +220,31 @@ designed to be rather small).
     % The periodicity at which this task shall be scheduled:
     periodicity :: periodicity(),
 
+    % Tells whether this task is to be scheduled according to any US-server DST
+    % (Daylight Saving Time) convention (if true; useful for timestamps
+    % expressed absolutely, but in terms of local time - and thus subject to the
+    % corresponding time transitions), or if it is to remain strictly
+    % periodical, regardless of DST transitions (if false, which is the usual
+    % case).
+    %
+    % Having a task be DST-bound is generally useful only when it is to be
+    % triggered at a given wallclock - thus DST-aware - (local) time of the day
+    % (e.g. start automatically the TV at 7:54 PM; if DST was not taken into
+    % account, it could be triggered only at 8:54 PM in Summer).
+    %
+    % Note that, in order a DST correction to be applied to its DST-bound tasks,
+    % the scheduler itself must have a DST convention set.
+    %
+    dst_bound = false :: boolean(),
+
+    % Stores any precomputed DST offset, in minutes, for the next trigger:
+    %
+    % (to avoid this offset and its DST transition to have to be determined
+    % twice, when a previous scheduling is done, and then when it becomes the
+    % current one)
+    %
+    next_dst_offset :: option( minute() ),
+
     % The number of times this task shall still be scheduled:
     count :: schedule_count(),
 
@@ -227,8 +254,9 @@ designed to be rather small).
     % The internal time offset (if any) at which this task was first scheduled:
     started_on = undefined :: option( schedule_offset() ),
 
-    % The internal time offset (if any) at which this task was last scheduled:
+    % The internal time offset (if any) at which this task was scheduled last:
     last_schedule = undefined :: option( schedule_offset() ),
+
 
     % The PID of the process having registered this task:
     requester_pid :: requester_pid(),
@@ -269,6 +297,14 @@ Schedule pairs, ordered from closest future (sooner) to most remote one (later).
     { schedule_plan, schedule_plan(), "the ordered list of next schedulings" },
 
     { timer_table, timer_table(), "a table registering live timers" },
+
+    { dst_convention, option( dst_convention() ),
+      "tells any DST convention this scheduler shall support, for tasks that "
+      "would be defined in DST time" },
+
+    { dst_shift, option( ms_duration() ),
+      "any DST shift to apply (generally an offset of 1 hour, sometimes 30 "
+      "minutes), for any actual, current DST convention" },
 
     % Allows also to count all tasks that have been submitted:
     { next_task_id, task_id(), "identifier of the next task to register" } ] ).
@@ -332,7 +368,22 @@ Schedule pairs, ordered from closest future (sooner) to most remote one (later).
 % for example due to DST (Daylight Saving Time), tasks may appear to be executed
 % with a time offset (e.g. at 1 PM instead of noon). Working with a monotonic,
 % UTC (Universal Coordinated Time)-like time is thus intentional.
+
+
+% On Daylight saving time:
 %
+% The DST mode allows scheduling tasks not in absolute (e.g. UTC) time but in
+% conventional, local, DST-aware time (for example based on the European
+% convention); the scheduling of such tasks will thus be subject to DST
+% offsets.
+%
+% For example, if planning a DST-aware task each day at 7:54 PM, then twice a
+% year, during any DST transitions, its scheduling will not be strictly
+% periodical. For example, with the european_dst server convention, in the last
+% Sunday of March, 23 hours only will elapse between two of its activations, and
+% 25 hours in the last Sunday of October.
+
+
 % Due to some external event (e.g. system overload or suspension), task
 % deadlines may be missed, in which case they will be rescheduled in a row at a
 % faster pace on a best-effort basis (rather than being skipped as a whole). As
@@ -392,13 +443,19 @@ Schedule pairs, ordered from closest future (sooner) to most remote one (later).
 -type timestamp() :: time_utils:timestamp().
 -type dhms_duration() :: time_utils:dhms_duration().
 -type ms_duration() :: time_utils:ms_duration().
+-type minute() :: time_utils:minute().
+-type dst_convention() :: time_utils:dst_convention().
 
 -type registration_name() :: naming_utils:registration_name().
 -type registration_scope() :: naming_utils:registration_scope().
 
 
 
--doc "Constructs the main (singleton), default US scheduler.".
+-doc """
+Constructs the main (singleton), default US scheduler.
+
+No specific Daylight Saving Time convention is set.
+""".
 -spec construct( wooper:state() ) -> wooper:state().
 construct( State ) ->
 
@@ -408,11 +465,15 @@ construct( State ) ->
         ?us_common_scheduler_registration_name,
         ?us_common_scheduler_registration_scope ),
 
-    init_common( SrvState ).
+    init_common( _DSTConv=undefined, SrvState ).
 
 
 
--doc "Constructs a (named, unregistered) US scheduler.".
+-doc """
+Constructs a (named, unregistered) US scheduler.
+
+No specific Daylight Saving Time convention is set.
+""".
 -spec construct( wooper:state(), ustring() ) -> wooper:state().
 construct( State, SchedulerName ) ->
 
@@ -422,11 +483,15 @@ construct( State, SchedulerName ) ->
     SrvState = class_USServer:construct( State,
                                          ?trace_categorize(SchedulerName) ),
 
-    init_common( SrvState ).
+    init_common( _DSTConv=undefined, SrvState ).
 
 
 
--doc "Constructs a (named, registered with specified scope) US scheduler.".
+-doc """
+Constructs a (named, registered with specified scope) US scheduler.
+
+No specific Daylight Saving Time convention is set.
+""".
 -spec construct( wooper:state(), ustring(), registration_name(),
                  registration_scope() ) -> wooper:state().
 construct( State, SchedulerName, RegistrationName, RegistrationScope ) ->
@@ -435,19 +500,40 @@ construct( State, SchedulerName, RegistrationName, RegistrationScope ) ->
     SrvState = class_USServer:construct( State,
         ?trace_categorize(SchedulerName), RegistrationName, RegistrationScope ),
 
-    init_common( SrvState ).
+    init_common( _DSTConv=undefined, SrvState ).
+
+
+-doc """
+Constructs a (named, registered with specified scope) US scheduler, using the
+specified Daylight Saving Time convention.
+""".
+-spec construct( wooper:state(), ustring(), registration_name(),
+                 registration_scope(), dst_convention() ) -> wooper:state().
+construct( State, SchedulerName, RegistrationName, RegistrationScope,
+           DSTConv ) ->
+
+    % First the direct mother classes, then this class-specific actions:
+    SrvState = class_USServer:construct( State,
+        ?trace_categorize(SchedulerName), RegistrationName, RegistrationScope ),
+
+    init_common( DSTConv, SrvState ).
 
 
 
 % (helper)
--spec init_common( wooper:state() ) -> wooper:state().
-init_common( State ) ->
+-spec init_common( option( dst_convention() ), wooper:state() ) ->
+                                            wooper:state().
+init_common( MaybeDSTConv, State ) ->
 
     EmptyTable = table:new(),
+
+    MaybeDSTConv =:= undefined
+        orelse time_utils:vet_dst_convention( MaybeDSTConv ),
 
     ReadyState = setAttributes( State, [ { task_table, EmptyTable },
                                          { schedule_plan, [] },
                                          { timer_table, EmptyTable },
+                                         { dst_convention, MaybeDSTConv },
                                          { next_task_id, 1 } ] ),
 
     trace_bridge:notice_fmt( "Scheduler ready, at ~ts.",
@@ -503,6 +589,10 @@ Registers (synchronously) the specified one-shot task: the specified command
 will be executed once, at the specified time, being assigned to the requesting
 process (as actuator).
 
+Does not take into account any Daylight Saving Time convention: even if a DST
+transition happens, no DST offset will be applied to the scheduling of this
+task.
+
 Returns either `task_done` if the task was done on the fly (hence is already
 triggered; then no task identifier applies), or `{'task_registered', TaskId}` if
 it is registered for a later trigger (then its assigned task identifier is
@@ -519,15 +609,20 @@ of literal timestamps).
 registerOneshotTask( State, UserTaskCommand, UserStartTime ) ->
 
     { NewState, Result } = registerTask( State, UserTaskCommand, UserStartTime,
-        _Periodicity=once, _Count=1, _ActPid=?getSender() ),
+        _Periodicity=once, _DSTBound=false, _Count=1, _ActPid=?getSender() ),
 
     wooper:return_state_result( NewState, Result ).
+
 
 
 -doc """
 Registers (synchronously) the specified one-shot task: the specified command
 will be executed once, after the specified duration, being assigned to the
 requesting process (as actuator).
+
+Does not take into account any Daylight Saving Time convention: even if a DST
+transition happens, no DST offset will be applied to the scheduling of this
+task.
 
 Returns either `task_done` if the task was done on the fly (hence is already
 triggered; then no task identifier applies), or `{'task_registered', TaskId}` if
@@ -540,7 +635,7 @@ returned).
 registerOneshotTaskIn( State, UserTaskCommand, AfterDuration ) ->
     StartTime = time_utils:timestamp_in( AfterDuration ),
     { NewState, Result } = registerTask( State, UserTaskCommand, StartTime,
-        _Periodicity=once, _Count=1, _ActPid=?getSender() ),
+        _Periodicity=once, _DSTBound=false, _Count=1, _ActPid=?getSender() ),
 
     wooper:return_state_result( NewState, Result ).
 
@@ -550,6 +645,10 @@ registerOneshotTaskIn( State, UserTaskCommand, AfterDuration ) ->
 Registers (synchronously) the specified one-shot task: the specified command
 will be executed once, at the specified time, as assigned to requesting and
 specified actuator process.
+
+Does not take into account any Daylight Saving Time convention: even if a DST
+transition happens, no DST offset will be applied to the scheduling of this
+task.
 
 Returns either `task_done` if the task was done on the fly (hence is already
 triggered; then no task identifier applies), or `{'task_registered', TaskId}` if
@@ -567,7 +666,7 @@ of literal timestamps).
 registerOneshotTask( State, UserTaskCommand, UserStartTime, UserActPid ) ->
 
     { NewState, Result } = registerTask( State, UserTaskCommand, UserStartTime,
-        _Periodicity=once, _Count=1, UserActPid ),
+        _Periodicity=once, _DSTBound=false, _Count=1, UserActPid ),
 
     wooper:return_state_result( NewState, Result ).
 
@@ -579,6 +678,9 @@ specified command will be executed starting immediately (in a flexible manner),
 at the specified user periodicity and indefinitely, being assigned to the
 requesting process (as actuator).
 
+The scheduling of this task will be strictly periodical, regardless of any DST
+convention.
+
 Returns either `task_done` if the task was a one-shot one that was done on the
 fly (hence is already triggered, in a case where no task identifier applies
 since it is fully completed), or `{'task_registered', TaskId}` if it is
@@ -589,7 +691,7 @@ registered for a later trigger (then its assigned task identifier is returned).
 registerTask( State, UserTaskCommand, UserPeriodicity ) ->
 
     { RegOutcome, RegState } = register_task( UserTaskCommand,
-        _StartTime=flexible, UserPeriodicity, _Count=unlimited,
+        _StartTime=flexible, UserPeriodicity, _DSTBound=false, _Count=unlimited,
         _UserActPid=?getSender(), State ),
 
     wooper:return_state_result( RegState, RegOutcome ).
@@ -602,6 +704,9 @@ specified command will be executed starting immediately (in a flexible manner),
 at the specified user periodicity, for the specified number of times, being
 assigned to the requesting process (as actuator).
 
+The scheduling of this task will be strictly periodical, regardless of any DST
+convention.
+
 Returns either `task_done` if the task was a one-shot one that was done on the
 fly (hence is already triggered, in a case where no task identifier applies
 since it is fully completed), or `{'task_registered', TaskId}` if it is
@@ -612,7 +717,7 @@ registered for a later trigger (then its assigned task identifier is returned).
 registerTask( State, UserTaskCommand, UserPeriodicity, UserCount ) ->
 
     { RegOutcome, RegState } = register_task( UserTaskCommand,
-        _StartTime=flexible, UserPeriodicity, UserCount,
+        _StartTime=flexible, UserPeriodicity, _DSTBound=false, UserCount,
         _UserActPid=?getSender(), State ),
 
     wooper:return_state_result( RegState, RegOutcome ).
@@ -624,6 +729,9 @@ Registers (synchronously) the specified (potentially periodical) task: the
 specified command will be executed starting from the specified time, at the
 specified user periodicity, for the specified number of times, being assigned to
 the requesting process.
+
+The scheduling of this task will be strictly periodical, regardless of any DST
+convention.
 
 Returns either `task_done` if the task was a one-shot one that was done on the
 fly (hence is already triggered, in a case where no task identifier applies
@@ -643,7 +751,43 @@ registerTask( State, UserTaskCommand, UserStartTime, UserPeriodicity,
               UserCount ) ->
 
     { RegOutcome, RegState } = register_task( UserTaskCommand, UserStartTime,
-        UserPeriodicity, UserCount, _UserActPid=?getSender(), State ),
+        UserPeriodicity, _DSTBound=false, UserCount, _UserActPid=?getSender(),
+        State ),
+
+    wooper:return_state_result( RegState, RegOutcome ).
+
+
+
+-doc """
+Registers (synchronously) the specified (potentially periodical) task: the
+specified command will be executed starting from the specified time, at the
+specified user periodicity, for the specified number of times, being assigned to
+the requesting process.
+
+If requested to be bound to Daylight Saving Time, the scheduling of this task
+will apply any overall DST convention set for this scheduler, and this task will
+be triggered according to DST (thus proper DST offsets will be applied to its
+scheduling whenever necessary), instead of being strictly periodical.
+
+Returns either `task_done` if the task was a one-shot one that was done on the
+fly (hence is already triggered, in a case where no task identifier applies
+since it is fully completed), or `{'task_registered', TaskId}` if it is
+registered for a later trigger (then its assigned task identifier is returned).
+
+Note: if the deadline is specified in absolute terms (e.g. as `{{2020,3,22},
+{16,1,48}}`), the conversion to internal time will be done immediately (at task
+submission time), resulting in any future system time change (e.g. DST) not
+being taken into account at this level (as the respect of actual periodicities
+is preferred over the one of literal timestamps).
+""".
+-spec registerTask( wooper:state(), task_command(), start_time(),
+                    user_periodicity(), boolean(), schedule_count() ) ->
+                        request_return( task_registration_outcome() ).
+registerTask( State, UserTaskCommand, UserStartTime, UserPeriodicity,
+              DSTBound, UserCount ) ->
+
+    { RegOutcome, RegState } = register_task( UserTaskCommand, UserStartTime,
+        UserPeriodicity, DSTBound, UserCount, _UserActPid=?getSender(), State ),
 
     wooper:return_state_result( RegState, RegOutcome ).
 
@@ -656,6 +800,9 @@ the specified command will be executed starting from the specified time, at the
 specified user periodicity, for the specified number of times, being assigned to
 the requesting process.
 
+The scheduling of this task will be strictly periodical, regardless of any DST
+convention.
+
 Note: if the deadline is specified in absolute terms (e.g. as `{{2020,3,22},
 {16,1,48}}`), the conversion to internal time will be done immediately (at task
 submission time), resulting in any future system time change (e.g. DST) not
@@ -663,12 +810,13 @@ being taken into account at this level (as the respect of actual periodicities
 is preferred over the one of literal timestamps).
 """.
 -spec registerTaskAsync( wooper:state(), task_command(), start_time(),
-                    user_periodicity(), schedule_count() ) -> oneway_return().
+    user_periodicity(), schedule_count() ) -> oneway_return().
 registerTaskAsync( State, UserTaskCommand, UserStartTime, UserPeriodicity,
                    UserCount ) ->
 
     { RegOutcome, RegState } = register_task( UserTaskCommand, UserStartTime,
-        UserPeriodicity, UserCount, _UserActPid=?getSender(), State ),
+        UserPeriodicity, _DSTBound=false, UserCount, _UserActPid=?getSender(),
+        State ),
 
     cond_utils:if_defined( us_common_debug_scheduling,
         ?debug_fmt( "Asynchronous registering of task '~p' resulted in "
@@ -686,6 +834,11 @@ specified command will be executed starting from the specified time, at the
 specified user periodicity, for the specified number of times, being assigned to
 the specified actuator process.
 
+If requested to be bound to Daylight Saving Time, the scheduling of this task
+will apply any overall DST convention set for this scheduler, and this task will
+be triggered according to DST (thus proper DST offsets will be applied to its
+scheduling whenever necessary), instead of being strictly periodical.
+
 Returns either `task_done` if the task was a one-shot one that was done on the
 fly (hence is already triggered, in a case where no task identifier applies
 since it is fully completed), or `{'task_registered', TaskId}` if it is
@@ -696,15 +849,17 @@ Note: if the deadline is specified in absolute terms (e.g. as `{{2020,3,22},
 submission time), resulting in any future system time change (e.g. DST) not
 being taken into account at this level (as the respect of actual periodicities
 is preferred over the one of literal timestamps).
+
+This is the most complete registering of a synchronous task.
 """.
 -spec registerTask( wooper:state(), task_command(), start_time(),
-                    user_periodicity(), schedule_count(), actuator_pid() ) ->
+    user_periodicity(), boolean(), schedule_count(), actuator_pid() ) ->
                         request_return( task_registration_outcome() ).
 registerTask( State, UserTaskCommand, UserStartTime, UserPeriodicity,
-              UserCount, UserActPid ) ->
+              DSTBound, UserCount, UserActPid ) ->
 
     { RegOutcome, RegState } = register_task( UserTaskCommand, UserStartTime,
-        UserPeriodicity, UserCount, UserActPid, State ),
+        UserPeriodicity, DSTBound, UserCount, UserActPid, State ),
 
     wooper:return_state_result( RegState, RegOutcome ).
 
@@ -717,20 +872,27 @@ the specified command will be executed starting from the specified time, at the
 specified user periodicity, for the specified number of times, being assigned to
 the specified actuator process.
 
+If requested to be bound to Daylight Saving Time, the scheduling of this task
+will apply any overall DST convention set for this scheduler, and this task will
+be triggered according to DST (thus proper DST offsets will be applied to its
+scheduling whenever necessary), instead of being strictly periodical.
+
 Note: if the deadline is specified in absolute terms (e.g. as `{{2020,3,22},
 {16,1,48}}`), the conversion to internal time will be done immediately (at task
 submission time), resulting in any future system time change (e.g. DST) not
 being taken into account at this level (as the respect of actual periodicities
 is preferred over the one of literal timestamps).
+
+This is the most complete registering of an asynchronous task.
 """.
 -spec registerTaskAsync( wooper:state(), task_command(), start_time(),
-                    user_periodicity(), schedule_count(), actuator_pid() ) ->
+    user_periodicity(), boolean(), schedule_count(), actuator_pid() ) ->
                                             oneway_return().
 registerTaskAsync( State, UserTaskCommand, UserStartTime, UserPeriodicity,
-                   UserCount, UserActPid ) ->
+                   DSTBound, UserCount, UserActPid ) ->
 
     { RegOutcome, RegState } = register_task( UserTaskCommand, UserStartTime,
-        UserPeriodicity, UserCount, UserActPid, State ),
+        UserPeriodicity, DSTBound, UserCount, UserActPid, State ),
 
     cond_utils:if_defined( us_common_debug_scheduling,
         ?debug_fmt( "Asynchronous registering of task '~p' resulted in "
@@ -743,21 +905,22 @@ registerTaskAsync( State, UserTaskCommand, UserStartTime, UserPeriodicity,
 
 
 -doc """
-The actual registering of new tasks.
+The actual registering of a new task.
 
 (helper)
 """.
 -spec register_task( task_command(), start_time(), user_periodicity(),
-                     schedule_count(), actuator_pid(), wooper:state() ) ->
+    boolean(), schedule_count(), actuator_pid(), wooper:state() ) ->
                             { task_registration_outcome(), wooper:state() }.
-register_task( UserTaskCommand, UserStartTime, UserPeriodicity, UserCount,
-               UserActPid, State ) ->
+register_task( UserTaskCommand, UserStartTime, UserPeriodicity, DSTBound,
+               UserCount, UserActPid, State ) ->
 
     % Checks and canonicalises specified elements:
     TaskCommand = vet_task_command( UserTaskCommand, State ),
-    MsDurationBeforeStart = vet_start_time( UserStartTime, State ),
+    DurationBeforeStartMs = vet_start_time( UserStartTime, State ),
     Count = vet_count( UserCount, State ),
     MaybePeriodicity = vet_periodicity( UserPeriodicity, Count, State ),
+    vet_dst_bound( DSTBound ),
     ReqPid = ?getSender(),
     ActPid = vet_actuator_pid( UserActPid ),
 
@@ -771,26 +934,31 @@ register_task( UserTaskCommand, UserStartTime, UserPeriodicity, UserCount,
 
     end,
 
-    HappenStr = case MsDurationBeforeStart of
+    HappenStr = case DurationBeforeStartMs of
 
         0 ->
             "immediately";
 
         _ ->
             text_utils:format( "in ~ts",
-                [ time_utils:duration_to_string( MsDurationBeforeStart ) ] )
+                [ time_utils:duration_to_string( DurationBeforeStartMs ) ] )
 
     end,
 
+    DSTStr = case DSTBound of
+        true -> "with respect to DST";
+        false -> "regardless of DST"
+    end,
+
     ?info_fmt( "Registering task whose command is '~p', whose declared start "
-        "time is ~ts (hence to happen ~ts), to be triggered ~ts with ~ts "
+        "time is ~ts (hence to happen ~ts), to be triggered ~ts ~ts with ~ts "
         "on actuator ~w (~ts).",
         [ TaskCommand, start_time_to_string( UserStartTime ), HappenStr,
-          schedule_count_to_string( Count ),
+          DSTStr, schedule_count_to_string( Count ),
           periodicity_to_string( MaybePeriodicity ), ActPid, ActStr ] ),
 
     % Immediate launch requested?
-    case MsDurationBeforeStart of
+    case DurationBeforeStartMs of
 
         % Immediate launch here:
         0 ->
@@ -803,11 +971,11 @@ register_task( UserTaskCommand, UserStartTime, UserPeriodicity, UserCount,
                     % Just to be executed once (implied and checked: Count=1).
                     %
                     % Not even recording it then, it was just fire and forget:
-                    % neither task entry, just updating the task count.
+                    % no task entry either, just updating the task count.
                     %
                     { task_done, incrementAttribute( State, next_task_id ) };
 
-                MsPeriod ->
+                PeriodMs ->
                     case decrement_count( Count ) of
 
                         0 ->
@@ -823,22 +991,30 @@ register_task( UserTaskCommand, UserStartTime, UserPeriodicity, UserCount,
                             % happen, and must be recorded:
 
                             TaskId = ?getAttr(next_task_id),
-                            NowMs = get_current_schedule_offset( State ),
-                            NextSchedule = NowMs + MsPeriod,
 
-                            TI = #task_entry{ id=TaskId,
-                                              command=TaskCommand,
-                                              next_schedule=NextSchedule,
-                                              periodicity=MsPeriod,
-                                              count=NewCount,
-                                              schedule_count=1,
-                                              started_on=NowMs,
-                                              last_schedule=NowMs,
-                                              requester_pid=ReqPid,
-                                              actuator_pid=ActPid },
+                            NowMs = get_current_schedule_offset( State ),
+
+                            { NextScheduleOffsetMs, NextDSTMinOffset } =
+                                plan_next_scheduling( DSTBound, NowMs,
+                                    _MaybeCurrentDSTMinOffset=undefined,
+                                    _DurationMs=PeriodMs, State ),
+
+                            TI = #task_entry{
+                                id=TaskId,
+                                command=TaskCommand,
+                                next_schedule=NextScheduleOffsetMs,
+                                periodicity=PeriodMs,
+                                dst_bound=DSTBound,
+                                next_dst_offset=NextDSTMinOffset,
+                                count=NewCount,
+                                schedule_count=1,
+                                started_on=NowMs,
+                                last_schedule=NowMs,
+                                requester_pid=ReqPid,
+                                actuator_pid=ActPid },
 
                             RegState = register_task_schedule( TaskId, TI,
-                                NextSchedule, MsPeriod, State ),
+                                NextScheduleOffsetMs, PeriodMs, State ),
 
                             { { task_registered, TaskId }, RegState }
 
@@ -849,12 +1025,20 @@ register_task( UserTaskCommand, UserStartTime, UserPeriodicity, UserCount,
         % Deferred launch here (most common case):
         _ ->
             TaskId = ?getAttr(next_task_id),
+
             NowMs = get_current_schedule_offset( State ),
-            NextSchedule = NowMs + MsDurationBeforeStart,
+
+            { NextScheduleOffsetMs, NextDSTMinOffset } =
+                plan_next_scheduling( DSTBound, NowMs,
+                    _MaybeCurrentDSTMinOffset=undefined,
+                    _DurationMs=DurationBeforeStartMs, State ),
+
             TI = #task_entry{ id=TaskId,
                               command=TaskCommand,
-                              next_schedule=NextSchedule,
+                              next_schedule=NextScheduleOffsetMs,
                               periodicity=MaybePeriodicity,
+                              dst_bound=DSTBound,
+                              next_dst_offset=NextDSTMinOffset,
                               count=Count,
 
                               % Defaults:
@@ -865,14 +1049,98 @@ register_task( UserTaskCommand, UserStartTime, UserPeriodicity, UserCount,
                               requester_pid=ReqPid,
                               actuator_pid=ActPid },
 
-            RegState = register_task_schedule( TaskId, TI, NextSchedule,
-                                               MsDurationBeforeStart, State ),
+            RegState = register_task_schedule( TaskId, TI, NextScheduleOffsetMs,
+                                               DurationBeforeStartMs, State ),
 
             cond_utils:if_defined( us_common_debug_scheduling,
                 ?debug_fmt( "Resulting scheduler state: ~ts.",
                             [ to_string( RegState ) ] ) ),
 
             { { task_registered, TaskId }, RegState }
+
+    end.
+
+
+
+-doc """
+Plans the next scheduling after the specified duration, in local time if
+DST-bound, otherwise the actual one.
+""".
+-spec plan_next_scheduling( boolean(), schedule_offset(), option( minute() ),
+                            ms_duration(), wooper:state() ) ->
+        { NextScheduleOffsetMs :: schedule_offset(),
+          MaybeNextDSTMinOffset :: option( minute() ) }.
+% *DSTMinOffset are any precomputed DST offsets, in minutes:
+plan_next_scheduling( _DSTBound=false, NowOffsetMs, _MaybeCurrentDSTMinOffset,
+                      DurationMs, _State ) ->
+    % Simplest case:
+    NextScheduleOffsetMs = NowOffsetMs + DurationMs,
+    { NextScheduleOffsetMs, _MaybeNextDSTMinOffset=undefined };
+
+plan_next_scheduling( _DSTBound=true, NowOffsetMs, MaybeCurrentDSTMinOffset,
+                      DurationMs, State ) ->
+    % DST-aware task, we have to know whether the next scheduling will take
+    % place during in the same DST period as the current one (e.g. both in
+    % summertime, regardless of the number of DST transitions in-between):
+    %
+    case ?getAttr(dst_convention) of
+
+        undefined ->
+            % Server is unaware of DST, thus like if not DST-bound:
+            plan_next_scheduling( false, NowOffsetMs,
+                MaybeCurrentDSTMinOffset, DurationMs, State );
+
+        DSTConv ->
+            % We have to determine first the DST offsets for now and then:
+
+            NowUTCTimestamp = erlang:universaltime(),
+
+            % Maybe already known, as determined from any previous trigger:
+            NowDSTMinOffset = case MaybeCurrentDSTMinOffset of
+
+                undefined ->
+                    % No, then compute it:
+                   time_utils:get_dst_offset( NowUTCTimestamp, DSTConv );
+
+                 CurrentDSTMinOffset ->
+                    CurrentDSTMinOffset
+
+            end,
+
+            NextUTCTimestamp = time_utils:offset_timestamp( NowUTCTimestamp,
+                _Seconds=DurationMs div 1000 ),
+
+            NextDSTMinOffset = time_utils:get_dst_offset( NextUTCTimestamp,
+                                                          DSTConv ),
+
+            % For example, with europe_dst, if scheduling a task that shall
+            % always happen at 7:54PM in local time, while being in February (in
+            % winter, thus not in DST; so NowDSTMinOffset=0), and if scheduling
+            % it next for May (in summer, thus with DST; so
+            % NextDSTMinOffset=60), then the actual, current local time to
+            % target is 6:54PM (as all local timestamps will have been offset of
+            % +1 hour during the upcoming winter to summer DST transition); so
+            % the signed minute offset is:
+            %
+            OverallDSTMinOffset = NowDSTMinOffset - NextDSTMinOffset,
+
+            NextScheduleOffsetMs = NowOffsetMs + OverallDSTMinOffset * 60 * 1000
+                + DurationMs,
+
+            cond_utils:if_defined( us_common_debug_scheduling,
+                ?info_fmt( "Planning at ~ts UTC the next DST-aware scheduling: "
+                    "current DST offset is ~B minutes, "
+                    "next (at ~ts UTC, after ~ts) will be ~B minutes, "
+                    "so the overall one will be ~B minutes, and next "
+                    "schedule offset will be ~B ms.",
+                    [ time_utils:timestamp_to_string( NowUTCTimestamp ),
+                      NowDSTMinOffset,
+                      time_utils:timestamp_to_string( NextUTCTimestamp ),
+                      time_utils:duration_to_string( DurationMs ),
+                      NextDSTMinOffset, OverallDSTMinOffset,
+                      NextScheduleOffsetMs ] ) ),
+
+            { NextScheduleOffsetMs, NextDSTMinOffset }
 
     end.
 
@@ -1250,35 +1518,42 @@ trigger_tasks_helper( _TaskIds=[ TaskId | T ], ScheduleOffsetMs, NowMs,
                         [ TaskId ] ),
 
             trigger_tasks_helper( T, ScheduleOffsetMs, NowMs, SchedulePlan,
-                TimerTable, ShrunkTaskTable, State );
+                                  TimerTable, ShrunkTaskTable, State );
 
 
         % Possibly unlimited:
         NewCount ->
             % Will thus be still scheduled again afterwards.
 
-            % If first scheduling:
+            % To be set iff first scheduling:
             StartOffsetMs = case TaskEntry#task_entry.started_on of
 
                 undefined ->
-                    % Now rather than scheduled (ScheduleOffsetMs):
-                    NowMs;
+                     NowMs;
 
                 AlreadyStartOffsetMs ->
                     AlreadyStartOffsetMs
 
             end,
 
+            MaybeCurrentDSTMinOffset = TaskEntry#task_entry.next_dst_offset,
+
+            % Relying on planned (not actual, i.e. NowMs) offset to (attempt to)
+            % resorb any delay:
+            %
+            AdjustedNowMs = TaskEntry#task_entry.next_schedule,
+
             % Periodicity not expected to be 'undefined' here:
             Periodicity = TaskEntry#task_entry.periodicity,
 
-            % Basing on planned (not actual, i.e. NowMs) offset to (attempt to)
-            % resorb any delay:
-            %
-            NextScheduleMs = ScheduleOffsetMs + Periodicity,
+            { NextScheduleOffsetMs, MaybeNextDSTMinOffset } =
+                plan_next_scheduling( TaskEntry#task_entry.dst_bound,
+                    AdjustedNowMs, MaybeCurrentDSTMinOffset, Periodicity,
+                    State ),
 
             NewTaskEntry = TaskEntry#task_entry{
-                next_schedule=NextScheduleMs,
+                next_schedule=NextScheduleOffsetMs,
+                next_dst_offset=MaybeNextDSTMinOffset,
                 count=NewCount,
                 schedule_count=TaskEntry#task_entry.schedule_count+1,
                 started_on=StartOffsetMs,
@@ -1288,7 +1563,7 @@ trigger_tasks_helper( _TaskIds=[ TaskId | T ], ScheduleOffsetMs, NowMs,
             NewTaskTable =
                 table:add_entry( TaskId, NewTaskEntry, ShrunkTaskTable ),
 
-            case NextScheduleMs > NowMs of
+            case NextScheduleOffsetMs > NowMs of
 
                 % "Normal" case:
                 true ->
@@ -1305,7 +1580,7 @@ trigger_tasks_helper( _TaskIds=[ TaskId | T ], ScheduleOffsetMs, NowMs,
                     DurationFromNowMs = Periodicity + ScheduleOffsetMs - NowMs,
 
                     { NewPlan, NewTimerTable } = insert_task_at( TaskId,
-                        NextScheduleMs, DurationFromNowMs, SchedulePlan,
+                        NextScheduleOffsetMs, DurationFromNowMs, SchedulePlan,
                         TimerTable ),
 
                     cond_utils:if_defined( us_common_debug_scheduling,
@@ -1320,7 +1595,7 @@ trigger_tasks_helper( _TaskIds=[ TaskId | T ], ScheduleOffsetMs, NowMs,
                 false ->
                     ?warning_fmt( "Next scheduling of task #~B to happen in "
                         "the past (at offset ~B), forcing it now.",
-                        [ TaskId, NextScheduleMs ] ),
+                        [ TaskId, NextScheduleOffsetMs ] ),
                     trigger_tasks_helper( [ TaskId | T ], ScheduleOffsetMs,
                         NowMs, SchedulePlan, TimerTable, NewTaskTable, State )
 
@@ -1725,6 +2000,7 @@ vet_start_time( _UserStartTime=flexible, _State ) ->
     % At least currently:
     0;
 
+% Thus in seconds:
 vet_start_time( StartTimeInSecs, _State ) when is_integer( StartTimeInSecs ) ->
     case StartTimeInSecs > 0 of
 
@@ -1876,6 +2152,16 @@ vet_user_periodicity( UserPeriodicity, State ) ->
 
 
 
+-doc "Returns the user-specified DST binding status".
+-spec vet_dst_bound( term() ) -> boolean().
+vet_dst_bound( B ) when is_boolean( B ) ->
+    B;
+
+vet_dst_bound( Other ) ->
+    throw( { invalid_dst_binding_spec, Other } ).
+
+
+
 -doc "Returns the user-specified actuator PID.".
 -spec vet_actuator_pid( term() ) -> actuator_pid().
 vet_actuator_pid( Pid ) when is_pid( Pid ) ->
@@ -1893,6 +2179,11 @@ vet_actuator_pid( Other ) ->
 -doc "Returns a textual description of this server.".
 -spec to_string( wooper:state() ) -> ustring().
 to_string( State ) ->
+
+    DSTStr = text_utils:format( "applying ~ts DST convention",
+        [ case ?getAttr(dst_convention) of
+              undefined -> "no specific";
+              DSTConv -> text_utils:format( "the ~ts", [ DSTConv ] ) end ] ),
 
     TaskStr = case table:enumerate( ?getAttr(task_table) ) of
 
@@ -1914,10 +2205,10 @@ to_string( State ) ->
 
     TotalTaskCount = ?getAttr(next_task_id) - 1,
 
-    text_utils:format( "US scheduler, a ~ts; "
+    text_utils:format( "US scheduler, a ~ts; ~ts, "
         "registering ~ts (with a total of ~B task(s) already declared); "
         "current schedule ~ts; with ~ts",
-        [ class_USServer:to_string( State ), TaskStr, TotalTaskCount,
+        [ class_USServer:to_string( State ), DSTStr, TaskStr, TotalTaskCount,
           SchedStr, TimerStr ] ).
 
 
@@ -1978,6 +2269,7 @@ task_entry_to_string( #task_entry{ id=_TaskId,
                              command=Cmd,
                              next_schedule=NextSchedOffset,
                              periodicity=Periodicity,
+                             dst_bound=DSTBound,
                              count=Count,
                              schedule_count=SchedCount,
                              started_on=MaybeStartOffset,
@@ -2017,15 +2309,20 @@ task_entry_to_string( #task_entry{ id=_TaskId,
 
     NextSchedTime = get_timestamp_string_for( NextSchedOffset, State ),
 
+    DSTStr = case DSTBound of
+        true -> "based on DST time";
+        false -> "regardless of DST time"
+    end,
+
     PeriodStr = periodicity_to_string( Periodicity ),
 
     CountStr = schedule_count_to_string( Count ),
 
     text_utils:format( "task to trigger command '~p' on actuator ~w, ~ts, "
-        "to be scheduled next at offset ~B (~ts) according to ~ts, "
+        "to be scheduled ~ts next at offset ~B (~ts) according to ~ts, "
         "and for ~ts; it was declared by ~w",
-        [ Cmd, ActuatorPid, ExecStr, NextSchedOffset, NextSchedTime, PeriodStr,
-          CountStr, RequesterPid ] ).
+        [ Cmd, ActuatorPid, ExecStr, DSTStr, NextSchedOffset, NextSchedTime,
+          PeriodStr, CountStr, RequesterPid ] ).
 
 
 

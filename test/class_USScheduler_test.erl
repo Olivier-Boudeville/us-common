@@ -221,7 +221,8 @@ run() ->
 
     % Actually a single scheduling:
     SchedPid ! { registerTask, [ get_command( sixth ), SixthDHMSDuration,
-        _SixthPeriodicity=once, _SixthCount=1, FirstActuatorPid ], self() },
+        _SixthPeriodicity=once, _SixthDSTBound=false, _SixthCount=1,
+        FirstActuatorPid ], self() },
 
     { task_registered, IdSixthTask=6 } = test_receive(),
 
@@ -234,8 +235,8 @@ run() ->
     SeventhDHMSDuration = { 0, 0, 0, SeventhOffsetSecs },
 
     SchedPid ! { registerTask, [ get_command( seventh ), SeventhDHMSDuration,
-        SeventhPeriodicitySecs=1, SeventhCount=5, FirstActuatorPid ],
-                 self() },
+        SeventhPeriodicitySecs=1, _SeventhDSTBound=true, SeventhCount=5,
+        FirstActuatorPid ], self() },
 
     { task_registered, IdSeventhTask=7 } = test_receive(),
 

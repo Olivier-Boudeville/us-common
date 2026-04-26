@@ -97,7 +97,7 @@ init( _Args=[] ) ->
 
     SchedServerPid = class_USScheduler:new_link( "US-Common scheduler",
         ?us_common_scheduler_registration_name,
-        ?us_common_scheduler_registration_scope ),
+        ?us_common_scheduler_registration_scope, _DSTConv=europe_dst ),
 
     { ok, SchedServerPid, _State=SchedServerPid }.
 

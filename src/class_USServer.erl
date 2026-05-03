@@ -281,7 +281,7 @@ construct( State, ServerInit, MaybeRegistrationName, MaybeRegistrationScope,
     % console):
     %
     %TrapExits =:= true andalso
-    %    trace_bridge:debug( "Will be trapping EXIT messages." ),_
+    %    trace_bridge:debug( "Will be trapping EXIT messages." ),
 
     % Constant based on the number of milliseconds of the EPOCH, since year 0;
     % used in order to compute the most complete offset (in UTC):
@@ -304,8 +304,13 @@ construct( State, ServerInit, MaybeRegistrationName, MaybeRegistrationScope,
 
         { header_info, us_action:init_header_info() } ] ),
 
-    %trace_bridge:debug_fmt( "Registering server as '~ts' for scope ~ts.",
-    %    [ MaybeRegistrationName, MaybeRegistrationScope ] ),
+    % Useful regarding firewalls:
+    trace_bridge:debug_fmt(
+        "Relying on EPMD TCP port ~B, using distribution TCP port ~B.",
+        [ net_utils:get_epmd_port(), net_utils:get_distribution_port() ] ),
+
+    trace_bridge:debug_fmt( "Registering server as '~ts' for scope ~ts.",
+        [ MaybeRegistrationName, MaybeRegistrationScope ] ),
 
     register_name( MaybeRegistrationName, MaybeRegistrationScope, SetState ).
 

@@ -84,7 +84,7 @@ setup( ServerPrefix ) ->
 
 
 -doc """
-Setups this US client, possibly verbose.
+Setups this US client, possibly verbosely.
 
 Returns the name of the target US node, whether this client should be verbose,
 the corresponding configuration, and the table of remaining command-line
@@ -112,11 +112,19 @@ setup( ServerPrefix, IsVerboseByDefault ) ->
         get_target_node_names( CfgTable, ServerPrefix ),
 
     IsVerbose andalso app_facilities:display(
-        "Trying to connect to US server node '~ts', as client node '~ts'.",
-        [ MainTargetNodeName, node() ] ),
+        "Trying to connect to US server node '~ts', as client node '~ts' "
+        "(relying on EPMD port ~B).",
+        [ MainTargetNodeName, node(), net_utils:get_epmd_port() ] ),
 
     % Test regarding the problem of overlapping partitions:
+    % (see https://erlangforums.com/t/preventing-overlapping-partitions/4357)
+
     %timer:sleep( 500 ),
+
+    % The only other solution found working other than running erl with the "
+    % -kernel prevent_overlapping_partitions false" option:
+    %
+    net_kernel:hidden_connect_node( MainTargetNodeName ),
 
     ActualTargetNodeName = case net_adm:ping( MainTargetNodeName ) of
 
@@ -381,18 +389,19 @@ teardown( IsVerbose ) ->
     IsVerbose andalso app_facilities:display( "Client terminating now "
         "(while known other nodes are ~w).", [ nodes() ] ),
 
-    % Feeble attempt of avoiding non-systematic "'global' at node us_foo@fff
+    % Feeble attempts of avoiding non-systematic "'global' at node us_foo@fff
     % requested disconnect from node 'us_foo_controller_exec-uu@mmm' in order
     % to prevent overlapping partitions":
-    %
+    % (none worked, only the net_kernel:hidden_connect_node/1 workaround did)
+
     % (far less brutal than erlang:halt/{0,1}, yet awfully slow, and
     % actually non-blocking)
     %
-    global:disconnect(),
+    %global:disconnect(),
 
     %timer:sleep( ?wait ),
 
-    global:sync(),
+    %global:sync(),
 
     init:stop( _StatusCode=0 ),
 
@@ -428,5 +437,9 @@ teardown( IsVerbose ) ->
     % ?app_stop_without_waiting_for_trace_supervisor() is not used either, as
     % no aggregator was started from that client.
 
+    % To check any new code is executed indeed:
+    %trace_utils:warning("Version XXX."),
+
     % Otherwise too slow:
     app_facilities:finished( IsVerbose, _BeQuick=true ).
+    %app_facilities:finished( IsVerbose, _BeQuick=false ).

@@ -20,9 +20,7 @@
 
 -module(class_USScheduler_test).
 
--moduledoc """
-Test of the US-Common **scheduling service**.
-""".
+-moduledoc "Test of the US-Common **scheduling service**.".
 
 
 % For spawn:
@@ -234,8 +232,11 @@ run() ->
 
     SeventhDHMSDuration = { 0, 0, 0, SeventhOffsetSecs },
 
+    SeventhPeriodicitySecs = 1,
+    SeventhCount=5,
+
     SchedPid ! { registerTask, [ get_command( seventh ), SeventhDHMSDuration,
-        SeventhPeriodicitySecs=1, _SeventhDSTBound=true, SeventhCount=5,
+        SeventhPeriodicitySecs, _SeventhDSTBound=true, SeventhCount,
         FirstActuatorPid ], self() },
 
     { task_registered, IdSeventhTask=7 } = test_receive(),

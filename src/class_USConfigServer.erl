@@ -1588,7 +1588,8 @@ can be sent in all cases needed), not a static method.
 get_us_config_registration_info( CreateIfNeeded, State ) ->
 
     ?debug_fmt( "Getting information about the US configuration server "
-                "(create if needed: ~ts).", [ CreateIfNeeded
+                "(create if needed: ~ts).", [ CreateIfNeeded ] ),
+
     % Same logic as the overall US configuration server itself, notably to
     % obtain the same registration name to locate its instance:
     %

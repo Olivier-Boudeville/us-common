@@ -1,0 +1,364 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Module us_action</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module us_action</h1>
+<ul class="index"><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+
+
+<h2><a name="types">Data Types</a></h2>
+
+<h3 class="typedecl"><a name="type-action_arity">action_arity()</a></h3>
+<p><code>action_arity() = arity()</code></p>
+
+
+<h3 class="typedecl"><a name="type-action_header">action_header()</a></h3>
+<p><code>action_header() = <a href="#type-bin_string" docgen-rel="seetype" docgen-href="#bin_string/0">bin_string()</a></code></p>
+
+
+<h3 class="typedecl"><a name="type-action_id">action_id()</a></h3>
+<p><code>action_id() = {<a href="#type-action_name" docgen-rel="seetype" docgen-href="#action_name/0">action_name()</a>, <a href="#type-action_arity" docgen-rel="seetype" docgen-href="#action_arity/0">action_arity()</a>}</code></p>
+
+
+<h3 class="typedecl"><a name="type-action_info">action_info()</a></h3>
+<p><code>action_info() = #action_info{server_lookup_info = <a href="#type-option" docgen-rel="seetype" docgen-href="#option/0">option</a>(<a href="naming_utils.html#type-lookup_info" docgen-rel="seetype" docgen-href="naming_utils#lookup_info/0">naming_utils:lookup_info()</a>), action_name = <a href="us_action.html#type-action_name" docgen-rel="seetype" docgen-href="us_action#action_name/0">us_action:action_name()</a>, splitter = <a href="#type-option" docgen-rel="seetype" docgen-href="#option/0">option</a>(<a href="spell_tree.html#type-splitter" docgen-rel="seetype" docgen-href="spell_tree#splitter/0">spell_tree:splitter()</a>), arg_specs = [<a href="us_action.html#type-arg_spec" docgen-rel="seetype" docgen-href="us_action#arg_spec/0">us_action:arg_spec()</a>], result_spec = <a href="us_action.html#type-result_spec" docgen-rel="seetype" docgen-href="us_action#result_spec/0">us_action:result_spec()</a>, autostart = boolean(), request_name = <a href="wooper.html#type-request_name" docgen-rel="seetype" docgen-href="wooper#request_name/0">wooper:request_name()</a>, description = <a href="#type-option" docgen-rel="seetype" docgen-href="#option/0">option</a>(<a href="us_action.html#type-description" docgen-rel="seetype" docgen-href="us_action#description/0">us_action:description()</a>)}</code></p>
+
+
+<h3 class="typedecl"><a name="type-action_name">action_name()</a></h3>
+<p><code>action_name() = atom()</code></p>
+
+
+<h3 class="typedecl"><a name="type-action_not_resolved_error">action_not_resolved_error()</a></h3>
+<p><code>action_not_resolved_error() = {action_not_resolved, {invalid_action_tokens, InvalidTokens::any()} | action_service_not_ready | {unresolved_action_name_prefix, <a href="#type-bin_string" docgen-rel="seetype" docgen-href="#bin_string/0">bin_string()</a>}}</code></p>
+
+
+<h3 class="typedecl"><a name="type-action_outcome">action_outcome()</a></h3>
+<p><code>action_outcome() = <a href="#type-action_outcome" docgen-rel="seetype" docgen-href="#action_outcome/0">action_outcome</a>(<a href="#type-request_result" docgen-rel="seetype" docgen-href="#request_result/0">request_result()</a>)</code></p>
+
+
+<h3 class="typedecl"><a name="type-action_outcome">action_outcome()</a></h3>
+<p><code>action_outcome(ReturnT) = {action_done, ReturnT} | {action_failed, <a href="#type-failure_report" docgen-rel="seetype" docgen-href="#failure_report/0">failure_report()</a>}</code></p>
+
+
+<h3 class="typedecl"><a name="type-action_request">action_request()</a></h3>
+<p><code>action_request() = {<a href="wooper.html#type-request_name" docgen-rel="seetype" docgen-href="wooper#request_name/0">wooper:request_name()</a>, <a href="wooper.html#type-method_arguments" docgen-rel="seetype" docgen-href="wooper#method_arguments/0">wooper:method_arguments()</a>}</code></p>
+
+
+<h3 class="typedecl"><a name="type-action_spec">action_spec()</a></h3>
+<p><code>action_spec() = {<a href="#type-action_name" docgen-rel="seetype" docgen-href="#action_name/0">action_name()</a>, <a href="#type-option" docgen-rel="seetype" docgen-href="#option/0">option</a>(<a href="#type-description" docgen-rel="seetype" docgen-href="#description/0">description()</a>), <a href="#type-request_name" docgen-rel="seetype" docgen-href="#request_name/0">request_name()</a>, [<a href="#type-arg_spec" docgen-rel="seetype" docgen-href="#arg_spec/0">arg_spec()</a>], <a href="#type-option" docgen-rel="seetype" docgen-href="#option/0">option</a>(<a href="#type-result_spec" docgen-rel="seetype" docgen-href="#result_spec/0">result_spec()</a>)}</code></p>
+
+
+<h3 class="typedecl"><a name="type-action_table">action_table()</a></h3>
+<p><code>action_table() = <a href="#type-table" docgen-rel="seetype" docgen-href="#table/0">table</a>(<a href="#type-action_id" docgen-rel="seetype" docgen-href="#action_id/0">action_id()</a>, <a href="#type-action_info" docgen-rel="seetype" docgen-href="#action_info/0">action_info()</a>)</code></p>
+
+
+<h3 class="typedecl"><a name="type-action_token">action_token()</a></h3>
+<p><code>action_token() = <a href="#type-any_string" docgen-rel="seetype" docgen-href="#any_string/0">any_string()</a></code></p>
+
+
+<h3 class="typedecl"><a name="type-any_string">any_string()</a></h3>
+<p><code>any_string() = <a href="text_utils.html#type-any_string" docgen-rel="seetype" docgen-href="text_utils#any_string/0">text_utils:any_string()</a></code></p>
+
+
+<h3 class="typedecl"><a name="type-arg_name">arg_name()</a></h3>
+<p><code>arg_name() = atom()</code></p>
+
+
+<h3 class="typedecl"><a name="type-arg_spec">arg_spec()</a></h3>
+<p><code>arg_spec() = <a href="#type-static_arg_spec" docgen-rel="seetype" docgen-href="#static_arg_spec/0">static_arg_spec()</a> | <a href="#type-dynamic_arg_spec" docgen-rel="seetype" docgen-href="#dynamic_arg_spec/0">dynamic_arg_spec()</a></code></p>
+
+
+<h3 class="typedecl"><a name="type-argument">argument()</a></h3>
+<p><code>argument() = any()</code></p>
+
+
+<h3 class="typedecl"><a name="type-argument_kind">argument_kind()</a></h3>
+<p><code>argument_kind() = static | dynamic</code></p>
+
+
+<h3 class="typedecl"><a name="type-argument_name">argument_name()</a></h3>
+<p><code>argument_name() = <a href="#type-ustring" docgen-rel="seetype" docgen-href="#ustring/0">ustring()</a></code></p>
+
+
+<h3 class="typedecl"><a name="type-bin_string">bin_string()</a></h3>
+<p><code>bin_string() = <a href="text_utils.html#type-bin_string" docgen-rel="seetype" docgen-href="text_utils#bin_string/0">text_utils:bin_string()</a></code></p>
+
+
+<h3 class="typedecl"><a name="type-classname">classname()</a></h3>
+<p><code>classname() = <a href="wooper.html#type-classname" docgen-rel="seetype" docgen-href="wooper#classname/0">wooper:classname()</a></code></p>
+
+
+<h3 class="typedecl"><a name="type-coerce_token_error">coerce_token_error()</a></h3>
+<p><code>coerce_token_error() = <a href="#type-ustring" docgen-rel="seetype" docgen-href="#ustring/0">ustring()</a> | {invalid_argument_type, <a href="#type-argument_name" docgen-rel="seetype" docgen-href="#argument_name/0">argument_name()</a>, <a href="type_utils.html#type-type_coercion_error" docgen-rel="seetype" docgen-href="type_utils#type_coercion_error/0">type_utils:type_coercion_error()</a>, <a href="#type-action_id" docgen-rel="seetype" docgen-href="#action_id/0">action_id()</a>}</code></p>
+
+
+<h3 class="typedecl"><a name="type-description">description()</a></h3>
+<p><code>description() = <a href="#type-bin_string" docgen-rel="seetype" docgen-href="#bin_string/0">bin_string()</a></code></p>
+
+
+<h3 class="typedecl"><a name="type-dynamic_arg_spec">dynamic_arg_spec()</a></h3>
+<p><code>dynamic_arg_spec() = {dynamic, <a href="#type-arg_name" docgen-rel="seetype" docgen-href="#arg_name/0">arg_name()</a>, <a href="#type-text_type" docgen-rel="seetype" docgen-href="#text_type/0">text_type()</a>, <a href="#type-explicit_type" docgen-rel="seetype" docgen-href="#explicit_type/0">explicit_type()</a>, <a href="#type-option" docgen-rel="seetype" docgen-href="#option/0">option</a>(<a href="#type-description" docgen-rel="seetype" docgen-href="#description/0">description()</a>)}</code></p>
+
+
+<h3 class="typedecl"><a name="type-explicit_type">explicit_type()</a></h3>
+<p><code>explicit_type() = <a href="type_utils.html#type-explicit_type" docgen-rel="seetype" docgen-href="type_utils#explicit_type/0">type_utils:explicit_type()</a></code></p>
+
+
+<h3 class="typedecl"><a name="type-failure_report">failure_report()</a></h3>
+<p><code>failure_report() = {implementation_server_not_found, <a href="#type-lookup_info" docgen-rel="seetype" docgen-href="#lookup_info/0">lookup_info()</a>} | <a href="#type-action_not_resolved_error" docgen-rel="seetype" docgen-href="#action_not_resolved_error/0">action_not_resolved_error()</a> | {action_not_found, <a href="#type-action_id" docgen-rel="seetype" docgen-href="#action_id/0">action_id()</a>} | {wrong_argument_count, Expected::<a href="#type-action_arity" docgen-rel="seetype" docgen-href="#action_arity/0">action_arity()</a>, Seen::<a href="#type-action_arity" docgen-rel="seetype" docgen-href="#action_arity/0">action_arity()</a>} | <a href="#type-coerce_token_error" docgen-rel="seetype" docgen-href="#coerce_token_error/0">coerce_token_error()</a> | invalid_result_type | {exception_thrown, term()} | {timed_out, <a href="#type-milliseconds" docgen-rel="seetype" docgen-href="#milliseconds/0">milliseconds()</a>}</code></p>
+
+
+<h3 class="typedecl"><a name="type-header_info">header_info()</a></h3>
+<p><code>header_info() = {HdTable::<a href="#type-list_table" docgen-rel="seetype" docgen-href="#list_table/0">list_table</a>(<a href="#type-action_header" docgen-rel="seetype" docgen-href="#action_header/0">action_header()</a>, [<a href="#type-action_id" docgen-rel="seetype" docgen-href="#action_id/0">action_id()</a>]), HeaderLessActIds::[<a href="#type-action_id" docgen-rel="seetype" docgen-href="#action_id/0">action_id()</a>]}</code></p>
+
+
+<h3 class="typedecl"><a name="type-list_table">list_table()</a></h3>
+<p><code>list_table(K, V) = <a href="list_table.html#type-list_table" docgen-rel="seetype" docgen-href="list_table#list_table/0">list_table:list_table</a>(K, V)</code></p>
+
+
+<h3 class="typedecl"><a name="type-lookup_info">lookup_info()</a></h3>
+<p><code>lookup_info() = <a href="naming_utils.html#type-lookup_info" docgen-rel="seetype" docgen-href="naming_utils#lookup_info/0">naming_utils:lookup_info()</a></code></p>
+
+
+<h3 class="typedecl"><a name="type-milliseconds">milliseconds()</a></h3>
+<p><code>milliseconds() = <a href="time_utils.html#type-milliseconds" docgen-rel="seetype" docgen-href="time_utils#milliseconds/0">time_utils:milliseconds()</a></code></p>
+
+
+<h3 class="typedecl"><a name="type-request_name">request_name()</a></h3>
+<p><code>request_name() = <a href="wooper.html#type-request_name" docgen-rel="seetype" docgen-href="wooper#request_name/0">wooper:request_name()</a></code></p>
+
+
+<h3 class="typedecl"><a name="type-request_result">request_result()</a></h3>
+<p><code>request_result() = <a href="wooper.html#type-request_result" docgen-rel="seetype" docgen-href="wooper#request_result/0">wooper:request_result()</a></code></p>
+
+
+<h3 class="typedecl"><a name="type-result_spec">result_spec()</a></h3>
+<p><code>result_spec() = <a href="#type-option" docgen-rel="seetype" docgen-href="#option/0">option</a>({<a href="#type-text_type" docgen-rel="seetype" docgen-href="#text_type/0">text_type()</a>, <a href="#type-explicit_type" docgen-rel="seetype" docgen-href="#explicit_type/0">explicit_type()</a>, <a href="#type-option" docgen-rel="seetype" docgen-href="#option/0">option</a>(<a href="#type-description" docgen-rel="seetype" docgen-href="#description/0">description()</a>)})</code></p>
+
+
+<h3 class="typedecl"><a name="type-server_pid">server_pid()</a></h3>
+<p><code>server_pid() = <a href="class_USServer.html#type-server_pid" docgen-rel="seetype" docgen-href="class_USServer#server_pid/0">class_USServer:server_pid()</a></code></p>
+
+
+<h3 class="typedecl"><a name="type-static_arg_spec">static_arg_spec()</a></h3>
+<p><code>static_arg_spec() = {static, <a href="#type-static_value" docgen-rel="seetype" docgen-href="#static_value/0">static_value()</a>, <a href="#type-option" docgen-rel="seetype" docgen-href="#option/0">option</a>(<a href="#type-description" docgen-rel="seetype" docgen-href="#description/0">description()</a>)}</code></p>
+
+
+<h3 class="typedecl"><a name="type-static_value">static_value()</a></h3>
+<p><code>static_value() = term()</code></p>
+
+
+<h3 class="typedecl"><a name="type-text_type">text_type()</a></h3>
+<p><code>text_type() = <a href="type_utils.html#type-text_type" docgen-rel="seetype" docgen-href="type_utils#text_type/0">type_utils:text_type()</a></code></p>
+
+
+<h3 class="typedecl"><a name="type-typedef_table">typedef_table()</a></h3>
+<p><code>typedef_table() = <a href="type_utils.html#type-typedef_table" docgen-rel="seetype" docgen-href="type_utils#typedef_table/0">type_utils:typedef_table()</a></code></p>
+
+
+<h3 class="typedecl"><a name="type-user_action_header">user_action_header()</a></h3>
+<p><code>user_action_header() = <a href="#type-any_string" docgen-rel="seetype" docgen-href="#any_string/0">any_string()</a></code></p>
+
+
+<h3 class="typedecl"><a name="type-user_action_spec">user_action_spec()</a></h3>
+<p><code>user_action_spec() = {<a href="#type-action_name" docgen-rel="seetype" docgen-href="#action_name/0">action_name()</a>, <a href="#type-option" docgen-rel="seetype" docgen-href="#option/0">option</a>(<a href="#type-user_description" docgen-rel="seetype" docgen-href="#user_description/0">user_description()</a>), <a href="#type-request_name" docgen-rel="seetype" docgen-href="#request_name/0">request_name()</a>, [<a href="#type-user_arg_spec" docgen-rel="seetype" docgen-href="#user_arg_spec/0">user_arg_spec()</a>], <a href="#type-user_result_spec" docgen-rel="seetype" docgen-href="#user_result_spec/0">user_result_spec()</a>, AutoStart::boolean()} | {<a href="#type-action_name" docgen-rel="seetype" docgen-href="#action_name/0">action_name()</a>, <a href="#type-option" docgen-rel="seetype" docgen-href="#option/0">option</a>(<a href="#type-user_description" docgen-rel="seetype" docgen-href="#user_description/0">user_description()</a>), <a href="#type-request_name" docgen-rel="seetype" docgen-href="#request_name/0">request_name()</a>, [<a href="#type-user_arg_spec" docgen-rel="seetype" docgen-href="#user_arg_spec/0">user_arg_spec()</a>], <a href="#type-user_result_spec" docgen-rel="seetype" docgen-href="#user_result_spec/0">user_result_spec()</a>} | {<a href="#type-action_name" docgen-rel="seetype" docgen-href="#action_name/0">action_name()</a>, <a href="#type-option" docgen-rel="seetype" docgen-href="#option/0">option</a>(<a href="#type-user_description" docgen-rel="seetype" docgen-href="#user_description/0">user_description()</a>), <a href="#type-request_name" docgen-rel="seetype" docgen-href="#request_name/0">request_name()</a>, [<a href="#type-user_arg_spec" docgen-rel="seetype" docgen-href="#user_arg_spec/0">user_arg_spec()</a>]} | {<a href="#type-action_name" docgen-rel="seetype" docgen-href="#action_name/0">action_name()</a>, <a href="#type-option" docgen-rel="seetype" docgen-href="#option/0">option</a>(<a href="#type-user_description" docgen-rel="seetype" docgen-href="#user_description/0">user_description()</a>), <a href="#type-request_name" docgen-rel="seetype" docgen-href="#request_name/0">request_name()</a>} | {<a href="#type-action_name" docgen-rel="seetype" docgen-href="#action_name/0">action_name()</a>, <a href="#type-option" docgen-rel="seetype" docgen-href="#option/0">option</a>(<a href="#type-user_description" docgen-rel="seetype" docgen-href="#user_description/0">user_description()</a>)} | <a href="#type-action_name" docgen-rel="seetype" docgen-href="#action_name/0">action_name()</a></code></p>
+
+
+<h3 class="typedecl"><a name="type-user_action_specs">user_action_specs()</a></h3>
+<p><code>user_action_specs() = [<a href="#type-user_action_spec" docgen-rel="seetype" docgen-href="#user_action_spec/0">user_action_spec()</a> | {<a href="#type-user_action_header" docgen-rel="seetype" docgen-href="#user_action_header/0">user_action_header()</a>, [<a href="#type-user_action_spec" docgen-rel="seetype" docgen-href="#user_action_spec/0">user_action_spec()</a>]}]</code></p>
+
+
+<h3 class="typedecl"><a name="type-user_arg_spec">user_arg_spec()</a></h3>
+<p><code>user_arg_spec() = {static, <a href="#type-static_value" docgen-rel="seetype" docgen-href="#static_value/0">static_value()</a>, <a href="#type-user_description" docgen-rel="seetype" docgen-href="#user_description/0">user_description()</a>} | {static, <a href="#type-static_value" docgen-rel="seetype" docgen-href="#static_value/0">static_value()</a>} | {dynamic, <a href="#type-arg_name" docgen-rel="seetype" docgen-href="#arg_name/0">arg_name()</a>, <a href="#type-text_type" docgen-rel="seetype" docgen-href="#text_type/0">text_type()</a>, <a href="#type-user_description" docgen-rel="seetype" docgen-href="#user_description/0">user_description()</a>} | {dynamic, <a href="#type-arg_name" docgen-rel="seetype" docgen-href="#arg_name/0">arg_name()</a>, <a href="#type-text_type" docgen-rel="seetype" docgen-href="#text_type/0">text_type()</a>} | {dynamic, <a href="#type-arg_name" docgen-rel="seetype" docgen-href="#arg_name/0">arg_name()</a>}</code></p>
+
+
+<h3 class="typedecl"><a name="type-user_description">user_description()</a></h3>
+<p><code>user_description() = <a href="#type-any_string" docgen-rel="seetype" docgen-href="#any_string/0">any_string()</a></code></p>
+
+
+<h3 class="typedecl"><a name="type-user_result_spec">user_result_spec()</a></h3>
+<p><code>user_result_spec() = {<a href="#type-text_type" docgen-rel="seetype" docgen-href="#text_type/0">text_type()</a>, <a href="#type-option" docgen-rel="seetype" docgen-href="#option/0">option</a>(<a href="#type-user_description" docgen-rel="seetype" docgen-href="#user_description/0">user_description()</a>)} | <a href="#type-text_type" docgen-rel="seetype" docgen-href="#text_type/0">text_type()</a> | unchecked_result</code></p>
+<p> Default: do not typecheck result</p>
+
+<h3 class="typedecl"><a name="type-ustring">ustring()</a></h3>
+<p><code>ustring() = <a href="text_utils.html#type-ustring" docgen-rel="seetype" docgen-href="text_utils#ustring/0">text_utils:ustring()</a></code></p>
+
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#action_id_to_detailed_string-1">action_id_to_detailed_string/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#action_id_to_string-1">action_id_to_string/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#action_info_to_help_string-1">action_info_to_help_string/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#action_info_to_string-1">action_info_to_string/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#action_table_to_string-1">action_table_to_string/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#action_tables_to_help_string-3">action_tables_to_help_string/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#action_tables_to_string-2">action_tables_to_string/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#arg_spec_to_string-1">arg_spec_to_string/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#args_to_string-1">args_to_string/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#coerce_token_arguments-3">coerce_token_arguments/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#get_action_id-1">get_action_id/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#header_to_string-3">header_to_string/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#headerless_actions_to_help_string-2">headerless_actions_to_help_string/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#init_header_info-0">init_header_info/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#integrate_dynamic_arguments-3">integrate_dynamic_arguments/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#interpret_failure_report-1">interpret_failure_report/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#is_result_matching_spec-2">is_result_matching_spec/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#mapping_to_string-2">mapping_to_string/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#merge_action_tables-4">merge_action_tables/4</a></td><td></td></tr>
+<tr><td valign="top"><a href="#perform_action-2">perform_action/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#perform_action-3">perform_action/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#register_action_specs-5">register_action_specs/5</a></td><td></td></tr>
+<tr><td valign="top"><a href="#result_spec_to_string-1">result_spec_to_string/1</a></td><td></td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="action_id_to_detailed_string-1">action_id_to_detailed_string/1</a></h3>
+<div class="spec">
+<p><code>action_id_to_detailed_string(ActId::<a href="#type-action_id" docgen-rel="seetype" docgen-href="#action_id/0">action_id()</a>) -&gt; <a href="#type-ustring" docgen-rel="seetype" docgen-href="#ustring/0">ustring()</a></code><br></p>
+<p> </p>
+</div>
+
+<h3 class="function"><a name="action_id_to_string-1">action_id_to_string/1</a></h3>
+<div class="spec">
+<p><code>action_id_to_string(ActId::<a href="#type-action_id" docgen-rel="seetype" docgen-href="#action_id/0">action_id()</a>) -&gt; <a href="#type-ustring" docgen-rel="seetype" docgen-href="#ustring/0">ustring()</a></code><br></p>
+<p> </p>
+</div>
+
+<h3 class="function"><a name="action_info_to_help_string-1">action_info_to_help_string/1</a></h3>
+<div class="spec">
+<p><code>action_info_to_help_string(Action_info::<a href="#type-action_info" docgen-rel="seetype" docgen-href="#action_info/0">action_info()</a>) -&gt; <a href="#type-ustring" docgen-rel="seetype" docgen-href="#ustring/0">ustring()</a></code><br></p>
+<p> </p>
+</div>
+
+<h3 class="function"><a name="action_info_to_string-1">action_info_to_string/1</a></h3>
+<div class="spec">
+<p><code>action_info_to_string(Action_info::<a href="#type-action_info" docgen-rel="seetype" docgen-href="#action_info/0">action_info()</a>) -&gt; <a href="#type-ustring" docgen-rel="seetype" docgen-href="#ustring/0">ustring()</a></code><br></p>
+<p> </p>
+</div>
+
+<h3 class="function"><a name="action_table_to_string-1">action_table_to_string/1</a></h3>
+<div class="spec">
+<p><code>action_table_to_string(ActTable::<a href="#type-action_table" docgen-rel="seetype" docgen-href="#action_table/0">action_table()</a>) -&gt; <a href="#type-ustring" docgen-rel="seetype" docgen-href="#ustring/0">ustring()</a></code><br></p>
+<p> </p>
+</div>
+
+<h3 class="function"><a name="action_tables_to_help_string-3">action_tables_to_help_string/3</a></h3>
+<div class="spec">
+<p><code>action_tables_to_help_string(ActTable::<a href="#type-action_table" docgen-rel="seetype" docgen-href="#action_table/0">action_table()</a>, HdInfo::<a href="#type-header_info" docgen-rel="seetype" docgen-href="#header_info/0">header_info()</a>, AppName::<a href="#type-ustring" docgen-rel="seetype" docgen-href="#ustring/0">ustring()</a>) -&gt; <a href="#type-ustring" docgen-rel="seetype" docgen-href="#ustring/0">ustring()</a></code><br></p>
+<p> </p>
+</div>
+
+<h3 class="function"><a name="action_tables_to_string-2">action_tables_to_string/2</a></h3>
+<div class="spec">
+<p><code>action_tables_to_string(HdInfo::<a href="#type-header_info" docgen-rel="seetype" docgen-href="#header_info/0">header_info()</a>, ActTable::<a href="#type-action_table" docgen-rel="seetype" docgen-href="#action_table/0">action_table()</a>) -&gt; <a href="#type-ustring" docgen-rel="seetype" docgen-href="#ustring/0">ustring()</a></code><br></p>
+<p> </p>
+</div>
+
+<h3 class="function"><a name="arg_spec_to_string-1">arg_spec_to_string/1</a></h3>
+<div class="spec">
+<p><code>arg_spec_to_string(X1::<a href="#type-arg_spec" docgen-rel="seetype" docgen-href="#arg_spec/0">arg_spec()</a>) -&gt; <a href="#type-ustring" docgen-rel="seetype" docgen-href="#ustring/0">ustring()</a></code><br></p>
+<p> </p>
+</div>
+
+<h3 class="function"><a name="args_to_string-1">args_to_string/1</a></h3>
+<div class="spec">
+<p><code>args_to_string(ArgSpecs::[<a href="#type-arg_spec" docgen-rel="seetype" docgen-href="#arg_spec/0">arg_spec()</a>]) -&gt; <a href="#type-ustring" docgen-rel="seetype" docgen-href="#ustring/0">ustring()</a></code><br></p>
+<p> </p>
+</div>
+
+<h3 class="function"><a name="coerce_token_arguments-3">coerce_token_arguments/3</a></h3>
+<div class="spec">
+<p><code>coerce_token_arguments(ArgTokens::[<a href="#type-action_token" docgen-rel="seetype" docgen-href="#action_token/0">action_token()</a>], ArgSpecs::[<a href="#type-arg_spec" docgen-rel="seetype" docgen-href="#arg_spec/0">arg_spec()</a>], ActName::<a href="#type-action_name" docgen-rel="seetype" docgen-href="#action_name/0">action_name()</a>) -&gt; <a href="#type-fallible" docgen-rel="seetype" docgen-href="#fallible/0">fallible</a>([<a href="#type-argument" docgen-rel="seetype" docgen-href="#argument/0">argument()</a>], <a href="#type-coerce_token_error" docgen-rel="seetype" docgen-href="#coerce_token_error/0">coerce_token_error()</a>)</code><br></p>
+<p> </p>
+</div>
+
+<h3 class="function"><a name="get_action_id-1">get_action_id/1</a></h3>
+<div class="spec">
+<p><code>get_action_id(Tokens::[<a href="#type-action_token" docgen-rel="seetype" docgen-href="#action_token/0">action_token()</a>]) -&gt; <a href="#type-fallible" docgen-rel="seetype" docgen-href="#fallible/0">fallible</a>(<a href="#type-action_id" docgen-rel="seetype" docgen-href="#action_id/0">action_id()</a>)</code><br></p>
+<p> </p>
+</div>
+
+<h3 class="function"><a name="header_to_string-3">header_to_string/3</a></h3>
+<div class="spec">
+<p><code>header_to_string(ActHeaderBinStr::<a href="#type-action_header" docgen-rel="seetype" docgen-href="#action_header/0">action_header()</a>, ActIds::[<a href="#type-action_id" docgen-rel="seetype" docgen-href="#action_id/0">action_id()</a>], ActTable::<a href="#type-action_table" docgen-rel="seetype" docgen-href="#action_table/0">action_table()</a>) -&gt; <a href="#type-ustring" docgen-rel="seetype" docgen-href="#ustring/0">ustring()</a></code><br></p>
+<p> </p>
+</div>
+
+<h3 class="function"><a name="headerless_actions_to_help_string-2">headerless_actions_to_help_string/2</a></h3>
+<div class="spec">
+<p><code>headerless_actions_to_help_string(ActIds::[<a href="#type-action_id" docgen-rel="seetype" docgen-href="#action_id/0">action_id()</a>], ActTable::<a href="#type-action_table" docgen-rel="seetype" docgen-href="#action_table/0">action_table()</a>) -&gt; <a href="#type-ustring" docgen-rel="seetype" docgen-href="#ustring/0">ustring()</a></code><br></p>
+<p> </p>
+</div>
+
+<h3 class="function"><a name="init_header_info-0">init_header_info/0</a></h3>
+<div class="spec">
+<p><code>init_header_info() -&gt; <a href="#type-header_info" docgen-rel="seetype" docgen-href="#header_info/0">header_info()</a></code><br></p>
+<p> </p>
+</div>
+
+<h3 class="function"><a name="integrate_dynamic_arguments-3">integrate_dynamic_arguments/3</a></h3>
+<div class="spec">
+<p><code>integrate_dynamic_arguments(DynArgs::[<a href="#type-argument" docgen-rel="seetype" docgen-href="#argument/0">argument()</a>], ArgSpecs::[<a href="#type-arg_spec" docgen-rel="seetype" docgen-href="#arg_spec/0">arg_spec()</a>], ActName::<a href="#type-action_name" docgen-rel="seetype" docgen-href="#action_name/0">action_name()</a>) -&gt; <a href="#type-fallible" docgen-rel="seetype" docgen-href="#fallible/0">fallible</a>([<a href="#type-argument" docgen-rel="seetype" docgen-href="#argument/0">argument()</a>])</code><br></p>
+<p> </p>
+</div>
+
+<h3 class="function"><a name="interpret_failure_report-1">interpret_failure_report/1</a></h3>
+<div class="spec">
+<p><code>interpret_failure_report(FailureReport::<a href="#type-failure_report" docgen-rel="seetype" docgen-href="#failure_report/0">failure_report()</a>) -&gt; <a href="#type-ustring" docgen-rel="seetype" docgen-href="#ustring/0">ustring()</a></code><br></p>
+<p> </p>
+</div>
+
+<h3 class="function"><a name="is_result_matching_spec-2">is_result_matching_spec/2</a></h3>
+<div class="spec">
+<p><code>is_result_matching_spec(Res::<a href="#type-request_result" docgen-rel="seetype" docgen-href="#request_result/0">request_result()</a>, ResSpec::<a href="#type-result_spec" docgen-rel="seetype" docgen-href="#result_spec/0">result_spec()</a>) -&gt; boolean()</code><br></p>
+<p> </p>
+</div>
+
+<h3 class="function"><a name="mapping_to_string-2">mapping_to_string/2</a></h3>
+<div class="spec">
+<p><code>mapping_to_string(ReqName::<a href="#type-request_name" docgen-rel="seetype" docgen-href="#request_name/0">request_name()</a>, Arity::arity()) -&gt; <a href="#type-ustring" docgen-rel="seetype" docgen-href="#ustring/0">ustring()</a></code><br></p>
+<p> </p>
+</div>
+
+<h3 class="function"><a name="merge_action_tables-4">merge_action_tables/4</a></h3>
+<div class="spec">
+<p><code>merge_action_tables(AddActTable::<a href="#type-action_table" docgen-rel="seetype" docgen-href="#action_table/0">action_table()</a>, AddHdInfo::<a href="#type-header_info" docgen-rel="seetype" docgen-href="#header_info/0">header_info()</a>, MasterActTable::<a href="#type-action_table" docgen-rel="seetype" docgen-href="#action_table/0">action_table()</a>, MasterHdInfo::<a href="#type-header_info" docgen-rel="seetype" docgen-href="#header_info/0">header_info()</a>) -&gt; {<a href="#type-action_table" docgen-rel="seetype" docgen-href="#action_table/0">action_table()</a>, <a href="#type-header_info" docgen-rel="seetype" docgen-href="#header_info/0">header_info()</a>}</code><br></p>
+<p> </p>
+</div>
+
+<h3 class="function"><a name="perform_action-2">perform_action/2</a></h3>
+<div class="spec">
+<p><code>perform_action(ActionName::<a href="#type-action_name" docgen-rel="seetype" docgen-href="#action_name/0">action_name()</a>, ServerPid::<a href="#type-server_pid" docgen-rel="seetype" docgen-href="#server_pid/0">server_pid()</a>) -&gt; <a href="#type-action_outcome" docgen-rel="seetype" docgen-href="#action_outcome/0">action_outcome()</a></code><br></p>
+<p> </p>
+</div>
+
+<h3 class="function"><a name="perform_action-3">perform_action/3</a></h3>
+<div class="spec">
+<p><code>perform_action(ActionName::<a href="#type-action_name" docgen-rel="seetype" docgen-href="#action_name/0">action_name()</a>, Args::[<a href="#type-argument" docgen-rel="seetype" docgen-href="#argument/0">argument()</a>], ServerPid::<a href="#type-server_pid" docgen-rel="seetype" docgen-href="#server_pid/0">server_pid()</a>) -&gt; <a href="#type-action_outcome" docgen-rel="seetype" docgen-href="#action_outcome/0">action_outcome()</a></code><br></p>
+<p> </p>
+</div>
+
+<h3 class="function"><a name="register_action_specs-5">register_action_specs/5</a></h3>
+<div class="spec">
+<p><code>register_action_specs(UserActSpecs::[<a href="#type-user_action_spec" docgen-rel="seetype" docgen-href="#user_action_spec/0">user_action_spec()</a>], ActTable::<a href="#type-action_table" docgen-rel="seetype" docgen-href="#action_table/0">action_table()</a>, HdInfo::<a href="#type-header_info" docgen-rel="seetype" docgen-href="#header_info/0">header_info()</a>, TypedefTable::<a href="#type-typedef_table" docgen-rel="seetype" docgen-href="#typedef_table/0">typedef_table()</a>, SrvClassname::<a href="#type-classname" docgen-rel="seetype" docgen-href="#classname/0">classname()</a>) -&gt; {<a href="#type-action_table" docgen-rel="seetype" docgen-href="#action_table/0">action_table()</a>, <a href="#type-header_info" docgen-rel="seetype" docgen-href="#header_info/0">header_info()</a>}</code><br></p>
+<p> </p>
+</div>
+
+<h3 class="function"><a name="result_spec_to_string-1">result_spec_to_string/1</a></h3>
+<div class="spec">
+<p><code>result_spec_to_string(ResSpec::<a href="#type-result_spec" docgen-rel="seetype" docgen-href="#result_spec/0">result_spec()</a>) -&gt; <a href="#type-ustring" docgen-rel="seetype" docgen-href="#ustring/0">ustring()</a></code><br></p>
+<p> </p>
+</div>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc</i></p>
+</body>
+</html>

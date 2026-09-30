@@ -170,7 +170,7 @@ construct( State, RingName, Actuators, TaskOnewayName, TaskOnewayArgs,
     SrvState = class_USServer:construct( State, ?trace_categorize(RingName) ),
 
     TaskPeriodicity = class_USScheduler:vet_user_periodicity(
-        UserTaskPeriodicity, SrvState ),
+        UserTaskPeriodicity, _PseudoTaskCommand=TaskOnewayName, SrvState ),
 
     TaskCall = { TaskOnewayName,
                  list_utils:append_at_end( self(), TaskOnewayArgs ) },

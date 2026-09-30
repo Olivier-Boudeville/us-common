@@ -309,7 +309,10 @@ construct( State, ServerInit, MaybeRegistrationName, MaybeRegistrationScope,
         "Relying on EPMD TCP port ~B, using distribution TCP port ~B.",
         [ net_utils:get_epmd_port(), net_utils:get_distribution_port() ] ),
 
-    trace_bridge:debug_fmt( "Registering server as '~ts' for scope ~ts.",
+    executeConstOneway( SetState, setProcessLabel ),
+
+    trace_bridge:debug_fmt( "Optional registration name: '~ts', "
+        "for optional scope ~ts.",
         [ MaybeRegistrationName, MaybeRegistrationScope ] ),
 
     register_name( MaybeRegistrationName, MaybeRegistrationScope, SetState ).

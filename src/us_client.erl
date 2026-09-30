@@ -121,10 +121,10 @@ setup( ServerPrefix, IsVerboseByDefault ) ->
 
     %timer:sleep( 500 ),
 
-    % The only other solution found working other than running erl with the "
-    % -kernel prevent_overlapping_partitions false" option:
+    % The only other solution that was found working other than running erl with
+    % the " -kernel prevent_overlapping_partitions false" option was:
     %
-    net_kernel:hidden_connect_node( MainTargetNodeName ),
+    %net_kernel:hidden_connect_node( MainTargetNodeName ),
 
     ActualTargetNodeName = case net_adm:ping( MainTargetNodeName ) of
 
@@ -403,7 +403,7 @@ teardown( IsVerbose ) ->
 
     %global:sync(),
 
-    init:stop( _StatusCode=0 ),
+    %init:stop( _StatusCode=0 ),
 
     %timer:sleep( ?wait ),
 
@@ -429,7 +429,16 @@ teardown( IsVerbose ) ->
     %  us_foo@fff, which tries to contact back us_foo_controller_exec-uu@mmm
     %  whereas the EMPD of the latter is not yet aware of its
     %  us_foo_controller_exec-uu node?
-
+    %
+    % The mystery has been finally solved: it was due to an inconsistent DNS
+    % resolution of the IP of the gateway on which US-Main was running.
+    % Sometimes the local DNS server was too long to answer, and the resolver on
+    % the client switched to another DNS server, which was public, and resolved
+    % the server hostname as its public IP rather than as its LAN one. From the
+    % point of view of the client, the same host/node resolved to different IPs,
+    % which was interpreted as a network split. Fixing the DNS resolution fixed
+    % in turn the "overlapping partitions" (whereas of course
+    % net_kernel:hidden_connect_node/1 was not called anymore).
 
     % ?app_stop should not be used here as its wait_for_any_trace_supervisor
     % macro would wait for a non-launched supervisor.
@@ -441,5 +450,5 @@ teardown( IsVerbose ) ->
     %trace_utils:warning("Version XXX."),
 
     % Otherwise too slow:
-    app_facilities:finished( IsVerbose, _BeQuick=true ).
-    %app_facilities:finished( IsVerbose, _BeQuick=false ).
+    %app_facilities:finished( IsVerbose, _BeQuick=true ).
+    app_facilities:finished( IsVerbose, _BeQuick=false ).

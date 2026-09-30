@@ -82,6 +82,9 @@ init( Args=[] ) ->
 
     ExecTarget = class_USConfigServer:get_execution_target(),
 
+    % If deemed useful:
+    process_utils:spawn_overall_monitor(),
+
     trace_bridge:debug_fmt( "Initialising the US-Common root supervisor "
         "(args: ~p; execution target: ~ts).", [ Args, ExecTarget ] ),
 

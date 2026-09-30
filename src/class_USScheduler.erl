@@ -319,7 +319,7 @@ Schedule pairs, ordered from closest future (sooner) to most remote one (later).
 
 
 % Exported helpers:
--export([ vet_user_periodicity/2 ]).
+-export([ vet_user_periodicity/3 ]).
 
 
 % To silence about unused functions:
@@ -915,14 +915,23 @@ The actual registering of a new task.
 register_task( UserTaskCommand, UserStartTime, UserPeriodicity, DSTBound,
                UserCount, UserActPid, State ) ->
 
+    % Not checked yet:
+    cond_utils:if_defined( us_common_debug_scheduling,
+        ?debug_fmt( "Registering a task whose command is '~p'.",
+                    [ UserTaskCommand ] ) ),
+
     % Checks and canonicalises specified elements:
+    % (task command used as a marker)
     TaskCommand = vet_task_command( UserTaskCommand, State ),
-    DurationBeforeStartMs = vet_start_time( UserStartTime, State ),
-    Count = vet_count( UserCount, State ),
-    MaybePeriodicity = vet_periodicity( UserPeriodicity, Count, State ),
-    vet_dst_bound( DSTBound ),
+    DurationBeforeStartMs = vet_start_time( UserStartTime, TaskCommand, State ),
+    Count = vet_count( UserCount, TaskCommand, State ),
+    MaybePeriodicity =
+        vet_periodicity( UserPeriodicity, Count, TaskCommand, State ),
+
+    vet_dst_bound( DSTBound, TaskCommand ),
+
     ReqPid = ?getSender(),
-    ActPid = vet_actuator_pid( UserActPid ),
+    ActPid = vet_actuator_pid( UserActPid, TaskCommand ),
 
     ActStr = case ActPid of
 
@@ -1992,27 +2001,29 @@ vet_task_command( UserTaskCommand, State ) ->
 Checks and canonicalises this user-specified start time: returns the number of
 milliseconds before starting any corresponding task (possibly zero).
 """.
--spec vet_start_time( term(), wooper:state() ) -> ms_duration().
-vet_start_time( _UserStartTime=asap, _State ) ->
+-spec vet_start_time( term(), task_command(), wooper:state() ) -> ms_duration().
+vet_start_time( _UserStartTime=asap, _TaskCommand, _State ) ->
     0;
 
-vet_start_time( _UserStartTime=flexible, _State ) ->
+vet_start_time( _UserStartTime=flexible, _TaskCommand, _State ) ->
     % At least currently:
     0;
 
 % Thus in seconds:
-vet_start_time( StartTimeInSecs, _State ) when is_integer( StartTimeInSecs ) ->
+vet_start_time( StartTimeInSecs, TaskCommand, _State )
+                                        when is_integer( StartTimeInSecs ) ->
     case StartTimeInSecs > 0 of
 
         true ->
             1000 * StartTimeInSecs;
 
         false ->
-            throw( { non_strictly_positive_start_duration, StartTimeInSecs } )
+            throw( { non_strictly_positive_start_duration, StartTimeInSecs,
+                     TaskCommand } )
 
     end;
 
-vet_start_time( _UserStartTime=StartTime, State ) ->
+vet_start_time( _UserStartTime=StartTime, TaskCommand, State ) ->
 
     case time_utils:is_timestamp( StartTime ) of
 
@@ -2034,11 +2045,13 @@ vet_start_time( _UserStartTime=StartTime, State ) ->
                 SecD ->
                     ?warning_fmt( "Specified user start time (~p, i.e. ~ts) "
                         "is in the past (i.e. ~ts before current time, which "
-                        "is ~ts), requesting immediate scheduling instead.",
+                        "is ~ts) for task command '~p', requesting immediate "
+                        "scheduling instead.",
                         [ StartTime,
                           time_utils:timestamp_to_string( StartTime ),
                           time_utils:duration_to_string( -1000 * SecD ),
-                          time_utils:timestamp_to_string( Now ) ] ),
+                          time_utils:timestamp_to_string( Now ),
+                          TaskCommand ] ),
                     0
 
             end;
@@ -2060,17 +2073,20 @@ vet_start_time( _UserStartTime=StartTime, State ) ->
                         D ->
                             ?warning_fmt( "Specified user duration "
                                 "(~p, i.e. ~ts) is negative (i.e. in the "
-                                "past), requesting immediate scheduling.",
+                                "past) for task command '~p', requesting "
+                                "immediate scheduling.",
                                 [ StartTime,
-                                  time_utils:duration_to_string( D ) ] ),
+                                  time_utils:duration_to_string( D ),
+                                  TaskCommand ] ),
                             0
 
                     end;
 
                 false ->
                     ?error_fmt( "Invalid user-specified start time (neither "
-                        "timestamp nor DHMS duration):~n ~p", [ StartTime ] ),
-                    throw( { invalid_start_time, StartTime } )
+                        "timestamp nor DHMS duration) for task command '~p': "
+                         "~n ~p", [ TaskCommand, StartTime ] ),
+                    throw( { invalid_start_time, StartTime, TaskCommand } )
 
             end
 
@@ -2079,34 +2095,36 @@ vet_start_time( _UserStartTime=StartTime, State ) ->
 
 
 -doc "Returns the user-specified schedule count.".
--spec vet_count( term(), wooper:state() ) -> schedule_count().
-vet_count( ScheduleCount=unlimited, _State ) ->
+-spec vet_count( term(), task_command(), wooper:state() ) -> schedule_count().
+vet_count( ScheduleCount=unlimited, _TaskCommand, _State ) ->
     ScheduleCount;
 
-vet_count( C, _State ) when is_integer( C ) andalso C > 0 ->
+vet_count( C, _TaskCommand, _State ) when is_integer( C ) andalso C > 0 ->
     C;
 
-vet_count( Other, State ) ->
-    ?error_fmt( "Invalid user-specified schedule count: ~p.", [ Other ] ),
-    throw( { invalid_schedule_count, Other } ).
+vet_count( Other, TaskCommand, State ) ->
+    ?error_fmt( "Invalid user-specified schedule count for task command '~p': "
+                "~p.", [ TaskCommand, Other ] ),
+    throw( { invalid_schedule_count, Other, TaskCommand } ).
 
 
 
 -doc "Returns any user-specified periodicity.".
--spec vet_periodicity( term(), term(), wooper:state() ) ->
+-spec vet_periodicity( term(), term(), task_command(), wooper:state() ) ->
                                 option( periodicity() ).
-vet_periodicity( _UserPeriodicity=once, _Count=1, _State ) ->
+vet_periodicity( _UserPeriodicity=once, _Count=1, _TaskCommand, _State ) ->
     undefined;
 
-vet_periodicity( UserPeriodicity=once, Count, State ) ->
+vet_periodicity( UserPeriodicity=once, Count, TaskCommand, State ) ->
 
     ?error_fmt( "Task periodicity is 'once', whereas specified schedule count "
-                "is ~p.", [ Count ] ),
+                "is ~p (for task command '~p').", [ Count, TaskCommand ] ),
 
-    throw( { periodicity_count_mismatch, UserPeriodicity, Count } );
+    throw( { periodicity_count_mismatch, UserPeriodicity, Count,
+             TaskCommand } );
 
-vet_periodicity( UserPeriodicity, _Count, State ) ->
-    vet_user_periodicity( UserPeriodicity, State ).
+vet_periodicity( UserPeriodicity, _Count, TaskCommand, State ) ->
+    vet_user_periodicity( UserPeriodicity, TaskCommand, State ).
 
 
 
@@ -2115,8 +2133,9 @@ Returns a vetted, internal periodicity.
 
 (helper, defined for reuse)
 """.
--spec vet_user_periodicity( term(), wooper:state() ) -> ms_duration().
-vet_user_periodicity( UserPeriodicity, State ) ->
+-spec vet_user_periodicity( term(), task_command(), wooper:state() ) ->
+                                            ms_duration().
+vet_user_periodicity( UserPeriodicity, TaskCommand, State ) ->
 
     case time_utils:is_dhms_duration( UserPeriodicity ) of
 
@@ -2128,11 +2147,14 @@ vet_user_periodicity( UserPeriodicity, State ) ->
 
                 D ->
                     ?error_fmt( "Invalid user-specified non strictly positive "
-                        "task periodicity ~p, i.e. ~ts).",
+                        "task periodicity ~p, i.e. ~ts, "
+                        "for task command '~p'.",
                         [ UserPeriodicity,
-                          time_utils:duration_to_string( D ) ] ),
+                          time_utils:duration_to_string( D ),
+                          TaskCommand ] ),
+
                     throw( { non_strictly_positive_user_periodicity,
-                             UserPeriodicity } )
+                             UserPeriodicity, TaskCommand } )
 
             end;
 
@@ -2144,7 +2166,8 @@ vet_user_periodicity( UserPeriodicity, State ) ->
                     1000 * UserPeriodicity;
 
                 false ->
-                    throw( { invalid_user_periodicity, UserPeriodicity } )
+                    throw( { invalid_user_periodicity, UserPeriodicity,
+                             TaskCommand } )
 
             end
 
@@ -2153,22 +2176,22 @@ vet_user_periodicity( UserPeriodicity, State ) ->
 
 
 -doc "Returns the user-specified DST binding status".
--spec vet_dst_bound( term() ) -> boolean().
-vet_dst_bound( B ) when is_boolean( B ) ->
+-spec vet_dst_bound( term(), task_command() ) -> boolean().
+vet_dst_bound( B, _TaskCommand ) when is_boolean( B ) ->
     B;
 
-vet_dst_bound( Other ) ->
-    throw( { invalid_dst_binding_spec, Other } ).
+vet_dst_bound( Other, TaskCommand  ) ->
+    throw( { invalid_dst_binding_spec, Other, TaskCommand } ).
 
 
 
 -doc "Returns the user-specified actuator PID.".
--spec vet_actuator_pid( term() ) -> actuator_pid().
-vet_actuator_pid( Pid ) when is_pid( Pid ) ->
+-spec vet_actuator_pid( term(), task_command() ) -> actuator_pid().
+vet_actuator_pid( Pid, _TaskCommand ) when is_pid( Pid ) ->
     Pid;
 
-vet_actuator_pid( Other ) ->
-    throw( { invalid_actuator_pid, Other } ).
+vet_actuator_pid( Other, TaskCommand ) ->
+    throw( { invalid_actuator_pid, Other, TaskCommand } ).
 
 
 

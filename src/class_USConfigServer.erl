@@ -278,6 +278,9 @@ Note: must be kept in line with the next constructor.
 -spec construct( wooper:state() ) -> wooper:state().
 construct( State ) ->
 
+    % If wanting to investigate:
+    %monitor_utils:monitor_self(),
+
     % Wanting a better control by resisting to exit messages being received:
     erlang:process_flag( trap_exit, true ),
 
@@ -621,6 +624,8 @@ factored, logic.
             static_return( { option( bin_directory_path() ), ustring() } ).
 get_us_config_directory() ->
 
+    trace_bridge:debug( "Getting US configuration directory." ),
+
     HomeDir = system_utils:get_user_home_directory(),
 
     % See design notes about directory selection.
@@ -644,6 +649,8 @@ get_us_config_directory() ->
 
     end,
 
+    %trace_bridge:debug( FirstMsg ),
+
     SecondEnvVar = "XDG_CONFIG_DIRS",
 
     { ListedPathsAsStrings, SecondMsg } =
@@ -663,6 +670,8 @@ get_us_config_directory() ->
 
     end,
 
+    %trace_bridge:debug( SecondMsg ),
+
     ListedPaths = text_utils:split( ListedPathsAsStrings, _Sep=$: ),
 
     AllBasePaths = [ FirstPath | ListedPaths ],
@@ -674,7 +683,11 @@ get_us_config_directory() ->
         "knowing that: ~ts~nConfiguration directory ", [ CfgSuffix,
             text_utils:strings_to_string( [ FirstMsg, SecondMsg ] ) ] ),
 
+    trace_bridge:debug( BaseMsg ),
+
     ResPair = find_file_in( AllBasePaths, CfgSuffix, BaseMsg, _Msgs=[] ),
+
+    %trace_bridge:debug_fmt( "Result: ~p.", [ ResPair ] ),
 
     wooper:return_static( ResPair ).
 
@@ -708,7 +721,7 @@ get_configuration_table( BinCfgDir ) ->
 
             catch ExClass:ExPattern ->
 
-                ErrorMsg = text_utils:format( "The processing of the "
+                ErrorMsg = text_utils:format( "the processing of the "
                     "US-Common configuration file '~ts' failed (~p):~n ~p.",
                     [ CfgFilePath, ExClass, ExPattern ] ),
 
@@ -719,7 +732,7 @@ get_configuration_table( BinCfgDir ) ->
 
 
         false ->
-            ErrorMsg = text_utils:format( "Unable to find the US configuration "
+            ErrorMsg = text_utils:format( "unable to find the US configuration "
                 "file from '~ts', searched as '~ts'.",
                 [ BinCfgDir, CfgFilePath ] ),
             { error, { { us_config_file_not_found, CfgFilePath }, ErrorMsg } }
@@ -809,6 +822,8 @@ get_us_web_configuration_filename( ConfigTable ) ->
 % (helper)
 find_file_in( _AllBasePaths=[], CfgSuffix, BaseMsg, Msgs ) ->
 
+    %trace_utils:debug( "All paths inspected." ),
+
     % Configuration directory not found:
 
     FullMsg = BaseMsg ++ text_utils:format( "could not be determined, "
@@ -823,6 +838,8 @@ find_file_in( _AllBasePaths=[ Path | T ], CfgSuffix, BaseMsg, Msgs ) ->
 
     CfgFilePath =
         file_utils:normalise_path( file_utils:join( Path, CfgSuffix ) ),
+
+    %trace_utils:debug_fmt( "Inspecting '~ts'.", [ CfgFilePath ] ),
 
     case file_utils:is_existing_file_or_link( CfgFilePath ) of
 
@@ -845,7 +862,8 @@ find_file_in( _AllBasePaths=[ Path | T ], CfgSuffix, BaseMsg, Msgs ) ->
 
             { text_utils:string_to_binary( CfgDir ), FullMsg };
 
-        false ->
+
+        _False ->
             NewMsgs = [ text_utils:format( "not found as '~ts'",
                                            [ CfgFilePath ] ) | Msgs ],
             find_file_in( T, CfgSuffix, BaseMsg, NewMsgs )
@@ -858,6 +876,8 @@ find_file_in( _AllBasePaths=[ Path | T ], CfgSuffix, BaseMsg, Msgs ) ->
 -spec perform_setup( bin_directory_path(), wooper:state() ) ->
                                 wooper:state().
 perform_setup( BinCfgDir, State ) ->
+
+    ?debug_fmt( "Performing setup based on directory '~ts'.", [ BinCfgDir ] ),
 
     LoadState = load_configuration( BinCfgDir, State ),
 
@@ -931,14 +951,19 @@ load_configuration( BinCfgDir, State ) ->
 
         { error, P={ { us_config_reading_failed, CfgFileP }, ErrorMsg } } ->
             ?error_fmt( "The overall US configuration file ('~ts') "
-                "could not be read: ~p.", [ CfgFileP, ErrorMsg ] ),
+                "could not be read: ~ts.", [ CfgFileP, ErrorMsg ] ),
             throw( P );
 
-        { error, P={ us_config_file_not_found, CfgFileP } } ->
+        { error, P={ { us_config_file_not_found, CfgFileP }, ErrorMsg } } ->
             ?error_fmt( "The overall US configuration file ('~ts') "
-                "could not be found.", [ CfgFileP ] ),
+                "could not be found: ~ts.", [ CfgFileP, ErrorMsg ] ),
             % Must have disappeared then:
-            throw( P )
+            throw( P );
+
+         % Let's be defensive:
+         Other ->
+            ?error_fmt( "Configuration error: ~p.", [ Other ] ),
+            throw( { configuration_error, Other } )
 
     end,
 
@@ -1606,6 +1631,8 @@ get_us_config_registration_info( CreateIfNeeded, State ) ->
 
     end,
 
+    ?debug_fmt( "Configuration directory: '~ts'.", [ BinCfgDir ] ),
+
     % Static settings regarding the overall US configuration server:
     { CfgFilename, CfgRegNameKey, CfgDefRegName, CfgSrvLookupScope } =
         get_default_settings(),
@@ -1767,6 +1794,6 @@ to_string( State ) ->
         "using configuration directory '~ts' and log directory '~ts', "
         "having found ~ts and ~ts",
         [ RegStr, ?getAttr(execution_context),
-          system_utils:get_user_name_safe(), system_utils:get_group_name_safe(),
+          system_utils:describe_user_name(), system_utils:describe_group_name(),
           EPMDStr, ?getAttr(config_base_directory), ?getAttr(log_directory),
           MainCfgStr, WebCfgStr ] ).

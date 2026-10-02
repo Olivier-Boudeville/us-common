@@ -152,8 +152,8 @@ synchronously a set of tasks, as a series (i.e. sequentially).
 -doc """
 Creates a task ring for the specified actuators, so that they are (immediately,
 yet flexibly) triggered with the specified request (a synchronous task command)
-at the specified overall periodicity, for the specified number of times, by the
-specified scheduler.
+at the specified overall (DST-unaware) periodicity, for the specified number of
+times, by the specified scheduler.
 """.
 -spec construct( wooper:state(), ustring(), [ actuator_pid() ],
         wooper:oneway_name(), wooper:method_arguments(), user_periodicity(),
@@ -189,7 +189,7 @@ construct( State, RingName, Actuators, TaskOnewayName, TaskOnewayArgs,
 
     % Self-registering:
     SchedulerPid ! { registerTask, [ _Cmd=triggerNextTask, _StartTime=flexible,
-                        RingPeriodicity, ScheduleCount, _ActPid=self() ],
+        RingPeriodicity, _DSTBound=false, ScheduleCount, _ActPid=self() ],
                      self() },
 
     FinalState = receive
